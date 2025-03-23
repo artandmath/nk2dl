@@ -73,7 +73,8 @@ def setup_venv_environment_vars(venv_path):
         # Modify Windows activation script
         activate_bat = Path(venv_path) / "Scripts" / "activate.bat"
         deactivate_bat = project_root / Path(venv_path) / "Scripts" / "deactivate.bat"
-        nuke_path = project_root / Path(venv_path) / "Lib" / "site-packages" 
+        nuke_path = project_root / "nk2dl" 
+        python_path = project_root / Path(venv_path) / "Lib" / "site-packages" 
         
         # Add to activate.bat
         with open(activate_bat, "a") as f:
@@ -81,8 +82,8 @@ def setup_venv_environment_vars(venv_path):
             f.write("set _OLD_NUKE_PATH=%NUKE_PATH%\n")
             f.write("set _OLD_PYTHONPATH=%PYTHONPATH%\n")
             f.write(f"set NUKE_PATH={nuke_path}\n")
-            f.write(f"set PYTHONPATH=%PYTHONPATH%;{nuke_path}\n")
-        
+            f.write(f"set PYTHONPATH=%PYTHONPATH%;{python_path}\n")
+
         # Add to deactivate.bat
         with open(deactivate_bat, "a") as f:
             f.write("\n@REM Restore old nk2dl environment variables\n")
@@ -98,7 +99,7 @@ def setup_venv_environment_vars(venv_path):
             f.write('_OLD_NUKE_PATH="$NUKE_PATH"\n')
             f.write('_OLD_PYTHONPATH="$PYTHONPATH"\n')
             f.write(f'export NUKE_PATH="{nuke_path}"\n')
-            f.write(f'export PYTHONPATH="$PYTHONPATH:{nuke_path}"\n')
+            f.write(f'export PYTHONPATH="$PYTHONPATH:{python_path}"\n')
             f.write('\ndeactivate_nk2dl() {\n')
             f.write('    # Revert to original values\n')
             f.write('    export NUKE_PATH="$_OLD_NUKE_PATH"\n')
@@ -133,7 +134,7 @@ def main():
     
     print("\nAfter activation, the following environment variables will be set:")
     print("- NUKE_PATH: Points to the project directory")
-    print("- PYTHONPATH: Includes the project directory")
+    print("- PYTHONPATH: Points to the required python packages")
     print("\nThese variables will be automatically removed when you deactivate the environment.")
 
 

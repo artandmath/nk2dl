@@ -8,17 +8,17 @@
   - [X] Create virtual environment
   - [X] Add basic requirements.txt
   - [X] Set up NUKE_PATH
-- [ ] Set up Git
-  - [ ] Initialize repository
-  - [ ] Add .gitignore
-  - [ ] Make initial commit
-  - [ ] Set up remote repository
-  - [ ] Create development branch
+- [X] Set up Git
+  - [X] Initialize repository
+  - [X] Add .gitignore
+  - [X] Make initial commit
+  - [X] Set up remote repository
+  - [X] Create development branch
 
 **TEST:** Verify imports work in both Python and Nuke
 
 ### 1.2 Core Submission Logic
-- [ ] Create basic Deadline submission
+- [X] Create basic Deadline submission
   - [ ] Write node detection
   - [ ] Frame range extraction
   - [ ] Simple job submission
