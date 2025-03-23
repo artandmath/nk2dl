@@ -1,0 +1,21 @@
+# nk2dl dependencies
+# VFX Platform 2024 (Python 3.11.x)
+
+# CLI tools
+click>=8.1.3
+rich>=13.3.0
+
+# Configuration management
+pyyaml>=6.0
+
+# Deadline connection
+# Note: Deadline API is typically installed with Deadline
+# and not via pip. This is a placeholder for development.
+# deadline_api
+
+# Development tools
+pytest>=7.3.1
+pytest-cov>=4.1.0
+black>=23.3.0
+flake8>=6.0.0
+isort>=5.12.0 
