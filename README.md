@@ -21,9 +21,11 @@ python scripts\setup_environment.py
 "C:\Program Files\Nuke15.1v1\Nuke15.1.exe"
 ```
 
-Submit job from within nuke
+### Basic Submission
 
-```
+Submit a single job from within Nuke:
+
+```python
 from nk2dl.core.submission import DeadlineSubmitter
 
 # Create submitter
@@ -39,6 +41,7 @@ job_id = submitter.submit_job(
     chunk_size=10,
     threads=4,
     ram_usage=16384,  # 16GB
-    use_gpu=True
+    use_gpu=True,
+    version = [15,1]
 )
 ```

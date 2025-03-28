@@ -18,7 +18,7 @@
 **TEST:** Verify imports work in both Python and Nuke
 
 ### 1.2 Core Submission Logic
-- [X] Create basic Deadline submission
+- [X ] Create basic Deadline submission
   - [ ] Write node detection
   - [ ] Frame range extraction
   - [ ] Simple job submission
