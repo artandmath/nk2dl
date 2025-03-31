@@ -13,6 +13,7 @@ It will:
 2. Submit each write node as a separate job with proper dependencies
 """
 import nuke
+import time
 from nk2dl.core.parser import ScriptAnalyzer
 from nk2dl.core.submission import DeadlineSubmitter
 
@@ -59,6 +60,14 @@ def submit_selected_write_nodes(
     if version is None:
         version = (nuke.NUKE_VERSION_MAJOR, nuke.NUKE_VERSION_MINOR)
     
+    # Create progress dialog
+    task = nuke.ProgressTask("Deadline Submission")
+    task.setMessage("Analyzing script...")
+    task.setProgress(0)
+    
+    # Force UI update
+    time.sleep(0.1)
+    
     # Analyze script for write nodes and dependencies
     analyzer = ScriptAnalyzer()
     
@@ -66,8 +75,16 @@ def submit_selected_write_nodes(
     write_nodes = analyzer.get_write_nodes(selected_only=True)
     
     if not write_nodes:
+        task.setProgress(100)
         nuke.message("No write nodes selected")
         return None
+    
+    # Update progress
+    task.setMessage("Analyzing dependencies...")
+    task.setProgress(10)
+    
+    # Force UI update
+    time.sleep(0.1)
     
     # Analyze dependencies between write nodes
     dependencies = analyzer.analyze_dependencies(write_nodes)
@@ -85,10 +102,23 @@ def submit_selected_write_nodes(
     confirm = nuke.ask(f"Submit {len(write_nodes)} write nodes?\n\n{nodes_text}")
     
     if not confirm:
+        task.setProgress(100)
         return None
     
     # Create and configure submitter
     submitter = DeadlineSubmitter()
+    
+    # Update progress for submission start
+    task.setMessage("Preparing job submission...")
+    task.setProgress(20)
+    
+    # Force UI update
+    time.sleep(0.1)
+    
+    # Track submission progress
+    global current_step, total_steps
+    total_steps = len(write_nodes)
+    current_step = 0
     
     # Submit write nodes as separate jobs with dependencies
     job_ids = submitter.submit_job(
@@ -103,8 +133,12 @@ def submit_selected_write_nodes(
         threads=threads,
         ram_usage=ram_usage,
         use_gpu=use_gpu,
-        version=version
+        version=version,
+        progress_callback=lambda node_name, job_id: _update_progress(task, node_name, job_id)
     )
+    
+    # Complete progress
+    task.setProgress(100)
     
     # Print job IDs
     print("\nSubmitted Jobs:")
@@ -112,6 +146,19 @@ def submit_selected_write_nodes(
         print(f"{node_name}: {job_id}")
     
     return job_ids
+
+
+def _update_progress(task, node_name, job_id):
+    """Update progress bar with current submission status."""
+    global current_step, total_steps
+    current_step += 1
+    progress_percent = int(20 + (current_step / total_steps) * 80)  # Scale to 20-100% range
+    task.setMessage(f"Submitting {node_name}...")
+    task.setProgress(progress_percent)
+    print(f"Submitted job {job_id} for {node_name} ({current_step}/{total_steps})")
+    
+    # Force UI update
+    time.sleep(0.1)
 
 
 # Example usage

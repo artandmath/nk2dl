@@ -5,7 +5,7 @@ import os
 import tempfile
 import subprocess
 import time
-from typing import Dict, List, Optional, Tuple, Union, Any
+from typing import Dict, List, Optional, Tuple, Union, Any, Callable
 
 from .job_info import JobInfo
 from .plugin_info import NukePluginInfo
@@ -77,6 +77,7 @@ class DeadlineSubmitter:
                   write_nodes: Optional[List[Any]] = None,
                   write_node_names: Optional[List[str]] = None,
                   dependencies: Optional[Dict[str, List[str]]] = None,
+                  progress_callback: Optional[Callable[[str, str], None]] = None,
                   **kwargs) -> Union[str, Dict[str, str]]:
         """
         Submit a Nuke script to Deadline.
@@ -86,6 +87,7 @@ class DeadlineSubmitter:
             write_nodes: Optional list of write node objects to include in submission
             write_node_names: Optional list of write node names to include in submission
             dependencies: Optional dictionary of node name to list of dependency node names
+            progress_callback: Optional callback function to report progress
             **kwargs: Additional job and plugin settings to override defaults
             
         Returns:
@@ -111,6 +113,7 @@ class DeadlineSubmitter:
                 write_nodes,
                 write_node_names,
                 dependencies,
+                progress_callback,
                 **kwargs
             )
         else:
@@ -166,6 +169,7 @@ class DeadlineSubmitter:
                              write_nodes: Optional[List[Any]] = None,
                              write_node_names: Optional[List[str]] = None,
                              dependencies: Optional[Dict[str, List[str]]] = None,
+                             progress_callback: Optional[Callable[[str, str], None]] = None,
                              **kwargs) -> Dict[str, str]:
         """
         Submit multiple jobs to Deadline, one for each write node.
@@ -175,6 +179,7 @@ class DeadlineSubmitter:
             write_nodes: Optional list of write node objects to include in submission
             write_node_names: Optional list of write node names to include in submission
             dependencies: Optional dictionary of node name to list of dependency node names
+            progress_callback: Optional callback function to report progress
             **kwargs: Additional job and plugin settings to override defaults
             
         Returns:
@@ -289,6 +294,10 @@ class DeadlineSubmitter:
                 if job_id:
                     node_to_job_id[node_name] = job_id
                     print(f"Successfully submitted job {job_id} for {node_name}")
+                    
+                    # Call progress callback if provided
+                    if progress_callback:
+                        progress_callback(node_name, job_id)
                 else:
                     raise RuntimeError(f"Failed to get job ID for write node: {node_name}")
                 
