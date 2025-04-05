@@ -72,7 +72,7 @@ def setup_venv_environment_vars(venv_path):
     if platform.system() == "Windows":
         # Modify Windows activation script
         activate_bat = Path(venv_path) / "Scripts" / "activate.bat"
-        deactivate_bat = project_root / Path(venv_path) / "Scripts" / "deactivate.bat"
+        deactivate_bat = Path(venv_path) / "Scripts" / "deactivate.bat"
         nuke_path = project_root / "nk2dl" 
         python_path = project_root / Path(venv_path) / "Lib" / "site-packages" 
         
@@ -94,6 +94,9 @@ def setup_venv_environment_vars(venv_path):
     else:
         # Modify Unix/Linux/Mac activation script
         activate_sh = Path(venv_path) / "bin" / "activate"
+        nuke_path = project_root / "nk2dl"
+        python_path = project_root / Path(venv_path) / "lib" / "python3.11" / "site-packages"
+        
         with open(activate_sh, "a") as f:
             f.write("\n# nk2dl environment variables\n")
             f.write('_OLD_NUKE_PATH="$NUKE_PATH"\n')

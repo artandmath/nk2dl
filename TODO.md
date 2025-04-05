@@ -1,83 +1,90 @@
-# nk2dl (Nuke to Deadline) Implementation Checklist
+# Nuke to Deadline Submitter (nk2dl) To-Do List
 
-## Phase 1: Basic Setup & Core Functionality
+## Phase 1: Core Infrastructure
+- [ ] Initialize Git repository
+- [ ] Setup Python project structure according to plan
+- [ ] Setup CI/CD pipeline
+- [ ] Implement YAML-based configuration system
+- [ ] Create logging system with configurable verbosity
+- [ ] Implement basic error handling
+- [ ] Build Deadline connection layer (connection handling, authentication)
+- [ ] Implement basic Deadline job operations
 
-### 1.1 Project Setup
-- [X] Create basic directory structure
-- [X] Set up development environment
-  - [X] Create virtual environment
-  - [X] Add basic requirements.txt
-  - [X] Set up NUKE_PATH
-- [X] Set up Git
-  - [X] Initialize repository
-  - [X] Add .gitignore
-  - [X] Make initial commit
-  - [X] Set up remote repository
-  - [X] Create development branch
+## Phase 2: Core Features
+- [ ] Implement frame range parser
+  - [ ] Support Nuke-compatible syntax
+  - [ ] Add special token support (f, l, m, hero)
+  - [ ] Build frame sequence optimization
+- [ ] Create validation system
+  - [ ] Nuke script validation
+  - [ ] Write node validation
+  - [ ] Options validation
+- [ ] Develop submission engine
+  - [ ] Core job submission logic
+  - [ ] Dependency management
+  - [ ] Job lifecycle hooks
+- [ ] Build template system
+  - [ ] Template storage/retrieval
+  - [ ] Template application
+  - [ ] Template validation
 
-**TEST:** Verify imports work in both Python and Nuke
+## Phase 3: CLI Implementation
+- [ ] Create CLI argument parser
+  - [ ] Support all defined options from PLANNED_INTERFACE.md
+  - [ ] Handle environment variables
+- [ ] Implement CLI commands
+  - [ ] `submit` command
+  - [ ] Utility commands
+  - [ ] Error handling and output formatting
+- [ ] Write CLI tests
+  - [ ] Unit tests
+  - [ ] Integration tests
+  - [ ] Documentation
 
-### 1.2 Core Submission Logic
-- [X ] Create basic Deadline submission
-  - [ ] Write node detection
-  - [ ] Frame range extraction
-  - [ ] Simple job submission
-- [ ] Add essential error handling
-  - [ ] Path validation
-  - [ ] Basic error messages
+## Phase 4: Python API Implementation
+- [ ] Build core API
+  - [ ] Implement submission functions
+  - [ ] Create validation functions
+  - [ ] Add utility functions
+- [ ] Develop job management
+  - [ ] Job status functions
+  - [ ] Job control functions
+  - [ ] Monitoring functions
+- [ ] Create Nuke integration
+  - [ ] Nuke-specific helpers
+  - [ ] API documentation
+  - [ ] Testing in Nuke environment
 
-**TEST:** Submit simple render from Python
+## Phase 5: Nuke UI Development
+- [ ] Create basic UI panel
+  - [ ] Main panel layout
+  - [ ] Form controls
+  - [ ] Connect to API functions
+- [ ] Add advanced UI features
+  - [ ] Template management
+  - [ ] Write node selection
+  - [ ] Job monitoring
+- [ ] Polish UI
+  - [ ] Improve UX
+  - [ ] Add help tooltips
+  - [ ] Final testing
 
-## Phase 2: Nuke Integration
+## Phase 6: Final Integration & Testing
+- [ ] Perform end-to-end testing
+  - [ ] Test all components together
+  - [ ] Validate all submission paths
+  - [ ] Address edge cases
+- [ ] Complete documentation
+  - [ ] User documentation
+  - [ ] API reference
+  - [ ] Example scripts
+- [ ] Prepare for deployment
+  - [ ] Create installation package
+  - [ ] Setup distribution method
+  - [ ] Release candidate testing
 
-### 2.1 Basic Panel
-- [ ] Create simple panel class
-  - [ ] Basic layout
-  - [ ] Write node list
-  - [ ] Submit button
-- [ ] Add to Nuke interface
-  - [ ] Panel registration
-  - [ ] Menu item
-
-**TEST:** Open panel and verify it shows write nodes
-
-### 2.2 Essential Features
-- [ ] Add basic settings
-  - [ ] Pool selection
-  - [ ] Priority setting
-  - [ ] Frame range override
-- [ ] Implement submission
-  - [ ] Progress feedback
-  - [ ] Error display
-
-**TEST:** Submit render from panel
-
-## Phase 3: Polish & Essential Improvements
-
-### 3.1 User Experience
-- [ ] Add basic logging
-  - [ ] Submission status
-  - [ ] Error logging
-- [ ] Improve error handling
-  - [ ] User-friendly messages
-  - [ ] Basic recovery options
-
-**TEST:** Verify error messages are clear
-
-### 3.2 Documentation
-- [ ] Create basic docs
-  - [ ] Installation steps
-  - [ ] Usage guide
-  - [ ] Common issues
-- [ ] Add help text to UI
-
-**TEST:** Have someone follow install guide
-
-## Future Improvements (Post-MVP)
-- Panel state persistence
-- Advanced job configuration
-- Template system
-- Multi-write submission
-- Performance optimization
-- Advanced error recovery
-- Network installation 
+## Ongoing Tasks
+- [ ] Unit testing for all components
+- [ ] Integration testing between components
+- [ ] Update documentation as features are implemented
+- [ ] Risk monitoring and mitigation
