@@ -26,7 +26,8 @@ def submit_selected_write_nodes(
     threads=0,
     ram_usage=0,
     use_gpu=False,
-    version=None
+    version=None,
+    metadata_overrides=False
 ):
     """
     Submit selected write nodes as separate jobs with proper dependencies.
@@ -40,6 +41,7 @@ def submit_selected_write_nodes(
         ram_usage: RAM limit in MB (0 = no limit)
         use_gpu: Whether to use GPU for rendering
         version: Nuke version to use as tuple (major, minor)
+        metadata_overrides: Whether to use metadata from write nodes to override job settings
     
     Returns:
         Dictionary mapping write node names to job IDs
@@ -134,6 +136,7 @@ def submit_selected_write_nodes(
         ram_usage=ram_usage,
         use_gpu=use_gpu,
         version=version,
+        metadata_overrides=metadata_overrides,
         progress_callback=lambda node_name, job_id: _update_progress(task, node_name, job_id)
     )
     
@@ -165,12 +168,13 @@ def _update_progress(task, node_name, job_id):
 if __name__ == "__main__":
     # Submit selected write nodes with custom settings
     job_ids = submit_selected_write_nodes(
-        priority=75,
-        pool="nuke_farm",
+        priority=50,
+        pool="nuke",
         chunk_size=5,
         threads=8,
         ram_usage=16384,  # 16GB
-        use_gpu=True
+        use_gpu=True,
+        metadata_overrides=True
     )
     
     if job_ids:

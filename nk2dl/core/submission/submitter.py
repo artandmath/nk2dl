@@ -48,29 +48,107 @@ class DeadlineSubmitter:
         
     def _call_deadline_command(self, args: List[str]) -> str:
         """
-        Call the Deadline command with the given arguments.
+        Execute the Deadline command with the given arguments.
         
         Args:
             args: List of arguments to pass to the Deadline command
             
         Returns:
-            Output from the Deadline command
+            Output of the Deadline command
             
         Raises:
             RuntimeError: If the Deadline command fails
         """
+        # Build the command line
+        cmd = [self.deadline_command] + args
+        
+        # Print the command being run
+        print(f"Running Deadline command: {' '.join(cmd)}")
+        
+        # Run the command
         try:
-            cmd = [self.deadline_command] + args
-            print(f"Running Deadline command: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-            print(f"Command output: {result.stdout.strip()}")
-            return result.stdout.strip()
+            result = subprocess.check_output(cmd, stderr=subprocess.STDOUT, universal_newlines=True)
+            print(f"Command output: {result}")
+            return result
         except subprocess.CalledProcessError as e:
-            # For dependency setting, we'll ignore errors as it's not critical
-            if args[0] == "-SetJobDependencies":
-                print(f"Warning: Failed to set job dependencies: {e.stderr}")
-                return ""
-            raise RuntimeError(f"Deadline command failed: {e.stderr}")
+            error_msg = f"Deadline command failed with exit code {e.returncode}: {e.output}"
+            print(error_msg)
+            raise RuntimeError(error_msg)
+            
+    def _extract_metadata_overrides(self, write_nodes: List[Any]) -> Dict[str, Dict[str, Any]]:
+        """
+        Extract Deadline job submission overrides from write node metadata.
+        
+        Looks for metadata keys with the following prefixes:
+        - 'input/deadline/jobInfo/' - For JobInfo settings
+        - 'input/deadline/pluginInfo/' - For PluginInfo settings
+        
+        Args:
+            write_nodes: List of write nodes to extract metadata from
+            
+        Returns:
+            Dictionary mapping node names to dictionaries of override settings
+        """
+        metadata_overrides = {}
+        
+        for node in write_nodes:
+            node_name = node.fullName()
+            metadata_overrides[node_name] = {}
+            
+            # Skip nodes without metadata
+            if not hasattr(node, 'metadata') or not callable(node.metadata):
+                continue
+                
+            # Get all metadata keys for this node
+            try:
+                metadata = node.metadata()
+                if not metadata:
+                    continue
+            except:
+                # If there's an error getting metadata, skip this node
+                print(f"Warning: Could not get metadata for {node_name}")
+                continue
+                
+            # Extract job info overrides
+            job_info_prefix = 'input/deadline/jobInfo/'
+            plugin_info_prefix = 'input/deadline/pluginInfo/'
+            
+            for key in metadata:
+                # Process JobInfo overrides
+                if key.startswith(job_info_prefix):
+                    param_name = key[len(job_info_prefix):]
+                    metadata_overrides[node_name][f'job_info.{param_name}'] = metadata[key]
+                
+                # Process PluginInfo overrides
+                elif key.startswith(plugin_info_prefix):
+                    param_name = key[len(plugin_info_prefix):]
+                    metadata_overrides[node_name][f'plugin_info.{param_name}'] = metadata[key]
+        
+        return metadata_overrides
+        
+    def _camel_to_snake_case(self, camel_str: str) -> str:
+        """
+        Convert a camelCase string to snake_case.
+        
+        Args:
+            camel_str: A string in camelCase format
+            
+        Returns:
+            The string converted to snake_case
+        """
+        # Handle the case where the first character is uppercase (ex: ChunkSize -> chunk_size)
+        if camel_str and camel_str[0].isupper():
+            camel_str = camel_str[0].lower() + camel_str[1:]
+            
+        # Insert underscores before uppercase characters and convert them to lowercase
+        result = ""
+        for char in camel_str:
+            if char.isupper():
+                result += '_' + char.lower()
+            else:
+                result += char
+                
+        return result
             
     def submit_job(self, 
                   nuke_script_path: str, 
@@ -78,6 +156,7 @@ class DeadlineSubmitter:
                   write_node_names: Optional[List[str]] = None,
                   dependencies: Optional[Dict[str, List[str]]] = None,
                   progress_callback: Optional[Callable[[str, str], None]] = None,
+                  metadata_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
                   **kwargs) -> Union[str, Dict[str, str]]:
         """
         Submit a Nuke script to Deadline.
@@ -88,6 +167,8 @@ class DeadlineSubmitter:
             write_node_names: Optional list of write node names to include in submission
             dependencies: Optional dictionary of node name to list of dependency node names
             progress_callback: Optional callback function to report progress
+            metadata_overrides: Optional dictionary of node name to override settings
+                                or True to extract metadata from write nodes
             **kwargs: Additional job and plugin settings to override defaults
             
         Returns:
@@ -105,6 +186,17 @@ class DeadlineSubmitter:
         # Update job name if not specified
         if "name" not in kwargs:
             kwargs["name"] = os.path.basename(nuke_script_path)
+
+        # Handle metadata extraction if requested
+        if metadata_overrides is True and write_nodes:
+            metadata_overrides = self._extract_metadata_overrides(write_nodes)
+            if metadata_overrides:
+                print("\nMetadata Overrides:")
+                for node_name, overrides in metadata_overrides.items():
+                    if overrides:
+                        print(f"{node_name}:")
+                        for key, value in overrides.items():
+                            print(f"  {key} = {value}")
         
         # Determine if we're submitting multiple jobs or a single job
         if write_nodes or write_node_names:
@@ -114,6 +206,7 @@ class DeadlineSubmitter:
                 write_node_names,
                 dependencies,
                 progress_callback,
+                metadata_overrides,
                 **kwargs
             )
         else:
@@ -170,6 +263,7 @@ class DeadlineSubmitter:
                              write_node_names: Optional[List[str]] = None,
                              dependencies: Optional[Dict[str, List[str]]] = None,
                              progress_callback: Optional[Callable[[str, str], None]] = None,
+                             metadata_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
                              **kwargs) -> Dict[str, str]:
         """
         Submit multiple jobs to Deadline, one for each write node.
@@ -180,6 +274,7 @@ class DeadlineSubmitter:
             write_node_names: Optional list of write node names to include in submission
             dependencies: Optional dictionary of node name to list of dependency node names
             progress_callback: Optional callback function to report progress
+            metadata_overrides: Optional dictionary of node name to override settings
             **kwargs: Additional job and plugin settings to override defaults
             
         Returns:
@@ -207,32 +302,39 @@ class DeadlineSubmitter:
         # Store job IDs for each write node
         node_to_job_id = {}
         
-        # Order nodes for submission based on dependencies
-        # We need to submit nodes that others depend on first
+        # Determine submission order based on dependencies
         submission_order = []
-        remaining_nodes = list(write_node_names)
+        processed_nodes = set()
         
-        # Keep adding nodes that don't depend on any remaining nodes
-        while remaining_nodes:
-            # Find nodes with no dependencies or with already submitted dependencies
-            ready_nodes = []
-            for node in remaining_nodes:
-                if node not in dependencies or not dependencies[node]:
-                    # No dependencies at all
-                    ready_nodes.append(node)
-                elif all(dep not in remaining_nodes for dep in dependencies[node]):
-                    # All dependencies already processed
-                    ready_nodes.append(node)
+        def process_node(name, stack=None):
+            if stack is None:
+                stack = []
             
-            if not ready_nodes:
-                # If we can't find any ready nodes but still have remaining nodes,
-                # there might be circular dependencies; break the cycle
-                ready_nodes = [remaining_nodes[0]]
+            # Detect cycles
+            if name in stack:
+                cycle = " -> ".join(stack[stack.index(name):] + [name])
+                raise ValueError(f"Cyclic dependency detected: {cycle}")
                 
-            # Add ready nodes to submission order and remove from remaining
-            for node in ready_nodes:
-                submission_order.append(node)
-                remaining_nodes.remove(node)
+            # Skip if already processed
+            if name in processed_nodes:
+                return
+                
+            # Process dependencies first
+            stack.append(name)
+            if dependencies and name in dependencies:
+                for dep in dependencies[name]:
+                    if dep not in processed_nodes:
+                        process_node(dep, stack)
+                        
+            # Add to submission order and mark as processed
+            submission_order.append(name)
+            processed_nodes.add(name)
+            stack.pop()
+        
+        # Process each node in dependency order
+        for node_name in write_node_names:
+            if node_name not in processed_nodes:
+                process_node(node_name)
         
         # Create temp directory for job files
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -265,6 +367,56 @@ class DeadlineSubmitter:
                 node_plugin_info = NukePluginInfo()
                 for key, value in vars(base_plugin_info).items():
                     setattr(node_plugin_info, key, value)
+                
+                # Apply metadata overrides if available
+                if metadata_overrides and node_name in metadata_overrides:
+                    overrides = metadata_overrides[node_name]
+                    for key, value in overrides.items():
+                        if key.startswith('job_info.'):
+                            # Extract the job info parameter name (in original case)
+                            param_name = key[len('job_info.'):]
+                            
+                            # Find matching attribute in job_info (case-insensitive)
+                            prop_name = self._find_matching_property(node_job_info, param_name)
+                            
+                            if prop_name:
+                                # Convert value to the appropriate type
+                                prop_value = getattr(node_job_info, prop_name)
+                                if isinstance(prop_value, bool):
+                                    if isinstance(value, str):
+                                        value = value.lower() in ('true', 'yes', '1')
+                                    else:
+                                        value = bool(value)
+                                elif isinstance(prop_value, int):
+                                    value = int(value)
+                                # Set the property value
+                                setattr(node_job_info, prop_name, value)
+                                print(f"Applied metadata override for {node_name}: {param_name} = {value}")
+                            else:
+                                print(f"Warning: No matching property found for {param_name} in JobInfo")
+                                
+                        elif key.startswith('plugin_info.'):
+                            # Extract the plugin info parameter name (in original case)
+                            param_name = key[len('plugin_info.'):]
+                            
+                            # Find matching attribute in plugin_info (case-insensitive)
+                            prop_name = self._find_matching_property(node_plugin_info, param_name)
+                            
+                            if prop_name:
+                                # Convert value to the appropriate type
+                                prop_value = getattr(node_plugin_info, prop_name)
+                                if isinstance(prop_value, bool):
+                                    if isinstance(value, str):
+                                        value = value.lower() in ('true', 'yes', '1')
+                                    else:
+                                        value = bool(value)
+                                elif isinstance(prop_value, int):
+                                    value = int(value)
+                                # Set the property value
+                                setattr(node_plugin_info, prop_name, value)
+                                print(f"Applied metadata override for {node_name}: {param_name} = {value}")
+                            else:
+                                print(f"Warning: No matching property found for {param_name} in PluginInfo")
                 
                 # Generate job files
                 job_file = os.path.join(temp_dir, f"{node_name}_job_info.job")
@@ -305,3 +457,38 @@ class DeadlineSubmitter:
                 time.sleep(1)
             
         return node_to_job_id 
+
+    def _find_matching_property(self, obj: Any, param_name: str) -> Optional[str]:
+        """
+        Find a matching property name in an object, handling different naming conventions.
+        
+        This method tries different case conversions to find a match:
+        1. Direct match (as is)
+        2. Convert param_name from CamelCase to snake_case
+        3. Case-insensitive match
+        
+        Args:
+            obj: The object to search for properties
+            param_name: The parameter name to find
+            
+        Returns:
+            The matching property name if found, else None
+        """
+        # Try direct match first
+        if hasattr(obj, param_name):
+            return param_name
+            
+        # Try converting CamelCase to snake_case
+        snake_case = self._camel_to_snake_case(param_name)
+        if hasattr(obj, snake_case):
+            return snake_case
+            
+        # Try case-insensitive match
+        param_lower = param_name.lower()
+        for prop in dir(obj):
+            # Only consider non-private attributes
+            if not prop.startswith('_') and prop.lower() == param_lower:
+                return prop
+                
+        # No match found
+        return None 
