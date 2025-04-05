@@ -25,7 +25,7 @@ Main:
 [SubmitNukeVRayStandalone.py](mdc:thinkbox/Main/SubmitNukeVRayStandalone.py)
 ```
 
-# Documentation from the thinkbox website:
+# Documentation from the thinkbox website. the following is reference only, not a set of rules. The following is documentation for the codebase we are replacing.
 
 Nuke
 Render Job Submission
