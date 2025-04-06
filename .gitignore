@@ -52,6 +52,9 @@ logs/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
+.nk2dl.yaml
+*.pfx
+.ignore/
 
 # OS specific
 .DS_Store
