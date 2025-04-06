@@ -119,14 +119,6 @@ def test_command_line():
         conn.ensure_connected()
         print("✓ Successfully connected via command-line")
         
-        # Test getting repository path
-        try:
-            repo_path = conn.get_repository_path()
-            print(f"✓ Repository path: {repo_path}")
-        except NotImplementedError:
-            # Skip repository path test when using web service
-            print("ℹ Skipping repository path test (not supported in web service mode)")
-        
         # Test getting groups
         groups = conn.get_groups()
         print(f"✓ Retrieved {len(groups)} groups: {', '.join(groups)}")

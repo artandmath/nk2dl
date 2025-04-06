@@ -26,7 +26,6 @@ class DeadlineConnection:
         self.use_web_service = config.get('deadline.use_web_service', False)
         self._web_client = None
         self._command_path = None
-        self._repository_path = None
         
         # Don't initialize connection in __init__ to make testing easier
         self._initialized = False
@@ -131,57 +130,10 @@ class DeadlineConnection:
             if not path:
                 raise DeadlineError("Empty repository path returned")
                 
-            self._repository_path = path
             logger.info("Successfully connected to Deadline via command-line")
             
         except Exception as e:
             raise DeadlineError(f"Failed to connect to Deadline: {e}")
-    
-    def get_repository_path(self, subdir: Optional[str] = None) -> str:
-        """Get the Deadline repository path.
-        
-        Args:
-            subdir: Optional subdirectory within repository
-            
-        Returns:
-            Repository path
-        """
-        self.ensure_connected()
-        
-        if self.use_web_service:
-            # TODO: Implement repository path retrieval via web service
-            raise NotImplementedError("Repository path retrieval not implemented for web service")
-        
-        args = [self._command_path, "-GetRepositoryPath"]
-        if subdir:
-            args.append(subdir)
-        
-        startupinfo = None
-        if os.name == 'nt':
-            startupinfo = subprocess.STARTUPINFO()
-            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        
-        try:
-            proc = subprocess.Popen(
-                args,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                startupinfo=startupinfo
-            )
-            output, errors = proc.communicate()
-            
-            if sys.version_info[0] > 2:
-                output = output.decode()
-            
-            path = output.strip()
-            if not path:
-                raise DeadlineError("Empty repository path returned")
-                
-            return path
-            
-        except Exception as e:
-            raise DeadlineError(f"Failed to get repository path: {e}")
     
     def get_groups(self) -> List[str]:
         """Get list of Deadline groups.
@@ -256,12 +208,31 @@ class DeadlineConnection:
                 logger.debug(f"Submitting job JSON payload:\n{json.dumps(payload, indent=2)}")
                 
                 # Submit job with correct arguments to the API
-                job_id = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
+                job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
                 
-                if isinstance(job_id, str) and job_id.startswith("Error:"):
-                    raise DeadlineError(f"Failed to submit job: {job_id}")
+                if isinstance(job_response, str) and job_response.startswith("Error:"):
+                    raise DeadlineError(f"Failed to submit job: {job_response}")
                 
-                return str(job_id)  # Ensure we return a string
+                # Extract job ID from response - handle both string and dict responses
+                if isinstance(job_response, dict) and '_id' in job_response.get('Props', {}):
+                    # Extract just the ID from the response dictionary
+                    job_id = job_response['Props']['_id']
+                elif isinstance(job_response, str):
+                    job_id = job_response
+                else:
+                    # Try to find any ID property in the response
+                    if isinstance(job_response, dict):
+                        # Log the response for debugging
+                        logger.debug(f"Unexpected job response format: {job_response}")
+                        # Look for '_id' anywhere in the dictionary
+                        if '_id' in job_response:
+                            job_id = job_response['_id']
+                        else:
+                            raise DeadlineError(f"Could not find job ID in response: {job_response}")
+                    else:
+                        raise DeadlineError(f"Unexpected job response format: {job_response}")
+                
+                return job_id  # Return just the string ID
                 
             except Exception as e:
                 raise DeadlineError(f"Failed to submit job via web service: {e}")

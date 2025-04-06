@@ -39,7 +39,6 @@ def test_command_line_connection(mock_config):
         
         # Initialize connection
         conn.ensure_connected()
-        assert conn._repository_path == '/repo/path'
 
 def test_web_service_connection(mock_config):
     """Test web service connection initialization."""
