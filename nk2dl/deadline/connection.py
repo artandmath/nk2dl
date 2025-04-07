@@ -184,6 +184,11 @@ class DeadlineConnection:
         """
         self.ensure_connected()
         
+        # Set UserName to current user if not specified
+        if 'UserName' not in job_info:
+            import getpass
+            job_info['UserName'] = getpass.getuser()
+        
         # Convert all values to strings
         def stringify_dict(d: Dict[str, Any]) -> Dict[str, str]:
             return {k: str(v) for k, v in d.items()}
