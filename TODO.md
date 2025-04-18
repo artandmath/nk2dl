@@ -1,32 +1,21 @@
 # Nuke to Deadline Submitter (nk2dl) To-Do List
 
 ## Phase 1: Core Infrastructure
-- [ ] Initialize Git repository
-- [ ] Setup Python project structure according to plan
-- [ ] Setup CI/CD pipeline
-- [ ] Implement YAML-based configuration system
-- [ ] Create logging system with configurable verbosity
-- [ ] Implement basic error handling
-- [ ] Build Deadline connection layer (connection handling, authentication)
-- [ ] Implement basic Deadline job operations
+- [x] Initialize Git repository
+- [x] Setup Python project structure according to plan
+- [x] Implement YAML-based configuration system
+- [x] Create logging system with configurable verbosity
+- [x] Implement basic error handling
+- [x] Build Deadline connection layer (connection handling, authentication)
+- [x] Implement basic Deadline job operations
 
 ## Phase 2: Core Features
-- [ ] Implement frame range parser
-  - [ ] Support Nuke-compatible syntax
-  - [ ] Add special token support (f, l, m, hero)
-  - [ ] Build frame sequence optimization
-- [ ] Create validation system
-  - [ ] Nuke script validation
-  - [ ] Write node validation
-  - [ ] Options validation
-- [ ] Develop submission engine
-  - [ ] Core job submission logic
+- [X] Implement frame range parser
+  - [X] Support Nuke-compatible syntax
+  - [X] Add special token support (f, l, m, hero)
+- [X] Develop core submission
+  - [X] Core job submission logic
   - [ ] Dependency management
-  - [ ] Job lifecycle hooks
-- [ ] Build template system
-  - [ ] Template storage/retrieval
-  - [ ] Template application
-  - [ ] Template validation
 
 ## Phase 3: CLI Implementation
 - [ ] Create CLI argument parser

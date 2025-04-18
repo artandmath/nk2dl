@@ -46,7 +46,6 @@ nk2dl/
 1. **Setup Project Structure**
    - Initialize Git repository
    - Setup Python project structure
-   - Create CI/CD pipeline
 
 2. **Implement Common Components**
    - Configuration system (YAML-based)
@@ -55,7 +54,6 @@ nk2dl/
 
 3. **Implement Deadline Connection Layer**
    - Connection handling
-   - Authentication
    - Basic job operations
 
 ### Phase 2: Core Features (4 weeks)

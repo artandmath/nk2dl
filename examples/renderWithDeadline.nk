@@ -1,0 +1,208 @@
+#! C:/Program Files/Nuke15.1v1/nuke-15.1.1.dll -nx
+version 15.1 v1
+define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
+<layout version="1.0">
+    <window x="-1" y="-7" w="2560" h="1369" maximized="1" screen="0">
+        <splitter orientation="1">
+            <split size="40"/>
+            <dock id="" hideTitles="1" activePageId="Toolbar.1">
+                <page id="Toolbar.1"/>
+            </dock>
+            <split size="1897" stretch="1"/>
+            <splitter orientation="2">
+                <split size="779"/>
+                <dock id="" activePageId="Viewer.1">
+                    <page id="Viewer.1"/>
+                </dock>
+                <split size="548"/>
+                <dock id="" activePageId="DAG.1">
+                    <page id="DAG.1"/>
+                    <page id="Curve Editor.1"/>
+                    <page id="DopeSheet.1"/>
+                </dock>
+            </splitter>
+            <split size="615"/>
+            <dock id="" activePageId="Properties.1" focus="true">
+                <page id="Properties.1"/>
+                <page id="uk.co.thefoundry.backgroundrenderview.1"/>
+                <page id="Scenegraph.1"/>
+            </dock>
+        </splitter>
+    </window>
+</layout>
+}
+Root {
+ inputs 0
+ name C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
+ frame 62
+ first_frame 1001
+ lock_range true
+ format "1920 1080 0 0 1920 1080 1 HD_1080"
+ proxy_type scale
+ proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
+ colorManagement OCIO
+ OCIO_config custom
+ customOCIOConfigPath "P:/peach/admin/genericSoftwareFolderStructures/ocio/KMM OCIO/config.ocio"
+ defaultViewerLUT "OCIO LUTs"
+ workingSpaceLUT scene_linear
+ monitorLut "sRGB (ACES)"
+ monitorOutLUT "Rec.709 (ACES)"
+ int8Lut matte_paint
+ int16Lut texture_paint
+ logLut compositing_log
+ floatLut scene_linear
+ addUserKnob {20 Deadline}
+ addUserKnob {1 FrameListMode l frameListMode}
+ FrameListMode Global
+ addUserKnob {1 CustomFrameList l customFrameList}
+ CustomFrameList 1-100
+ addUserKnob {1 Department l department}
+ addUserKnob {1 Pool l pool}
+ Pool nuke
+ addUserKnob {1 SecondaryPool l secondaryPool}
+ SecondaryPool " "
+ addUserKnob {1 Group l group}
+ Group none
+ addUserKnob {1 Priority l priority}
+ Priority 50
+ addUserKnob {1 MachineLimit l machineLimit}
+ MachineLimit 0
+ addUserKnob {1 IsBlacklist l isBlacklist}
+ IsBlacklist False
+ addUserKnob {1 MachineList l machineList}
+ addUserKnob {1 LimitGroups l limitGroups}
+ addUserKnob {1 SubmitSuspended l submitSuspended}
+ SubmitSuspended False
+ addUserKnob {1 ChunkSize l chunkSize}
+ ChunkSize 100
+ addUserKnob {1 ConcurrentTasks l concurrentTasks}
+ ConcurrentTasks 4
+ addUserKnob {1 LimitConcurrentTasks l limitConcurrentTasks}
+ LimitConcurrentTasks False
+ addUserKnob {1 Threads l threads}
+ Threads 0
+ addUserKnob {1 SubmitScene l submitScene}
+ SubmitScene True
+ addUserKnob {1 BatchMode l batchMode}
+ BatchMode False
+ addUserKnob {1 ContinueOnError l continueOnError}
+ ContinueOnError True
+ addUserKnob {1 SeparateJobs l separateJobs}
+ SeparateJobs True
+ addUserKnob {1 UseNodeRange l useNodeRange}
+ UseNodeRange True
+ addUserKnob {1 UseGpu l useGpu}
+ UseGpu False
+ addUserKnob {1 UseSpecificGpu l useSpecificGpu}
+ UseSpecificGpu False
+ addUserKnob {1 ChooseGpu l chooseGpu}
+ ChooseGpu 0
+ addUserKnob {1 EnforceRenderOrder l enforceRenderOrder}
+ EnforceRenderOrder False
+ addUserKnob {1 DeadlineRenderMode l deadlineRenderMode}
+ DeadlineRenderMode "Use Scene Settings"
+ addUserKnob {1 PerformanceProfiler l performanceProfiler}
+ PerformanceProfiler False
+ addUserKnob {1 ReloadPlugin l reloadPlugin}
+ ReloadPlugin True
+ addUserKnob {1 PerformanceProfilerPath l performanceProfilerPath}
+}
+CheckerBoard2 {
+ inputs 0
+ name CheckerBoard1
+ xpos -884
+ ypos -140
+}
+CameraShake3 {
+ name CameraShake3_1
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -884
+ ypos -37
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings1
+ xpos -884
+ ypos 37
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop1
+ xpos -884
+ ypos 105
+}
+Write {
+ channels rgba
+ file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.####.exr
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 10
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write1
+ xpos -884
+ ypos 164
+}
+CheckerBoard2 {
+ inputs 0
+ name CheckerBoard2
+ xpos -672
+ ypos -139
+}
+Grade {
+ white {1 0 1 1}
+ white_panelDropped true
+ name Grade1
+ xpos -672
+ ypos -23
+}
+set N3c3ed000 [stack 0]
+NoOp {
+ name DeadlineSettings2
+ xpos -672
+ ypos 38
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop2
+ xpos -672
+ ypos 106
+}
+Write {
+ channels rgba
+ file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames02_v001.####.exr
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 20
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write2
+ xpos -672
+ ypos 165
+}
+push $N3c3ed000
+Viewer {
+ frame 62
+ frame_range 1-100
+ viewerProcess "Rec.709 (ACES)"
+ monitorOutNDISenderName "Nuke - test - Viewer1"
+ name Viewer1
+ xpos -40
+ ypos -9
+}
