@@ -44,6 +44,8 @@ venv.bak/
 .nuke/
 *.nknc
 *.nkc
+examples/renderOutput/*
+
 
 # Project specific
 logs/

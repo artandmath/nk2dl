@@ -15,7 +15,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="Viewer.1"/>
                 </dock>
                 <split size="548"/>
-                <dock id="" activePageId="DAG.1" focus="true">
+                <dock id="" activePageId="DAG.1">
                     <page id="DAG.1"/>
                     <page id="Curve Editor.1"/>
                     <page id="DopeSheet.1"/>
@@ -54,7 +54,7 @@ Root {
  floatLut scene_linear
  addUserKnob {20 Deadline}
  addUserKnob {1 FrameListMode l frameListMode}
- FrameListMode Custom
+ FrameListMode Global
  addUserKnob {1 CustomFrameList l customFrameList}
  CustomFrameList 1-100
  addUserKnob {1 Department l department}
@@ -89,9 +89,9 @@ Root {
  addUserKnob {1 ContinueOnError l continueOnError}
  ContinueOnError True
  addUserKnob {1 SeparateJobs l separateJobs}
- SeparateJobs False
+ SeparateJobs True
  addUserKnob {1 UseNodeRange l useNodeRange}
- UseNodeRange False
+ UseNodeRange True
  addUserKnob {1 UseGpu l useGpu}
  UseGpu False
  addUserKnob {1 UseSpecificGpu l useSpecificGpu}
@@ -171,7 +171,6 @@ Write {
  display ACES
  view Rec.709
  name Write1
- selected true
  xpos -884
  ypos 164
 }
@@ -217,7 +216,6 @@ Write {
  display ACES
  view Rec.709
  name Write2
- selected true
  xpos -699
  ypos 162
 }
