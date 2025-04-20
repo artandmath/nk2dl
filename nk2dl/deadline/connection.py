@@ -49,15 +49,21 @@ class DeadlineConnection:
             from Deadline.DeadlineConnect import DeadlineCon as Connect
         except ImportError:
             if config.get('deadline.commandline_on_fail', True):
-                logger.warning("Failed to import Deadline Web Service API. Falling back to command line.")
-                self._setup_command_line()
-                self.use_web_service = False
-                self._init_command_line()
-                return
+                logger.warning("Failed to import Deadline Web Service API. Attempting fallback to command line.")
+                try:
+                    self._setup_command_line()
+                    self.use_web_service = False
+                    self._init_command_line()
+                    logger.info("Web Service connection failed. Successfully connected via command line.")
+                    return
+                except Exception as e:
+                    logger.error("Web Service connection failed. Command line fallback also failed.")
+                    raise DeadlineError(f"Failed to connect via both Web Service and command line: {e}")
             else:
+                logger.error("Web Service connection failed. Command line fallback disabled in config.")
                 raise DeadlineError(
-                    "Failed to import Deadline Web Service API. "
-                    "Please ensure Deadline is installed and the Python path is configured correctly."
+                    "Failed to import Deadline Web Service API and fallback is disabled. "
+                    "Enable fallback by setting deadline.commandline_on_fail=true in config."
                 )
         
         host = config.get('deadline.host', 'localhost')
@@ -77,21 +83,50 @@ class DeadlineConnection:
                 self._web_client = Connect(host, port, use_ssl, ssl_cert, False)
             else:
                 # For non-SSL connections, only pass host and port
-                # this is correct, but cursor wants to add use_ssl, ssl_cert, and False
                 self._web_client = Connect(host, port)
             
             # Test connection
-            self._web_client.Groups.GetGroupNames()
-            logger.info("Successfully connected to Deadline Web Service")
+            try:
+                groups = self._web_client.Groups.GetGroupNames()
+                if groups is None or not isinstance(groups, list):
+                    raise DeadlineError(f"Invalid response from Groups.GetGroupNames(): {groups}")
+                logger.info(f"Successfully connected to Deadline Web Service at {host}:{port}")
+            except Exception as e:
+                if config.get('deadline.commandline_on_fail', True):
+                    logger.warning(f"Failed to test Deadline Web Service connection at {host}:{port}: {e}. Attempting fallback to command line.")
+                    try:
+                        self._setup_command_line()
+                        self.use_web_service = False
+                        self._init_command_line()
+                        logger.info("Web Service connection failed. Successfully connected via command line.")
+                        return
+                    except Exception as fallback_error:
+                        logger.error("Web Service connection failed. Command line fallback also failed.")
+                        raise DeadlineError(f"Failed to connect via both Web Service and command line. Web Service error: {e}, Command line error: {fallback_error}")
+                else:
+                    logger.error("Web Service connection failed. Command line fallback disabled in config.")
+                    raise DeadlineError(
+                        f"Failed to connect to Deadline Web Service and fallback is disabled. "
+                        f"Enable fallback by setting deadline.commandline_on_fail=true in config. Error: {e}"
+                    )
         except Exception as e:
             if config.get('deadline.commandline_on_fail', True):
-                logger.warning(f"Failed to connect to Deadline Web Service: {e}. Falling back to command line.")
-                self._setup_command_line()
-                self.use_web_service = False
-                self._init_command_line()
-                return
+                logger.warning(f"Failed to connect to Deadline Web Service at {host}:{port}. Attempting fallback to command line.")
+                try:
+                    self._setup_command_line()
+                    self.use_web_service = False
+                    self._init_command_line()
+                    logger.info("Web Service connection failed. Successfully connected via command line.")
+                    return
+                except Exception as fallback_error:
+                    logger.error("Web Service connection failed. Command line fallback also failed.")
+                    raise DeadlineError(f"Failed to connect via both Web Service and command line. Web Service error: {e}, Command line error: {fallback_error}")
             else:
-                raise DeadlineError(f"Failed to connect to Deadline Web Service: {e}")
+                logger.error("Web Service connection failed. Command line fallback disabled in config.")
+                raise DeadlineError(
+                    f"Failed to connect to Deadline Web Service and fallback is disabled. "
+                    f"Enable fallback by setting deadline.commandline_on_fail=true in config. Error: {e}"
+                )
     
     def _init_command_line(self) -> None:
         """Initialize command-line interface."""
@@ -134,7 +169,17 @@ class DeadlineConnection:
         self.ensure_connected()
         
         if self.use_web_service:
-            return self._web_client.Groups.GetGroupNames()
+            try:
+                return self._web_client.Groups.GetGroupNames()
+            except Exception as e:
+                if config.get('deadline.commandline_on_fail', True):
+                    logger.warning(f"Failed to get groups via web service: {e}. Falling back to command line.")
+                    self._setup_command_line()
+                    self.use_web_service = False
+                    self._init_command_line()
+                    return self.get_groups()  # Retry with command line
+                else:
+                    raise DeadlineError(f"Failed to get groups via web service: {e}")
         else:
             if "dotnet" in self._command_path:
                 # For dotnet command string, split into command parts
@@ -201,6 +246,7 @@ class DeadlineConnection:
                 
                 # Log the JSON payload for debugging
                 logger.info(f"Submitting job JSON payload:\n{json.dumps(payload, indent=2)}")
+                
                 # Submit job with correct arguments to the API
                 job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
                 
@@ -222,7 +268,6 @@ class DeadlineConnection:
                         if '_id' in job_response:
                             job_id = job_response['_id']
                             logger.debug(f"Found job ID in response: {job_id}")
-                            
                         else:
                             raise DeadlineError(f"Could not find job ID in response: {job_response}")
                     else:
@@ -232,7 +277,14 @@ class DeadlineConnection:
                 return job_id  # Return just the string ID
                 
             except Exception as e:
-                raise DeadlineError(f"Failed to submit job via web service: {e}")
+                if config.get('deadline.commandline_on_fail', True):
+                    logger.warning(f"Failed to submit job via web service: {e}. Falling back to command line.")
+                    self._setup_command_line()
+                    self.use_web_service = False
+                    self._init_command_line()
+                    return self.submit_job(job_info, plugin_info)  # Retry with command line
+                else:
+                    raise DeadlineError(f"Failed to submit job via web service: {e}")
         else:
             # Command line submission using files
             logger.info(f"Submitting job via deadline command line")
