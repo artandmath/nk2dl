@@ -15,29 +15,7 @@ from ..common.errors import SubmissionError
 from ..common.logging import logger
 from ..common.framerange import FrameRange
 from ..deadline.connection import get_connection
-
-# Global variable to store nuke module when imported
-_nuke_module = None
-
-def get_nuke():
-    """Get the nuke module, importing it if necessary.
-    
-    Returns:
-        The nuke module.
-        
-    Raises:
-        SubmissionError: If nuke module is not available.
-    """
-    global _nuke_module
-    if _nuke_module is None:
-        try:
-            import nuke
-            _nuke_module = nuke
-        except (ImportError, ModuleNotFoundError):
-            raise SubmissionError("The Nuke Python API is required but not available. "
-                                 "This module must be run from within Nuke or nuke should be available in the system path.")
-    return _nuke_module
-
+from . import utils as nuke_utils
 
 class NukeSubmission:
     """Handles submission of Nuke scripts to Deadline."""
@@ -133,7 +111,7 @@ class NukeSubmission:
                                   If no values are provided for a key (e.g., "key:" or just "key"), 
                                   all available values for that key will be used.
         """
-        # Validate that render_order_dependencies and write_nodes_as_tasks are not both True
+        # Check if render_order_dependencies and write_nodes_as_tasks are not both True
         if render_order_dependencies and write_nodes_as_tasks:
             raise SubmissionError("Cannot use both dependencies and write nodes as tasks features simultaneously")
         
@@ -141,9 +119,6 @@ class NukeSubmission:
         if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not frame_range.lower() in ['f-l', 'first-last', 'f', 'l', 'first', 'last', 'i', 'input', 'h', 'hero']:
             raise SubmissionError("Custom frame list is not supported when submitting write nodes as separate tasks. "
                                  "Please use global (f-l) or input (i) frame ranges, or enable use_nodes_frame_list.")
-            
-        # Check if we're running inside Nuke - this is required
-        self._ensure_nuke_available()
             
         self.script_path = Path(script_path)
         if not self.script_path.exists():
@@ -222,9 +197,14 @@ class NukeSubmission:
                             self._get_frame_range_from_nuke(write_nodes[0])
                         else:
                             # Can't determine input frame range without a specific write node
-                            raise SubmissionError("The 'i/input' token requires exactly one write node to be specified")
+                            raise SubmissionError("The 'i/input' token requires exactly one write node to be specified. "
+                                                 "This is only valid when rendering a single write node, using write_nodes_as_tasks=True, "
+                                                 "or with render_order_dependencies=True.")
                     else:
                         self._get_frame_range_from_nuke()
+                except SubmissionError as e:
+                    # Re-raise SubmissionError to stop the submission process
+                    raise
                 except Exception as e:
                     logger.warning(f"Failed to substitute frame range tokens: {e}")
                     
@@ -254,99 +234,7 @@ class NukeSubmission:
         Returns:
             The evaluated file path with frame number placeholders preserved
         """
-        nuke = get_nuke()
-        
-        if not 'file' in node.knobs():
-            return ""
-            
-        try:
-            # Get the original unexpanded file path expression
-            original_path = node['file'].value()
-            logger.debug(f"{node.name()} Original path: {original_path}")
-
-            # Evaluate the path (which will substitute the current frame number)
-            evaluated_path = node['file'].evaluate()
-            logger.debug(f"{node.name()} Nuke evaluated path: {evaluated_path}")
-
-            # Check if the original path had frame number placeholders
-            has_hash_placeholder = re.search(r'#+', original_path) is not None
-            has_printf_placeholder = re.search(r'%\d*d', original_path) is not None
-            
-            if has_hash_placeholder or has_printf_placeholder:
-                # Get the frame number format from the original path
-                if has_hash_placeholder:
-                    # Extract the hash sequence (e.g., '####')
-                    hash_match = re.search(r'(#+)', original_path)
-                    if hash_match:
-                        placeholder = hash_match.group(1)
-                        
-                        # Create a regex pattern to find the frame number in the evaluated path
-                        # Use only the suffix for more reliable matching
-                        parts = original_path.split(placeholder)
-                        if len(parts) >= 2:
-                            suffix = re.escape(parts[1]) if len(parts) > 1 else ''
-                            # Only match against the suffix
-                            pattern = f"(\\d+){suffix}"
-                            
-                            # Find and replace the frame number with the original placeholder
-                            frame_match = re.search(pattern, evaluated_path)
-                            if frame_match:
-                                frame_num = frame_match.group(1)
-                                evaluated_path = evaluated_path.replace(frame_num, placeholder, 1)
-                
-                elif has_printf_placeholder:
-                    # Extract the printf format (e.g., '%04d')
-                    printf_match = re.search(r'(%\d*d)', original_path)
-                    if printf_match:
-                        placeholder = printf_match.group(1)
-                        
-                        # Create a regex pattern to find the frame number in the evaluated path
-                        # Use only the suffix for more reliable matching
-                        parts = original_path.split(placeholder)
-                        if len(parts) >= 2:
-                            suffix = re.escape(parts[1]) if len(parts) > 1 else ''
-                            # Only match against the suffix
-                            pattern = f"(\\d+){suffix}"
-                            
-                            # Find and replace the frame number with the original placeholder
-                            frame_match = re.search(pattern, evaluated_path)
-                            if frame_match:
-                                frame_num = frame_match.group(1)
-                                evaluated_path = evaluated_path.replace(frame_num, placeholder, 1)
-
-            # Check if the path contains GSV variables like %{shotcode}
-            gsv_pattern = r'%\{([^}]+)\}'
-            gsv_matches = re.finditer(gsv_pattern, evaluated_path)
-            
-            # If unevaluated GSV variables are found, evaluate them
-            if re.search(gsv_pattern, evaluated_path):
-                try:
-                    # Get the root node to access GSV knob
-                    root_node = get_nuke().root()
-                    if 'gsv' in root_node.knobs():
-                        gsv_knob = root_node['gsv']
-                        
-                        # For each GSV variable found, replace with its value
-                        for match in re.finditer(gsv_pattern, evaluated_path):
-                            logger.debug(f"Found unevaluated GSV variable: {match.group(1)}")
-
-                            var_name = match.group(1)
-                            var_value = gsv_knob.getGsvValue(var_name)
-                            
-                            if var_value:
-                                # Replace the GSV placeholder with its value
-                                gsv_placeholder = match.group(0)  # %{var_name}
-                                evaluated_path = evaluated_path.replace(gsv_placeholder, var_value)
-                except Exception as e:
-                    logger.warning(f"Error evaluating GSV variables: {e}")
-
-            # If no placeholders or replacement failed, return the evaluated path
-            logger.debug(f"{node.name()} Pretty path: {evaluated_path}")
-            return evaluated_path
-            
-        except Exception as e:
-            logger.warning(f"Error evaluating node file path: {e}")
-            return ""
+        return nuke_utils.node_pretty_path(node)
 
     def _replace_tokens(self, template: str, write_node: Optional[str] = None) -> str:
         """Generic token replacement function for any field.
@@ -358,7 +246,7 @@ class NukeSubmission:
         Returns:
             String with tokens replaced
         """
-        nuke = get_nuke()
+        nuke = nuke_utils.nuke_module()
         
         # Start with the template
         result = template
@@ -464,7 +352,7 @@ class NukeSubmission:
         Raises:
             ValueError: If a restricted token is used in batch_name
         """
-        nuke = get_nuke()
+        nuke = nuke_utils.nuke_module()
         
         # Start with the template
         result = template
@@ -547,14 +435,6 @@ class NukeSubmission:
             ExtraInfo with tokens replaced
         """
         return self._replace_tokens(template, write_node)
-
-    def _ensure_nuke_available(self) -> None:
-        """Ensure that Nuke API is available.
-        
-        Raises:
-            SubmissionError: If Nuke API is not available
-        """
-        get_nuke()  # This will raise SubmissionError if nuke is not available
     
     def _get_frame_range_from_nuke(self, write_node_name: Optional[str] = None) -> None:
         """Get frame range from Nuke script using Nuke API.
@@ -562,7 +442,7 @@ class NukeSubmission:
         Args:
             write_node_name: Optional name of a write node for 'input' token
         """
-        nuke = get_nuke()
+        nuke = nuke_utils.nuke_module()
         
         try:
             if not self.script_is_open:
@@ -595,7 +475,7 @@ class NukeSubmission:
         
         After parsing, gsv_combinations will contain tuples of (key, value) pairs for each combination.
         """
-        nuke = get_nuke()
+        nuke = nuke_utils.nuke_module()
         
         try:
             # Get the root node to access GSV knob
@@ -769,6 +649,12 @@ class NukeSubmission:
                 self.job_name = self._replace_job_name_tokens(self.job_name_template, self.write_nodes[0])
             else:
                 self.job_name = self._replace_job_name_tokens(self.job_name_template)
+        
+        # Check if frame range still contains the 'input' token as it causes Deadline submission errors
+        if 'input' in self.frame_range or 'i' == self.frame_range:
+            raise SubmissionError("The 'input' token was not resolved correctly. "
+                                 "This token requires exactly one write node to be specified. "
+                                 "Please specify a write node or use a different frame range format.")
             
         job_info = {
             "Name": self.job_name,
@@ -794,6 +680,9 @@ class NukeSubmission:
                     job_info["Comment"] = self._replace_comment_tokens(self.comment)
             else:
                 job_info["Comment"] = self.comment
+                
+        # Add OutputFilename entries to job info
+        self._add_output_filenames_to_job_info(job_info)
         
         # Process extra_info fields if any
         if self.extra_info:
@@ -826,48 +715,52 @@ class NukeSubmission:
                     job_info[f"JobDependency{i}"] = dep_id
         
         return job_info
-    
-    def get_nuke_version(self) -> str:
-        """Get the Nuke version to use for rendering.
         
-        Uses the following priority:
-        1. The nuke_version parameter provided to the constructor
-        2. The nuke_version value from config
-        3. The current Nuke version
+    def _add_output_filenames_to_job_info(self, job_info: Dict[str, Any]) -> None:
+        """Add OutputFilename# entries to job info.
         
-        Returns:
-            Version string in format "MAJOR.MINOR" (e.g. "13.0")
+        This allows the Deadline Monitor to display the "View Output Image" context menu option.
+        
+        Args:
+            job_info: The job info dictionary to update
         """
-        # If nuke_version was provided to the constructor
-        if self.nuke_version is not None:
-            # Handle different input types
-            if isinstance(self.nuke_version, int):
-                # Integer: add ".0" (e.g., 15 -> "15.0")
-                return f"{self.nuke_version}.0"
-            elif isinstance(self.nuke_version, float):
-                # Float: convert to string (e.g., 15.1 -> "15.1")
-                return str(self.nuke_version)
-            else:
-                # String or anything else: convert to string
-                return str(self.nuke_version)
+        nuke = nuke_utils.nuke_module()
         
-        # Check if nuke_version is in config
-        config_version = config.get('submission.nuke_version')
-        if config_version is not None:
-            # Handle different config value types
-            if isinstance(config_version, int):
-                return f"{config_version}.0"
-            elif isinstance(config_version, float):
-                return str(config_version)
-            else:
-                return str(config_version)
+        # Different handling based on submission mode
+        if self.write_nodes_as_tasks and self.write_nodes:
+            # For write nodes as tasks: add all specified write nodes
+            for i, write_node_name in enumerate(self.write_nodes):
+                node = nuke.toNode(write_node_name)
+                if node and node.Class() == "Write" and not node['disable'].value():
+                    output_path = self._get_node_pretty_path(node)
+                    if output_path:
+                        job_info[f"OutputFilename{i}"] = output_path
+                        
+        elif self.write_nodes and len(self.write_nodes) == 1:
+            # For a single write node: add just that one
+            write_node_name = self.write_nodes[0]
+            node = nuke.toNode(write_node_name)
+            if node and node.Class() == "Write" and not node['disable'].value():
+                output_path = self._get_node_pretty_path(node)
+                if output_path:
+                    job_info["OutputFilename0"] = output_path
+                    
+        elif not self.write_nodes:
+            # If no write node specified: find all enabled write nodes
+            write_nodes = []
+            for node in nuke.allNodes('Write'):
+                if not node['disable'].value():
+                    write_nodes.append(node)
+            
+            # Add outputs for all enabled write nodes
+            for i, node in enumerate(write_nodes):
+                output_path = self._get_node_pretty_path(node)
+                if output_path:
+                    job_info[f"OutputFilename{i}"] = output_path
         
-        # Fall back to current Nuke version
-        nuke = get_nuke()
-        major = nuke.NUKE_VERSION_MAJOR
-        minor = nuke.NUKE_VERSION_MINOR
-        return f"{major}.{minor}"
-    
+        # If using dependencies, don't add OutputFilename entries as they'll be set per job
+        # They are added in the submit method when handling each write node
+        
     def prepare_plugin_info(self, gsv_combination=None) -> Dict[str, Any]:
         """Prepare plugin information for Deadline submission.
         
@@ -879,7 +772,7 @@ class NukeSubmission:
         """
         plugin_info = {
             "SceneFile": str(self.script_path.absolute()),
-            "Version": self.get_nuke_version(),
+            "Version": nuke_utils.nuke_version(self.nuke_version),
             "UseNukeX": "1" if self.use_nuke_x else "0",
             "BatchMode": "1" if self.use_batch_mode else "0",
             "EnforceRenderOrder": "1" if self.enforce_render_order else "0",
@@ -960,7 +853,7 @@ class NukeSubmission:
         Returns:
             List of tuples (node_name, start_frame, end_frame)
         """
-        nuke = get_nuke()
+        nuke = nuke_utils.nuke_module()
         
         write_node_info = []
         
@@ -1034,7 +927,7 @@ class NukeSubmission:
         Returns:
             Dictionary mapping render orders to lists of write node names
         """
-        nuke = get_nuke()
+        nuke = nuke_utils.nuke_module()
         
         write_nodes_by_order = {}
         
@@ -1146,6 +1039,14 @@ class NukeSubmission:
                                     if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
                                         node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
                                 
+                                # Add output filename for this write node
+                                nuke = nuke_utils.nuke_module()
+                                node_obj = nuke.toNode(write_node)
+                                if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
+                                    output_path = self._get_node_pretty_path(node_obj)
+                                    if output_path:
+                                        node_job_info["OutputFilename0"] = output_path
+                                
                                 # Specify which write node to render
                                 node_plugin_info["WriteNodes"] = write_node
                                 
@@ -1232,6 +1133,14 @@ class NukeSubmission:
                                 extra_info_key = f"ExtraInfo{i}"
                                 if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
                                     node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
+                            
+                            # Add output filename for this write node
+                            nuke = nuke_utils.nuke_module()
+                            node_obj = nuke.toNode(write_node)
+                            if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
+                                output_path = self._get_node_pretty_path(node_obj)
+                                if output_path:
+                                    node_job_info["OutputFilename0"] = output_path
                             
                             # Specify which write node to render
                             node_plugin_info["WriteNodes"] = write_node
