@@ -46,7 +46,8 @@ class NukeSubmission:
                 use_proxy: bool = False,
                 write_nodes: Optional[List[str]] = None,
                 render_mode: str = "full",
-                use_dependencies: bool = False,
+                render_order_dependencies: bool = False,
+                job_dependencies: Optional[str] = None,
                 write_nodes_as_tasks: bool = False,
                 use_nodes_frame_list: bool = False,
                 script_is_open: bool = False):
@@ -56,7 +57,7 @@ class NukeSubmission:
             script_path: Path to the Nuke script (.nk file)
             frame_range: Frame range to render (e.g. "1-100", "f-l")
             output_path: Override for output path
-            job_name: Custom job name
+            job_name: Custom job name or template with tokens
             batch_name: Batch name for grouping jobs
             priority: Job priority (0-100)
             pool: Deadline pool
@@ -79,13 +80,14 @@ class NukeSubmission:
             use_proxy: Whether to use proxy mode
             write_nodes: List of write nodes to render
             render_mode: Render mode (full, proxy)
-            use_dependencies: Whether to create dependencies based on write node render order
+            render_order_dependencies: Whether to create dependencies based on write node render order
+            job_dependencies: Comma or space delimited job IDs to add as dependencies
             write_nodes_as_tasks: Whether to submit write nodes as separate tasks for the same job
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
             script_is_open: Whether the script is already open in the current Nuke session
         """
-        # Validate that use_dependencies and write_nodes_as_tasks are not both True
-        if use_dependencies and write_nodes_as_tasks:
+        # Validate that render_order_dependencies and write_nodes_as_tasks are not both True
+        if render_order_dependencies and write_nodes_as_tasks:
             raise SubmissionError("Cannot use both dependencies and write nodes as tasks features simultaneously")
         
         # Check if write_nodes_as_tasks is enabled with a custom frame range but use_nodes_frame_list is disabled
@@ -110,30 +112,41 @@ class NukeSubmission:
         self.chunk_size = chunk_size if chunk_size is not None else config.get('submission.chunk_size', 10)
         
         # Optional job properties
-        self.job_name = job_name if job_name else self.script_path.stem
-        self.batch_name = batch_name
-        self.department = department
-        self.comment = comment
+        # Store the script filename (with extension) for token replacement
+        self.script_filename = self.script_path.name
+        self.script_stem = self.script_path.stem
+        
+        # Store the batch_name template for later processing
+        self.batch_name_template = batch_name if batch_name else config.get('submission.batch_name_template', "{stem}")
+        # Process batch name tokens first (since job name might depend on batch name)
+        self.batch_name = self._replace_batch_name_tokens(self.batch_name_template)
+        
+        self.department = department if department is not None else config.get('submission.department')
+        self.comment = comment if comment is not None else config.get('submission.comment')
+        
+        # Store the job_name template for later processing
+        self.job_name_template = job_name if job_name else config.get('submission.job_name_template', "{batch} / {write} / {file}")
         
         # Nuke-specific options
-        self.use_nuke_x = use_nuke_x
-        self.use_batch_mode = use_batch_mode
-        self.render_threads = render_threads
-        self.use_gpu = use_gpu
-        self.gpu_override = gpu_override
-        self.max_ram_usage = max_ram_usage
-        self.enforce_render_order = enforce_render_order
-        self.min_stack_size = min_stack_size
-        self.continue_on_error = continue_on_error
-        self.reload_plugins = reload_plugins
-        self.use_profiler = use_profiler
-        self.profile_dir = profile_dir
-        self.use_proxy = use_proxy
+        self.use_nuke_x = use_nuke_x if isinstance(use_nuke_x, bool) else config.get('submission.use_nuke_x', False)
+        self.use_batch_mode = use_batch_mode if isinstance(use_batch_mode, bool) else config.get('submission.use_batch_mode', True)
+        self.render_threads = render_threads if render_threads is not None else config.get('submission.render_threads')
+        self.use_gpu = use_gpu if isinstance(use_gpu, bool) else config.get('submission.use_gpu', False)
+        self.gpu_override = gpu_override if gpu_override is not None else config.get('submission.gpu_override')
+        self.max_ram_usage = max_ram_usage if max_ram_usage is not None else config.get('submission.max_ram_usage')
+        self.enforce_render_order = enforce_render_order if isinstance(enforce_render_order, bool) else config.get('submission.enforce_render_order', True)
+        self.min_stack_size = min_stack_size if min_stack_size is not None else config.get('submission.min_stack_size')
+        self.continue_on_error = continue_on_error if isinstance(continue_on_error, bool) else config.get('submission.continue_on_error', False)
+        self.reload_plugins = reload_plugins if isinstance(reload_plugins, bool) else config.get('submission.reload_plugins', False)
+        self.use_profiler = use_profiler if isinstance(use_profiler, bool) else config.get('submission.use_profiler', False)
+        self.profile_dir = profile_dir if profile_dir is not None else config.get('submission.profile_dir')
+        self.use_proxy = use_proxy if isinstance(use_proxy, bool) else config.get('submission.use_proxy', False)
         self.write_nodes = write_nodes
-        self.render_mode = render_mode
-        self.use_dependencies = use_dependencies
-        self.write_nodes_as_tasks = write_nodes_as_tasks
-        self.use_nodes_frame_list = use_nodes_frame_list
+        self.render_mode = render_mode if render_mode else config.get('submission.render_mode', 'full')
+        self.render_order_dependencies = render_order_dependencies if isinstance(render_order_dependencies, bool) else config.get('submission.render_order_dependencies', False)
+        self.job_dependencies = job_dependencies
+        self.write_nodes_as_tasks = write_nodes_as_tasks if isinstance(write_nodes_as_tasks, bool) else config.get('submission.write_nodes_as_tasks', False)
+        self.use_nodes_frame_list = use_nodes_frame_list if isinstance(use_nodes_frame_list, bool) else config.get('submission.use_nodes_frame_list', False)
         self.script_is_open = script_is_open
         
         # Initialize frame range
@@ -160,7 +173,117 @@ class NukeSubmission:
         else:
             # Get frame range from Nuke script
             self._get_frame_range_from_nuke()
-    
+        
+        # For job_name we'll do the replacement later when we have access to more information
+
+    def _replace_job_name_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+        """Replace tokens in job name template.
+        
+        Supported tokens:
+        - {stem}, {basestem}, {base_stem}: Script name without extension
+        - {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}: Full script name with extension
+        - {b}, {bn}, {batch}, {batchname}, {batch_name}: Batch name
+        - {w}, {wn}, {writenode}, {write}, {write_node}, {write_name}: Write node name
+        - {o}, {fn}, {file}, {filename}, {file_name}, {output}: Output filename
+        - {r}, {ro}, {renderorder}, {render_order}: Render order
+        - {x}, {f}, {fr}, {range}, {framerange}: Frame range
+
+        Args:
+            template: Job name template with tokens
+            write_node: Specific write node to use for token replacement
+
+        Returns:
+            Job name with tokens replaced
+        """
+        import nuke
+        
+        # Start with the template
+        job_name = template
+        
+        # Batch name tokens
+        batch_name_tokens = ["{b}", "{bn}", "{batch}", "{batchname}", "{batch_name}"]
+        for token in batch_name_tokens:
+            job_name = job_name.replace(token, self.batch_name)
+            
+        # Script stem tokens (without extension)
+        stem_tokens = ["{stem}", "{basestem}", "{base_stem}"]
+        for token in stem_tokens:
+            job_name = job_name.replace(token, self.script_stem)
+        
+        # Full script name tokens (with extension)
+        script_name_tokens = ["{s}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
+        for token in script_name_tokens:
+            job_name = job_name.replace(token, self.script_filename)
+        
+        # Frame range tokens
+        frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
+        for token in frame_range_tokens:
+            job_name = job_name.replace(token, self.frame_range)
+            
+        # If we have a specific write node, we can replace write node related tokens
+        if write_node:
+            node = nuke.toNode(write_node)
+            if node and node.Class() == "Write":
+                # Write node name tokens
+                write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
+                for token in write_node_tokens:
+                    job_name = job_name.replace(token, write_node)
+                
+                # Render order tokens
+                render_order = "0"
+                if 'render_order' in node.knobs():
+                    render_order = str(int(node['render_order'].value()))
+                
+                render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
+                for token in render_order_tokens:
+                    job_name = job_name.replace(token, render_order)
+                
+                # Output filename tokens
+                output_file = ""
+                try:
+                    # Try to get the node's file path
+                    if 'file' in node.knobs():
+                        # Evaluate the file knob to get the actual path
+                        output_file = node['file'].evaluate()
+                        # Get just the filename without the directory path
+                        output_filename = os.path.basename(output_file)
+                        
+                        output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
+                        for token in output_tokens:
+                            job_name = job_name.replace(token, output_filename)
+                except:
+                    logger.warning(f"Failed to get output filename for write node {write_node}")
+        
+        return job_name
+
+    def _replace_batch_name_tokens(self, template: str) -> str:
+        """Replace tokens in batch name template.
+        
+        Supported tokens:
+        - {stem}, {basestem}, {base_stem}: Script name without extension (e.g., 'renderWithDeadline_v001')
+        - {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}: Full script name with extension (e.g., 'renderWithDeadline_v001.nk')
+
+        Args:
+            template: Batch name template with tokens
+
+        Returns:
+            Batch name with tokens replaced
+        """
+        # Start with the template
+        batch_name = template
+        
+        # Script stem tokens (without extension)
+        stem_tokens = ["{stem}", "{basestem}", "{base_stem}"]
+        for token in stem_tokens:
+            batch_name = batch_name.replace(token, self.script_stem)
+        
+        # Full script name tokens (with extension)
+        script_name_tokens = ["{s}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
+        for token in script_name_tokens:
+            batch_name = batch_name.replace(token, self.script_filename)
+        
+        return batch_name
+
     def _ensure_nuke_available(self) -> None:
         """Ensure that Nuke API is available.
         
@@ -209,6 +332,12 @@ class NukeSubmission:
         Returns:
             Dictionary containing job information
         """
+        # Process job_name with tokens if it's for a specific write node
+        if self.write_nodes and len(self.write_nodes) == 1:
+            self.job_name = self._replace_job_name_tokens(self.job_name_template, self.write_nodes[0])
+        else:
+            self.job_name = self._replace_job_name_tokens(self.job_name_template)
+            
         job_info = {
             "Name": self.job_name,
             "Plugin": "Nuke",
@@ -234,6 +363,16 @@ class NukeSubmission:
             
             # Set chunk size to 1 to ensure each task processes one write node
             job_info["ChunkSize"] = 1
+        
+        # Add user-specified job dependencies if any
+        if self.job_dependencies:
+            # Parse dependencies (can be comma or space separated)
+            dep_list = re.split(r'[,\s]+', self.job_dependencies.strip())
+            
+            # Add each dependency with proper indexing
+            for i, dep_id in enumerate(dep_list):
+                if dep_id:  # Skip empty strings
+                    job_info[f"JobDependency{i}"] = dep_id
         
         return job_info
     
@@ -308,7 +447,7 @@ class NukeSubmission:
             # If using node's frame list, set the flag in plugin info
             if self.use_nodes_frame_list:
                 plugin_info["UseNodeFrameList"] = "1"
-        elif self.write_nodes and not self.use_dependencies:
+        elif self.write_nodes and not self.render_order_dependencies:
             # For regular submission with specific write nodes
             plugin_info["WriteNodes"] = ",".join(self.write_nodes)
             
@@ -463,7 +602,7 @@ class NukeSubmission:
                 return job_id
             
             # If using dependencies and we need to handle write nodes with different render orders
-            elif self.use_dependencies and self.write_nodes and len(self.write_nodes) > 1:
+            elif self.render_order_dependencies and self.write_nodes and len(self.write_nodes) > 1:
                 # Parse the Nuke script for write nodes and their render orders
                 write_nodes_by_order = self._get_write_nodes_by_render_order()
                 
@@ -478,6 +617,11 @@ class NukeSubmission:
                 previous_job_ids = []
                 job_id = None
                 
+                # Count existing dependencies from the user-specified ones
+                dependency_count = 0
+                if self.job_dependencies:
+                    dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
+                
                 for render_order in sorted(write_nodes_by_order.keys()):
                     current_job_ids = []
                     
@@ -488,7 +632,7 @@ class NukeSubmission:
                         node_plugin_info = plugin_info.copy()
                         
                         # Update job name to include write node
-                        node_job_info["Name"] = f"{self.job_name} - {write_node}"
+                        node_job_info["Name"] = self._replace_job_name_tokens(self.job_name_template, write_node)
                         
                         # Specify which write node to render
                         node_plugin_info["WriteNodes"] = write_node
@@ -500,9 +644,9 @@ class NukeSubmission:
                         
                         # Set dependencies if we have previous jobs
                         if previous_job_ids:
-                            # Set dependencies as individual entries, not as a list
+                            # Set dependencies as individual entries, with index continuing from user dependencies
                             for i, dep_id in enumerate(previous_job_ids):
-                                node_job_info[f"JobDependency{i}"] = dep_id
+                                node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
                             
                         # Submit to Deadline
                         job_id = deadline.submit_job(node_job_info, node_plugin_info)

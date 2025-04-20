@@ -32,30 +32,7 @@ class DeadlineConnection:
         
         # For command line, verify the command path exists - but only if we're using command line
         if not self.use_web_service:
-            # Try to find it in DEADLINE_PATH
-            deadline_bin = ""
-            try:
-                deadline_bin = os.environ['DEADLINE_PATH']
-            except KeyError:
-                # If the error is a key error it means that DEADLINE_PATH is not set
-                # However Deadline command may be in the PATH or on OSX it could be in the file /Users/Shared/Thinkbox/DEADLINE_PATH
-                pass
-                
-            # On OSX, we look for the DEADLINE_PATH file if the environment variable does not exist.
-            if deadline_bin == "" and os.path.exists("/Users/Shared/Thinkbox/DEADLINE_PATH"):
-                with open("/Users/Shared/Thinkbox/DEADLINE_PATH") as f:
-                    deadline_bin = f.read().strip()
-
-            if deadline_bin:
-                self._command_path = os.path.join(deadline_bin, "deadlinecommand")
-                if sys.platform == 'win32':
-                    self._command_path += '.exe'
-            
-            if not self._command_path or not os.path.exists(self._command_path):
-                raise DeadlineError(
-                    "Could not find deadlinecommand. Please ensure Deadline is installed "
-                    "and DEADLINE_PATH environment variable is set correctly."
-                )
+            self._setup_command_line()
     
     def ensure_connected(self):
         """Ensure connection is initialized."""
@@ -71,10 +48,17 @@ class DeadlineConnection:
         try:
             from Deadline.DeadlineConnect import DeadlineCon as Connect
         except ImportError:
-            raise DeadlineError(
-                "Failed to import Deadline Web Service API. "
-                "Please ensure Deadline is installed and the Python path is configured correctly."
-            )
+            if config.get('deadline.commandline_on_fail', True):
+                logger.warning("Failed to import Deadline Web Service API. Falling back to command line.")
+                self._setup_command_line()
+                self.use_web_service = False
+                self._init_command_line()
+                return
+            else:
+                raise DeadlineError(
+                    "Failed to import Deadline Web Service API. "
+                    "Please ensure Deadline is installed and the Python path is configured correctly."
+                )
         
         host = config.get('deadline.host', 'localhost')
         port = config.get('deadline.port', 8081)
@@ -98,10 +82,16 @@ class DeadlineConnection:
             
             # Test connection
             self._web_client.Groups.GetGroupNames()
+            logger.info("Successfully connected to Deadline Web Service")
         except Exception as e:
-            raise DeadlineError(f"Failed to connect to Deadline Web Service: {e}")
-            
-        logger.info("Successfully connected to Deadline Web Service")
+            if config.get('deadline.commandline_on_fail', True):
+                logger.warning(f"Failed to connect to Deadline Web Service: {e}. Falling back to command line.")
+                self._setup_command_line()
+                self.use_web_service = False
+                self._init_command_line()
+                return
+            else:
+                raise DeadlineError(f"Failed to connect to Deadline Web Service: {e}")
     
     def _init_command_line(self) -> None:
         """Initialize command-line interface."""
@@ -330,6 +320,32 @@ class DeadlineConnection:
                         os.unlink(plugin_info_path)
                     except Exception as e:
                         logger.warning(f"Failed to clean up plugin info file {plugin_info_path}: {e}")
+
+    def _setup_command_line(self) -> None:
+        """Set up command line path for fallback."""
+        # Try to find it in DEADLINE_PATH
+        deadline_bin = ""
+        try:
+            deadline_bin = os.environ['DEADLINE_PATH']
+        except KeyError:
+            # If the error is a key error it means that DEADLINE_PATH is not set
+            pass
+            
+        # On OSX, we look for the DEADLINE_PATH file if the environment variable does not exist.
+        if deadline_bin == "" and os.path.exists("/Users/Shared/Thinkbox/DEADLINE_PATH"):
+            with open("/Users/Shared/Thinkbox/DEADLINE_PATH") as f:
+                deadline_bin = f.read().strip()
+
+        if deadline_bin:
+            self._command_path = os.path.join(deadline_bin, "deadlinecommand")
+            if sys.platform == 'win32':
+                self._command_path += '.exe'
+        
+        if not self._command_path or not os.path.exists(self._command_path):
+            raise DeadlineError(
+                "Could not find deadlinecommand. Please ensure Deadline is installed "
+                "and DEADLINE_PATH environment variable is set correctly."
+            )
 
 # Global connection instance - but don't initialize it yet
 _connection = None

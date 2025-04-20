@@ -43,6 +43,7 @@ class Config:
             'ssl': False,
             'ssl_cert': None,  # Path to SSL certificate
             'timeout': 30,
+            'commandline_on_fail': True,  # Whether to use command-line if web service fails
             
             # Command-line configuration
             'command_path': None,  # Will be auto-detected from DEADLINE_PATH
