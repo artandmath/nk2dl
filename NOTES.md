@@ -34,8 +34,9 @@ job_id = submit_nuke_script(
     render_threads=16,
     use_gpu=True,
     render_order_dependencies=True,
-    write_nodes=["Write1","Write2","Write3"],
+    write_nodes=["Write1","Write2","Write3","Write4","Write5"],
     use_nodes_frame_list=True,
+    continue_on_error=True
 )
 
 

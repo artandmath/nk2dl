@@ -33,7 +33,14 @@ def get_nuke_install_path():
     nuke_install_path = os.environ.get("NUKE_INSTALL_PATH", "")
     
     if not nuke_install_path:
-        default_path = "C:\\Program Files\\Nuke15.1v1" if platform.system() == "Windows" else "/usr/local/Nuke*"
+        system = platform.system()
+        if system == "Windows":
+            default_path = "C:\\Program Files\\Nuke15.2v1"
+        elif system == "Darwin":  # macOS
+            default_path = "/Applications/Nuke15.2/Nuke15.2v1.app/Contents/MacOS/Nuke15.2"
+        else:
+            default_path = "/opt/Nuke15.2v1/Nuke15.2"
+            
         print(f"\nNuke installation path not set.")
         print(f"Default path: {default_path}")
         user_input = input("Enter Nuke installation path (press Enter to use default): ").strip()
@@ -427,7 +434,7 @@ def main():
     if platform.system() == "Windows":
         print(f"    CMD: .venv\\Scripts\\activate.bat")
         print(f"    PowerShell: .venv\\Scripts\\Activate-nk2dl.ps1")
-]    else:
+    else:
         print(f"    source .venv/bin/activate")
     
     print("\nAfter activation, the following environment variables will be set:")

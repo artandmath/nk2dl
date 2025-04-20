@@ -26,6 +26,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
+                <page id="uk.co.thefoundry.scripteditor.1"/>
             </dock>
         </splitter>
     </window>
@@ -56,6 +57,7 @@ Root {
   __default__ {
    shotcode ABC_0010 { { vp:type List } { vp:options { ABC_0010 ABC_0020 XYZ_0010 XYZ_0020 XYZ_0030 } } { vp:label "shot code" } }
    res wh { { vp:type List } { vp:options { wh hh qh } } { vp:label resolution } }
+   variable_of_string_type "this is a string"
   }
   __panel__ {
    tab {Main}
@@ -120,6 +122,59 @@ Root {
 }
 CheckerBoard2 {
  inputs 0
+ name CheckerBoard1
+ xpos -884
+ ypos -140
+}
+CameraShake3 {
+ name CameraShake3_1
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -884
+ ypos -37
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings1
+ xpos -884
+ ypos 37
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+FrameRange {
+ first_frame 1001
+ last_frame 1100
+ time ""
+ name FrameRange2
+ xpos -894
+ ypos 64
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop1
+ xpos -884
+ ypos 105
+}
+Write {
+ channels rgba
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames01_v001_%\{res\}.####.exr"
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 10
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write1
+ xpos -884
+ ypos 164
+}
+CheckerBoard2 {
+ inputs 0
  name CheckerBoard2
  xpos -699
  ypos -142
@@ -173,23 +228,23 @@ Write {
 }
 CheckerBoard2 {
  inputs 0
- name CheckerBoard1
- xpos -884
- ypos -140
+ name CheckerBoard3
+ xpos -310
+ ypos -142
 }
 CameraShake3 {
- name CameraShake3_1
+ name CameraShake3_3
  label "\[value amplitude] px at \[value frequency]"
- xpos -884
- ypos -37
+ xpos -310
+ ypos -39
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
 NoOp {
- name DeadlineSettings1
- xpos -884
- ypos 37
+ name DeadlineSettings4
+ xpos -310
+ ypos 35
  addUserKnob {20 User}
  addUserKnob {7 poop}
  addUserKnob {3 JobInfoChunkSize}
@@ -198,38 +253,94 @@ NoOp {
 }
 FrameRange {
  first_frame 1001
- last_frame 1100
+ last_frame 1200
  time ""
- name FrameRange2
- xpos -894
+ name FrameRange4
+ xpos -307
+ ypos 69
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop4
+ xpos -310
+ ypos 103
+}
+Write {
+ channels rgba
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames04_v001_%\{res\}.####.exr"
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 20
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write4
+ xpos -310
+ ypos 162
+}
+CheckerBoard2 {
+ inputs 0
+ name CheckerBoard4
+ xpos -147
+ ypos -147
+}
+CameraShake3 {
+ name CameraShake3_4
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -147
+ ypos -44
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings5
+ xpos -147
+ ypos 30
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+FrameRange {
+ first_frame 1001
+ last_frame 1200
+ time ""
+ name FrameRange5
+ xpos -144
  ypos 64
 }
 Crop {
  box {0 0 1920 1080}
- name Crop1
- xpos -884
- ypos 105
+ name Crop5
+ xpos -147
+ ypos 98
 }
 Write {
  channels rgba
- file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames01_v001_%\{res\}.####.exr"
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames05_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
- render_order 10
+ render_order 40
  ocioColorspace scene_linear
  display ACES
  view Rec.709
- name Write1
- xpos -884
- ypos 164
+ name Write5
+ xpos -147
+ ypos 157
 }
 Read {
  inputs 0
  file_type exr
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.%04d.exr
- last 100
- origlast 100
+ file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/ABC_0010_testFrames01_v001_wh.####.exr
+ format "1920 1080 0 0 1920 1080 1 HD_1080"
+ first 1001
+ last 1200
+ origfirst 1001
+ origlast 1200
  origset true
  name Read1
  xpos -492
@@ -281,13 +392,15 @@ Write {
  view Rec.709
  name Write3
  xpos -492
- ypos 163
+ ypos 230
 }
 Viewer {
+ inputs 0
  frame_range 1001-1001
  viewerProcess "Rec.709 (ACES)"
  monitorOutNDISenderName "Nuke - renderWithDeadline - Viewer1"
  name Viewer1
- xpos -512
- ypos 283
+ selected true
+ xpos -492
+ ypos 319
 }
