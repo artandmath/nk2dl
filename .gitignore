@@ -38,7 +38,7 @@ venv.bak/
 
 # Nuke
 *.nk~
-*.autosave
+*.autosave*
 *.tmp
 *.crash
 .nuke/

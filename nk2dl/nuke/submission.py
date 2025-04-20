@@ -5,9 +5,9 @@ This module provides functionality for submitting Nuke scripts to Deadline rende
 
 import os
 import json
-import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional, Union, Tuple
+import re
 
 from ..common.config import config
 from ..common.errors import SubmissionError
@@ -47,7 +47,9 @@ class NukeSubmission:
                 write_nodes: Optional[List[str]] = None,
                 render_mode: str = "full",
                 use_dependencies: bool = False,
-                write_nodes_as_tasks: bool = False):
+                write_nodes_as_tasks: bool = False,
+                use_nodes_frame_list: bool = False,
+                script_is_open: bool = False):
         """Initialize a Nuke script submission.
         
         Args:
@@ -79,10 +81,20 @@ class NukeSubmission:
             render_mode: Render mode (full, proxy)
             use_dependencies: Whether to create dependencies based on write node render order
             write_nodes_as_tasks: Whether to submit write nodes as separate tasks for the same job
+            use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
+            script_is_open: Whether the script is already open in the current Nuke session
         """
         # Validate that use_dependencies and write_nodes_as_tasks are not both True
         if use_dependencies and write_nodes_as_tasks:
             raise SubmissionError("Cannot use both dependencies and write nodes as tasks features simultaneously")
+        
+        # Check if write_nodes_as_tasks is enabled with a custom frame range but use_nodes_frame_list is disabled
+        if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not frame_range.lower() in ['f-l', 'first-last', 'f', 'l', 'first', 'last', 'i', 'input', 'h', 'hero']:
+            raise SubmissionError("Custom frame list is not supported when submitting write nodes as separate tasks. "
+                                 "Please use global (f-l) or input (i) frame ranges, or enable use_nodes_frame_list.")
+            
+        # Check if we're running inside Nuke - this is required
+        self._ensure_nuke_available()
             
         self.script_path = Path(script_path)
         if not self.script_path.exists():
@@ -121,16 +133,24 @@ class NukeSubmission:
         self.render_mode = render_mode
         self.use_dependencies = use_dependencies
         self.write_nodes_as_tasks = write_nodes_as_tasks
+        self.use_nodes_frame_list = use_nodes_frame_list
+        self.script_is_open = script_is_open
         
         # Initialize frame range
         if frame_range:
             self.fr = FrameRange(frame_range)
-            # If frame range contains tokens, try to substitute them from script
+            # If frame range contains tokens, try to substitute them
             if self.fr.has_tokens:
                 try:
-                    with open(self.script_path, 'r') as f:
-                        script_content = f.read()
-                    self.fr.substitute_tokens_from_script(script_content)
+                    # For input token, we need to specify the write node
+                    if 'i' in frame_range or 'input' in frame_range:
+                        if write_nodes and len(write_nodes) == 1:
+                            self._get_frame_range_from_nuke(write_nodes[0])
+                        else:
+                            # Can't determine input frame range without a specific write node
+                            raise SubmissionError("The 'i/input' token requires exactly one write node to be specified")
+                    else:
+                        self._get_frame_range_from_nuke()
                 except Exception as e:
                     logger.warning(f"Failed to substitute frame range tokens: {e}")
                     
@@ -138,24 +158,50 @@ class NukeSubmission:
             if not self.fr.is_valid_syntax():
                 raise SubmissionError(f"Invalid frame range syntax: {frame_range}")
         else:
-            # Get frame range from script if not specified
-            try:
-                with open(self.script_path, 'r') as f:
-                    script_content = f.read()
-                    
-                # Extract frame range from script
-                first_frame_match = re.search(r'first_frame\s+(\d+)', script_content)
-                last_frame_match = re.search(r'last_frame\s+(\d+)', script_content)
+            # Get frame range from Nuke script
+            self._get_frame_range_from_nuke()
+    
+    def _ensure_nuke_available(self) -> None:
+        """Ensure that Nuke API is available.
+        
+        Raises:
+            SubmissionError: If Nuke API is not available
+        """
+        try:
+            import nuke
+        except (ImportError, ModuleNotFoundError):
+            raise SubmissionError(f"Module '{__name__}' must be run from within Nuke or nuke should be available in the system path. "
+                                  f"The Nuke Python API is required.")
+    
+    def _get_frame_range_from_nuke(self, write_node_name: Optional[str] = None) -> None:
+        """Get frame range from Nuke script using Nuke API.
+        
+        Args:
+            write_node_name: Optional name of a write node for 'input' token
+        """
+        import nuke
+        
+        try:
+            if not self.script_is_open:
+                # Open the script
+                nuke.scriptOpen(str(self.script_path.absolute()))
+            
+            # Use token substitution with the write node if specified
+            if self.fr.has_tokens:
+                self.fr.substitute_tokens_from_nuke(write_node_name)
+                self.frame_range = str(self.fr)
+            else:
+                # Get frame range from root
+                root = nuke.root()
+                first_frame = int(root['first_frame'].value())
+                last_frame = int(root['last_frame'].value())
                 
-                if first_frame_match and last_frame_match:
-                    first_frame = int(first_frame_match.group(1))
-                    last_frame = int(last_frame_match.group(1))
-                    self.frame_range = f"{first_frame}-{last_frame}"
-                    self.fr = FrameRange(self.frame_range)
-                else:
-                    raise SubmissionError("Could not determine frame range from script. Please specify a frame range.")
-            except Exception as e:
-                raise SubmissionError(f"Failed to get frame range from script: {e}")
+                self.frame_range = f"{first_frame}-{last_frame}"
+                self.fr = FrameRange(self.frame_range)
+            
+            logger.debug(f"Got frame range from Nuke API: {self.frame_range}")
+        except Exception as e:
+            raise SubmissionError(f"Failed to get frame range from Nuke API: {e}")
     
     def prepare_job_info(self) -> Dict[str, Any]:
         """Prepare job information for Deadline submission.
@@ -180,24 +226,27 @@ class NukeSubmission:
             job_info["Department"] = self.department
         if self.comment:
             job_info["Comment"] = self.comment
+            
+        # If using write nodes as tasks, set special frame range
+        if self.write_nodes_as_tasks and self.write_nodes:
+            # When using write nodes as tasks, frames should be 0 to (number of write nodes - 1)
+            job_info["Frames"] = f"0-{len(self.write_nodes) - 1}"
+            
+            # Set chunk size to 1 to ensure each task processes one write node
+            job_info["ChunkSize"] = 1
         
         return job_info
     
     def get_nuke_version(self) -> str:
-        """Get the current Nuke version if running inside Nuke.
+        """Get the current Nuke version.
         
         Returns:
             Version string in format "MAJOR.MINOR" (e.g. "13.0")
         """
-        try:
-            import nuke
-            major = nuke.NUKE_VERSION_MAJOR
-            minor = nuke.NUKE_VERSION_MINOR
-            return f"{major}.{minor}"
-        except (ImportError, AttributeError):
-            # Not running inside Nuke or can't get version
-            logger.debug("Could not detect Nuke version, using default")
-            return "10.0"  # Default version
+        import nuke
+        major = nuke.NUKE_VERSION_MAJOR
+        minor = nuke.NUKE_VERSION_MINOR
+        return f"{major}.{minor}"
     
     def prepare_plugin_info(self) -> Dict[str, Any]:
         """Prepare plugin information for Deadline submission.
@@ -207,7 +256,7 @@ class NukeSubmission:
         """
         plugin_info = {
             "SceneFile": str(self.script_path.absolute()),
-            "Version": self.get_nuke_version(),  # Get Nuke version programmatically
+            "Version": self.get_nuke_version(),
             "UseNukeX": "1" if self.use_nuke_x else "0",
             "BatchMode": "1" if self.use_batch_mode else "0",
             "EnforceRenderOrder": "1" if self.enforce_render_order else "0",
@@ -237,7 +286,8 @@ class NukeSubmission:
         
         # Handle write nodes differently based on submission mode
         if self.write_nodes_as_tasks and self.write_nodes:
-            plugin_info["WriteNodesAsSeparateTasks"] = "1"
+            # Use WriteNodesAsSeparateJobs instead of WriteNodesAsSeparateTasks to match Thinkbox naming
+            plugin_info["WriteNodesAsSeparateJobs"] = "True"
             
             # Get write node frame ranges
             write_node_info = self._get_write_node_frame_ranges()
@@ -245,8 +295,19 @@ class NukeSubmission:
             # Add write node info to plugin info
             for i, (node_name, start_frame, end_frame) in enumerate(write_node_info):
                 plugin_info[f"WriteNode{i}"] = node_name
-                plugin_info[f"WriteNode{i}StartFrame"] = str(start_frame)
-                plugin_info[f"WriteNode{i}EndFrame"] = str(end_frame)
+                
+                # If using node's frame list
+                if self.use_nodes_frame_list:
+                    plugin_info[f"WriteNode{i}StartFrame"] = str(start_frame)
+                    plugin_info[f"WriteNode{i}EndFrame"] = str(end_frame)
+                else:
+                    # When not using node's frame list, use 0 for start and end frames like Thinkbox does
+                    plugin_info[f"WriteNode{i}StartFrame"] = "0"
+                    plugin_info[f"WriteNode{i}EndFrame"] = "0"
+                
+            # If using node's frame list, set the flag in plugin info
+            if self.use_nodes_frame_list:
+                plugin_info["UseNodeFrameList"] = "1"
         elif self.write_nodes and not self.use_dependencies:
             # For regular submission with specific write nodes
             plugin_info["WriteNodes"] = ",".join(self.write_nodes)
@@ -256,21 +317,40 @@ class NukeSubmission:
             
         return plugin_info
     
-    def _get_write_node_frame_ranges(self) -> List[tuple]:
-        """Get frame ranges for each write node.
+    def _get_write_node_frame_ranges(self) -> List[Tuple[str, int, int]]:
+        """Get frame ranges for each write node using Nuke API.
         
         Returns:
             List of tuples (node_name, start_frame, end_frame)
         """
+        import nuke
+        
         write_node_info = []
         
+        # Parse frame range to get default start and end frames
+        if '-' in self.frame_range:
+            parts = self.frame_range.split('-')
+            try:
+                default_start = int(parts[0])
+                default_end = int(parts[1])
+            except (ValueError, IndexError):
+                # If parsing fails, use reasonable defaults
+                default_start = 1
+                default_end = 100
+        else:
+            try:
+                # Single frame case
+                default_start = default_end = int(self.frame_range)
+            except ValueError:
+                # If parsing fails, use reasonable defaults
+                default_start = 1
+                default_end = 100
+        
         try:
-            with open(self.script_path, 'r') as f:
-                script_content = f.read()
-                
-            # Use fr.start_frame and fr.end_frame as defaults
-            default_start = self.fr.start_frame
-            default_end = self.fr.end_frame
+            # If the script is not currently open, we need to open it
+            if not self.script_is_open:
+                # Open the script
+                nuke.scriptOpen(str(self.script_path.absolute()))
             
             # Get write nodes by render order
             write_nodes_by_order = self._get_write_nodes_by_render_order()
@@ -280,18 +360,82 @@ class NukeSubmission:
             for render_order in sorted(write_nodes_by_order.keys()):
                 all_write_nodes.extend(write_nodes_by_order[render_order])
             
-            # For each write node, try to extract its frame range
-            # In a real implementation, this would use more sophisticated Nuke script parsing
-            # For now, we'll just use the global frame range for all write nodes
+            # For each write node, extract its frame range
             for node_name in all_write_nodes:
-                write_node_info.append((node_name, default_start, default_end))
+                node = nuke.toNode(node_name)
+                if node and node.Class() == "Write":
+                    # Check if we should use the node's frame range
+                    if self.use_nodes_frame_list and 'use_limit' in node.knobs() and node['use_limit'].value():
+                        # Get node's frame range from knobs
+                        if 'first' in node.knobs() and 'last' in node.knobs():
+                            node_start = int(node['first'].value())
+                            node_end = int(node['last'].value())
+                            write_node_info.append((node_name, node_start, node_end))
+                            continue
+                    # If not using node's frame range, try to get input frame range
+                    elif re.search(r'\b(i|input)\b', self.frame_range):
+                        try:
+                            # Get frame range from input
+                            node_start = node.firstFrame()
+                            node_end = node.lastFrame()
+                            write_node_info.append((node_name, node_start, node_end))
+                            continue
+                        except:
+                            # If we can't get input range, fall back to defaults
+                            pass
                 
-            return write_node_info
+                # Fall back to default frame range
+                write_node_info.append((node_name, default_start, default_end))
             
+            return write_node_info
         except Exception as e:
-            logger.warning(f"Failed to get write node frame ranges: {e}")
-            # Return empty list on error
-            return []
+            raise SubmissionError(f"Failed to get write node frame ranges: {e}")
+    
+    def _get_write_nodes_by_render_order(self) -> Dict[int, List[str]]:
+        """Get write nodes grouped by render order using Nuke API.
+        
+        Returns:
+            Dictionary mapping render orders to lists of write node names
+        """
+        import nuke
+        
+        write_nodes_by_order = {}
+        
+        try:
+            # If the script is not currently open, we need to open it
+            if not self.script_is_open:
+                # Open the script
+                nuke.scriptOpen(str(self.script_path.absolute()))
+            
+            # Find all Write nodes
+            for node in nuke.allNodes('Write'):
+                node_name = node.name()
+                
+                # Get render order, default to 0
+                render_order = 0
+                if 'render_order' in node.knobs():
+                    render_order = int(node['render_order'].value())
+                
+                # Add to dictionary
+                if render_order not in write_nodes_by_order:
+                    write_nodes_by_order[render_order] = []
+                write_nodes_by_order[render_order].append(node_name)
+            
+            # If we're filtering to specific write nodes, only keep those
+            if self.write_nodes:
+                write_nodes_set = set(self.write_nodes)
+                for order in list(write_nodes_by_order.keys()):
+                    write_nodes_by_order[order] = [
+                        node for node in write_nodes_by_order[order] 
+                        if node in write_nodes_set
+                    ]
+                    # Remove empty lists
+                    if not write_nodes_by_order[order]:
+                        del write_nodes_by_order[order]
+            
+            return write_nodes_by_order
+        except Exception as e:
+            raise SubmissionError(f"Failed to get write nodes by render order: {e}")    
     
     def submit(self) -> str:
         """Submit the Nuke script to Deadline.
@@ -323,6 +467,13 @@ class NukeSubmission:
                 # Parse the Nuke script for write nodes and their render orders
                 write_nodes_by_order = self._get_write_nodes_by_render_order()
                 
+                # Get write node frame ranges if use_nodes_frame_list is enabled
+                write_node_frames = {}
+                if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
+                    write_node_info = self._get_write_node_frame_ranges()
+                    for node_name, start_frame, end_frame in write_node_info:
+                        write_node_frames[node_name] = (start_frame, end_frame)
+                
                 # Process in ascending render order
                 previous_job_ids = []
                 job_id = None
@@ -341,6 +492,11 @@ class NukeSubmission:
                         
                         # Specify which write node to render
                         node_plugin_info["WriteNodes"] = write_node
+                        
+                        # Override frame range if use_nodes_frame_list is enabled and frame range is available
+                        if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
+                            start_frame, end_frame = write_node_frames[write_node]
+                            node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                         
                         # Set dependencies if we have previous jobs
                         if previous_job_ids:
@@ -365,66 +521,6 @@ class NukeSubmission:
                 
         except Exception as e:
             raise SubmissionError(f"Failed to submit job: {e}")
-            
-    def _get_write_nodes_by_render_order(self) -> Dict[int, List[str]]:
-        """Parse the Nuke script to get write nodes grouped by render order.
-        
-        Returns:
-            Dictionary mapping render orders to lists of write node names
-        """
-        write_nodes_by_order = {}
-        
-        try:
-            with open(self.script_path, 'r') as f:
-                script_content = f.read()
-                
-            # Find all Write nodes
-            # This is a simplified approach - a proper implementation would use Nuke Python API
-            # when available or more sophisticated parsing
-            write_node_pattern = r'Write \{(.*?)\}'
-            render_order_pattern = r'render_order\s+(\d+)'
-            name_pattern = r'name\s+([\w\d_]+)'
-            
-            for write_match in re.finditer(write_node_pattern, script_content, re.DOTALL):
-                write_node_text = write_match.group(1)
-                
-                # Get node name
-                name_match = re.search(name_pattern, write_node_text)
-                if not name_match:
-                    continue
-                node_name = name_match.group(1)
-                
-                # Get render order, default to 0
-                render_order = 0
-                render_order_match = re.search(render_order_pattern, write_node_text)
-                if render_order_match:
-                    render_order = int(render_order_match.group(1))
-                
-                # Add to dictionary
-                if render_order not in write_nodes_by_order:
-                    write_nodes_by_order[render_order] = []
-                write_nodes_by_order[render_order].append(node_name)
-            
-            # If we're filtering to specific write nodes, only keep those
-            if self.write_nodes:
-                write_nodes_set = set(self.write_nodes)
-                for order in write_nodes_by_order:
-                    write_nodes_by_order[order] = [
-                        node for node in write_nodes_by_order[order] 
-                        if node in write_nodes_set
-                    ]
-                    # Remove empty lists
-                    if not write_nodes_by_order[order]:
-                        del write_nodes_by_order[order]
-            
-            return write_nodes_by_order
-            
-        except Exception as e:
-            logger.warning(f"Failed to parse write nodes: {e}")
-            # Fall back to treating all nodes as render order 0
-            if self.write_nodes:
-                return {0: self.write_nodes}
-            return {0: []}
 
 
 def submit_nuke_script(script_path: str, **kwargs) -> str:

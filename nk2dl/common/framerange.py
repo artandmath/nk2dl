@@ -14,10 +14,11 @@ class FrameRange:
     - 9-18x2,100 (mixed stepped range and single frames)
     
     Tokens that can be substituted:
-    - f = first_frame
-    - m = middle_frame (the average of first and last frame)
-    - l = last_frame
-    - hero = hero_frames (comma separated list of frames)
+    - f or first = first_frame
+    - m or middle = middle_frame (the average of first and last frame)
+    - l or last = last_frame
+    - i or input = frame range from input of a write node
+    - h or hero = hero_frames (comma separated list of frames)
     
     Usage:
         # Create a frame range object
@@ -47,7 +48,7 @@ class FrameRange:
     FRAME_RANGE_PATTERN = fr'^({RANGE_PATTERN}|{SINGLE_PATTERN})(?:,({RANGE_PATTERN}|{SINGLE_PATTERN}))*$'
     
     # Token patterns
-    TOKEN_PATTERN = r'(f|m|l|hero)\b'
+    TOKEN_PATTERN = r'(f|first|m|middle|l|last|i|input|h|hero)\b'
     
     def __init__(self, frame_range_str: str = ""):
         """
@@ -96,15 +97,19 @@ class FrameRange:
     
     def substitute_tokens(self, first_frame: Optional[Union[int, float]] = None, 
                          last_frame: Optional[Union[int, float]] = None,
-                         hero_frames: Optional[str] = None) -> str:
+                         hero_frames: Optional[str] = None,
+                         input_first_frame: Optional[int] = None,
+                         input_last_frame: Optional[int] = None) -> str:
         """
         Substitute tokens in the frame range string with actual values.
         Only performs substitution if tokens are present.
         
         Args:
-            first_frame: Value to substitute for 'f' token
-            last_frame: Value to substitute for 'l' token
-            hero_frames: Value to substitute for 'hero' token
+            first_frame: Value to substitute for 'f/first' token
+            last_frame: Value to substitute for 'l/last' token
+            hero_frames: Value to substitute for 'h/hero' token
+            input_first_frame: Value to substitute for 'i/input' token (start frame)
+            input_last_frame: Value to substitute for 'i/input' token (end frame)
             
         Returns:
             str: Frame range string with tokens substituted
@@ -124,25 +129,37 @@ class FrameRange:
         # Substitute tokens
         if first_frame is not None:
             result = re.sub(r'\bf\b', str(int(first_frame)), result)
+            result = re.sub(r'\bfirst\b', str(int(first_frame)), result)
         
         if middle_frame is not None:
             result = re.sub(r'\bm\b', str(middle_frame), result)
+            result = re.sub(r'\bmiddle\b', str(middle_frame), result)
             
         if last_frame is not None:
             result = re.sub(r'\bl\b', str(int(last_frame)), result)
+            result = re.sub(r'\blast\b', str(int(last_frame)), result)
+            
+        if input_first_frame is not None and input_last_frame is not None:
+            input_range = f"{input_first_frame}-{input_last_frame}"
+            result = re.sub(r'\bi\b', input_range, result)
+            result = re.sub(r'\binput\b', input_range, result)
             
         if hero_frames is not None:
             normalized_hero_frames = self.normalize_hero_frames(hero_frames)
+            result = re.sub(r'\bh\b', normalized_hero_frames, result)
             result = re.sub(r'\bhero\b', normalized_hero_frames, result)
             
         self.processed_str = result
         return result
     
-    def substitute_tokens_from_nuke(self) -> str:
+    def substitute_tokens_from_nuke(self, write_node_name: Optional[str] = None) -> str:
         """
         Substitute tokens using values from Nuke environment.
         Only performs substitution if tokens are present.
         
+        Args:
+            write_node_name: Optional name of a write node to get input frame range from
+            
         Returns:
             str: Frame range string with tokens substituted
         
@@ -163,8 +180,22 @@ class FrameRange:
             hero_frames = None
             if 'heroFrames' in root.knobs():
                 hero_frames = root['heroFrames'].value()
+                
+            # Get input frame range if a write node is specified
+            input_first_frame = None
+            input_last_frame = None
+            if write_node_name and re.search(r'\b(i|input)\b', self.original_str):
+                write_node = nuke.toNode(write_node_name)
+                if write_node:
+                    try:
+                        input_first_frame = write_node.firstFrame()
+                        input_last_frame = write_node.lastFrame()
+                    except:
+                        # Fall back to global first/last if we can't get input range
+                        input_first_frame = first_frame
+                        input_last_frame = last_frame
             
-            return self.substitute_tokens(first_frame, last_frame, hero_frames)
+            return self.substitute_tokens(first_frame, last_frame, hero_frames, input_first_frame, input_last_frame)
         except ImportError:
             # Not in Nuke environment
             self.processed_str = self.original_str
@@ -194,6 +225,7 @@ class FrameRange:
         last_frame = int(last_frame_match.group(1)) if last_frame_match else None
         hero_frames = hero_frames_match.group(1).strip() if hero_frames_match else None
         
+        # We can't reliably extract input frame range from script content, so we'll leave it as None
         return self.substitute_tokens(first_frame, last_frame, hero_frames)
     
     def expand_range(self) -> List[int]:

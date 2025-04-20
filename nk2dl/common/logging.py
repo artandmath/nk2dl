@@ -50,6 +50,10 @@ def setup_logging(name: Optional[str] = None) -> logging.Logger:
         
         # Set log level
         logger.setLevel(getattr(logging, log_level.upper()))
+        
+        # Prevent propagation to root logger to avoid duplicate messages
+        if name:
+            logger.propagate = False
     
     return logger
 

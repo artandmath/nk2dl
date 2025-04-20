@@ -22,10 +22,11 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                 </dock>
             </splitter>
             <split size="615"/>
-            <dock id="" activePageId="Properties.1">
+            <dock id="" activePageId="uk.co.thefoundry.scripteditor.1">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
+                <page id="uk.co.thefoundry.scripteditor.1"/>
             </dock>
         </splitter>
     </window>
@@ -34,7 +35,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 Root {
  inputs 0
  name C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
- frame 6
+ frame 1001
  first_frame 1001
  last_frame 1100
  lock_range true
@@ -54,9 +55,9 @@ Root {
  floatLut scene_linear
  addUserKnob {20 Deadline}
  addUserKnob {1 FrameListMode l frameListMode}
- FrameListMode Custom
+ FrameListMode Global
  addUserKnob {1 CustomFrameList l customFrameList}
- CustomFrameList 1-100
+ CustomFrameList 1001-1100
  addUserKnob {1 Department l department}
  addUserKnob {1 Pool l pool}
  Pool nuke
@@ -119,12 +120,12 @@ Read {
  xpos -492
  ypos -139
 }
-set N3c3ed800 [stack 0]
+set N5315800 [stack 0]
 Viewer {
- frame 6
- frame_range 1-100
+ frame 1001
+ frame_range 1001-1001
  viewerProcess "Rec.709 (ACES)"
- monitorOutNDISenderName "Nuke - test - Viewer1"
+ monitorOutNDISenderName "Nuke - renderWithDeadline - Viewer1"
  name Viewer1
  xpos -40
  ypos -9
@@ -167,6 +168,8 @@ Write {
  compression DWAA
  first_part rgba
  render_order 10
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -213,6 +216,8 @@ Write {
  compression DWAA
  first_part rgba
  render_order 10
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -221,7 +226,7 @@ Write {
  xpos -699
  ypos 162
 }
-push $N3c3ed800
+push $N5315800
 Grade {
  white {1 0 1 1}
  white_panelDropped true
@@ -239,6 +244,14 @@ NoOp {
  JobInfoChunkSize 5
  addUserKnob {3 PluginInfoRamUse}
 }
+FrameRange {
+ first_frame 1001
+ last_frame 1050
+ time ""
+ name FrameRange1
+ xpos -489
+ ypos 64
+}
 Crop {
  box {0 0 1920 1080}
  name Crop2
@@ -252,11 +265,14 @@ Write {
  compression DWAA
  first_part rgba
  render_order 20
+ first {{first_frame}}
+ last {{last_frame}}
+ use_limit true
  ocioColorspace scene_linear
  display ACES
  view Rec.709
  name Write3
  selected true
  xpos -492
- ypos 165
+ ypos 163
 }

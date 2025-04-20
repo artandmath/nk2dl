@@ -198,7 +198,7 @@ class DeadlineConnection:
         
         if self.use_web_service:
             # Submit via web service using direct JSON API
-            logger.debug(f"Submitting job via web service")
+            logger.info(f"Submitting job via web service")
 
             try:
                 import json
@@ -210,8 +210,7 @@ class DeadlineConnection:
                 }
                 
                 # Log the JSON payload for debugging
-                logger.debug(f"Submitting job JSON payload:\n{json.dumps(payload, indent=2)}")
-                
+                logger.info(f"Submitting job JSON payload:\n{json.dumps(payload, indent=2)}")
                 # Submit job with correct arguments to the API
                 job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
                 
@@ -228,22 +227,25 @@ class DeadlineConnection:
                     # Try to find any ID property in the response
                     if isinstance(job_response, dict):
                         # Log the response for debugging
-                        logger.debug(f"Unexpected job response format: {job_response}")
+                        logger.debug(f"Retrieving job ID from response: {job_response}")
                         # Look for '_id' anywhere in the dictionary
                         if '_id' in job_response:
                             job_id = job_response['_id']
+                            logger.debug(f"Found job ID in response: {job_id}")
+                            
                         else:
                             raise DeadlineError(f"Could not find job ID in response: {job_response}")
                     else:
                         raise DeadlineError(f"Unexpected job response format: {job_response}")
                 
+                logger.info(f"Job submitted successfully with ID: {job_id}")
                 return job_id  # Return just the string ID
                 
             except Exception as e:
                 raise DeadlineError(f"Failed to submit job via web service: {e}")
         else:
             # Command line submission using files
-            logger.debug(f"Submitting job via deadline command line")
+            logger.info(f"Submitting job via deadline command line")
 
             import tempfile
             job_info_path = None
@@ -266,8 +268,8 @@ class DeadlineConnection:
                 with open(plugin_info_path, 'r') as f:
                     plugin_data = f.read()
                     
-                logger.debug(f"Submitting job info:\n{job_data}")
-                logger.debug(f"Submitting plugin info:\n{plugin_data}")
+                logger.info(f"Submitting job info:\n{job_data}")
+                logger.info(f"Submitting plugin info:\n{plugin_data}")
                 
                 # Submit via command line
                 if "dotnet" in self._command_path:
@@ -302,10 +304,14 @@ class DeadlineConnection:
                     if errors and "error" in errors.lower():
                         raise DeadlineError(f"Command line error: {errors}")
                     
+                    # Log the response for debugging
+                    logger.debug(f"Retrieving job ID from response: {output}")
                     # Parse job ID from output
                     for line in output.splitlines():
                         if line.startswith("JobID="):
-                            return line[6:].strip()
+                            job_id = line[6:].strip()
+                            logger.info(f"Job submitted successfully with ID: {job_id}")
+                            return job_id
                             
                     raise DeadlineError("No job ID found in submission output")
                     

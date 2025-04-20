@@ -28,10 +28,13 @@ from nk2dl.nuke import submit_nuke_script
 job_id = submit_nuke_script(
     "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk",
     frame_range="1-100",
+    chunk_size=50,
     priority=75,
     use_nuke_x=True,
     render_threads=16,
     use_gpu=True,
     use_dependencies=True,
-    write_nodes=["Write1","Write2","Write3"]
+    write_nodes=["Write1","Write2","Write3"],
+    write_nodes_as_tasks=True,
+    use_nodes_frame_list=True
 )
