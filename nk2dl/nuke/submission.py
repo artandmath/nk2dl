@@ -190,24 +190,24 @@ class NukeSubmission:
             self.fr = FrameRange(frame_range)
             # If frame range contains tokens, try to substitute them
             if self.fr.has_tokens:
+                # First ensure we can query the script
+                nuke = self._ensure_script_can_be_queried()
+                
                 try:
-                    # For input token, we need to specify the write node
-                    if 'i' in frame_range or 'input' in frame_range:
+                    # Only substitute tokens if it's not "i" or "input"
+                    if not re.search(r'\b(i|input)\b', frame_range):
+                        self._get_frame_range_from_nuke()
+                    else:
+                        # For input token, we need to specify the write node
                         if write_nodes and len(write_nodes) == 1:
                             self._get_frame_range_from_nuke(write_nodes[0])
                         else:
-                            # Can't determine input frame range without a specific write node
-                            raise SubmissionError("The 'i/input' token requires exactly one write node to be specified. "
-                                                 "This is only valid when rendering a single write node, using write_nodes_as_tasks=True, "
-                                                 "or with render_order_dependencies=True.")
-                    else:
-                        self._get_frame_range_from_nuke()
-                except SubmissionError as e:
-                    # Re-raise SubmissionError to stop the submission process
-                    raise
+                            logger.debug(f"Input token found in frame_range object and multiple write nodes specified. We will resolve the input token later."
+                                         f"writenodes: {write_nodes} frame_range: \"{frame_range}\"")
+
                 except Exception as e:
                     logger.warning(f"Failed to substitute frame range tokens: {e}")
-                    
+            
             # Validate frame range syntax
             if not self.fr.is_valid_syntax():
                 raise SubmissionError(f"Invalid frame range syntax: {frame_range}")
@@ -221,7 +221,24 @@ class NukeSubmission:
         if self.graph_scope_variables:
             self._parse_graph_scope_variables()
 
-    def _get_node_pretty_path(self, node) -> str:
+    def _ensure_script_can_be_queried(self):
+        """Ensure the script is open in Nuke before trying to access nodes or GSVs.
+        
+        Returns:
+            The nuke module
+        """
+        nuke = nuke_utils.nuke_module()
+        
+        # If the script is not currently open, we need to open it
+        if not self.script_is_open:
+            # Open the script
+            nuke.scriptOpen(str(self.script_path.absolute()))
+            # Mark as open now
+            self.script_is_open = True
+        
+        return nuke
+
+    def _get_node_pretty_path(self, node, gsv_combination=None) -> str:
         """Get a node's file path while preserving frame number placeholders.
         
         When Nuke evaluates a file path with node['file'].evaluate(), it replaces
@@ -230,23 +247,51 @@ class NukeSubmission:
         
         Args:
             node: A Nuke node with a 'file' knob
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
             
         Returns:
             The evaluated file path with frame number placeholders preserved
         """
+        # Apply GSV values if provided
+        if gsv_combination:
+            nuke = self._ensure_script_can_be_queried()
+            root_node = nuke.root()
+            if 'gsv' in root_node.knobs():
+                gsv_knob = root_node['gsv']
+                # Apply each GSV value
+                for key, value in gsv_combination:
+                    try:
+                        gsv_knob.setGsvValue(f'__default__.{key}', value)
+                    except Exception as e:
+                        logger.warning(f"Failed to set GSV value {key}={value}: {e}")
+        
         return nuke_utils.node_pretty_path(node)
 
-    def _replace_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+    def _replace_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Generic token replacement function for any field.
         
         Args:
             template: Template string with tokens
             write_node: Optional write node name for write-node specific tokens
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
             
         Returns:
             String with tokens replaced
         """
-        nuke = nuke_utils.nuke_module()
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_queried()
+        
+        # Apply GSV values if provided
+        if gsv_combination:
+            root_node = nuke.root()
+            if 'gsv' in root_node.knobs():
+                gsv_knob = root_node['gsv']
+                # Apply each GSV value
+                for key, value in gsv_combination:
+                    try:
+                        gsv_knob.setGsvValue(f'__default__.{key}', value)
+                    except Exception as e:
+                        logger.warning(f"Failed to set GSV value {key}={value}: {e}")
         
         # Start with the template
         result = template
@@ -291,7 +336,7 @@ class NukeSubmission:
                         node = nuke.toNode(write_node)
                         if node and node.Class() == "Write":
                             try:
-                                output_file = self._get_node_pretty_path(node)
+                                output_file = self._get_node_pretty_path(node, gsv_combination)
                                 # Extract stem from the output path
                                 output_stem = os.path.splitext(os.path.basename(output_file))[0]
                                 value = output_stem
@@ -319,7 +364,7 @@ class NukeSubmission:
                         elif token in output_tokens:
                             # Try to get output filename
                             try:
-                                output_file = self._get_node_pretty_path(node)
+                                output_file = self._get_node_pretty_path(node, gsv_combination)
                                 value = os.path.basename(output_file)
                             except:
                                 logger.warning(f"Failed to get output filename for write node {write_node}")
@@ -386,7 +431,7 @@ class NukeSubmission:
         
         return result
 
-    def _replace_job_name_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+    def _replace_job_name_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Replace tokens in job name template.
         
         Supported tokens:
@@ -402,13 +447,14 @@ class NukeSubmission:
         Args:
             template: Job name template with tokens
             write_node: Specific write node to use for token replacement
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
 
         Returns:
             Job name with tokens replaced
         """
-        return self._replace_tokens(template, write_node)
+        return self._replace_tokens(template, write_node, gsv_combination)
 
-    def _replace_comment_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+    def _replace_comment_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Replace tokens in comment template.
         
         Supports the same tokens as job_name.
@@ -416,13 +462,14 @@ class NukeSubmission:
         Args:
             template: Comment template with tokens
             write_node: Specific write node to use for token replacement
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
 
         Returns:
             Comment with tokens replaced
         """
-        return self._replace_tokens(template, write_node)
+        return self._replace_tokens(template, write_node, gsv_combination)
 
-    def _replace_extrainfo_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+    def _replace_extrainfo_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Replace tokens in extrainfo template.
         
         Supports the same tokens as job_name.
@@ -430,11 +477,12 @@ class NukeSubmission:
         Args:
             template: ExtraInfo template with tokens
             write_node: Specific write node to use for token replacement
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
 
         Returns:
             ExtraInfo with tokens replaced
         """
-        return self._replace_tokens(template, write_node)
+        return self._replace_tokens(template, write_node, gsv_combination)
     
     def _get_frame_range_from_nuke(self, write_node_name: Optional[str] = None) -> None:
         """Get frame range from Nuke script using Nuke API.
@@ -442,13 +490,10 @@ class NukeSubmission:
         Args:
             write_node_name: Optional name of a write node for 'input' token
         """
-        nuke = nuke_utils.nuke_module()
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_queried()
         
         try:
-            if not self.script_is_open:
-                # Open the script
-                nuke.scriptOpen(str(self.script_path.absolute()))
-            
             # Use token substitution with the write node if specified
             if self.fr.has_tokens:
                 self.fr.substitute_tokens_from_nuke(write_node_name)
@@ -475,7 +520,8 @@ class NukeSubmission:
         
         After parsing, gsv_combinations will contain tuples of (key, value) pairs for each combination.
         """
-        nuke = nuke_utils.nuke_module()
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_queried()
         
         try:
             # Get the root node to access GSV knob
@@ -617,16 +663,7 @@ class NukeSubmission:
         else:
             job_name = self._replace_job_name_tokens(self.job_name_template)
         
-        # Add GSV information to the job name
-        gsv_parts = []
-        for key, value in gsv_combination:
-            gsv_parts.append(f"{key}={value}")
-        
-        # Add GSV info to job name
-        if gsv_parts:
-            gsv_info = " | ".join(gsv_parts)
-            job_name = f"{job_name} | {gsv_info}"
-        
+        # Return just the job name without GSV info
         return job_name
 
     def prepare_job_info(self, gsv_combination=None) -> Dict[str, Any]:
@@ -639,22 +676,11 @@ class NukeSubmission:
             Dictionary containing job information
         """
         # Process job_name with tokens if it's for a specific write node
-        if gsv_combination:
-            if self.write_nodes and len(self.write_nodes) == 1:
-                self.job_name = self._get_gsv_job_name(gsv_combination, self.write_nodes[0])
-            else:
-                self.job_name = self._get_gsv_job_name(gsv_combination)
+        if self.write_nodes and len(self.write_nodes) == 1:
+            self.job_name = self._replace_job_name_tokens(self.job_name_template, self.write_nodes[0], gsv_combination)
         else:
-            if self.write_nodes and len(self.write_nodes) == 1:
-                self.job_name = self._replace_job_name_tokens(self.job_name_template, self.write_nodes[0])
-            else:
-                self.job_name = self._replace_job_name_tokens(self.job_name_template)
+            self.job_name = self._replace_job_name_tokens(self.job_name_template, None, gsv_combination)
         
-        # Check if frame range still contains the 'input' token as it causes Deadline submission errors
-        if 'input' in self.frame_range or 'i' == self.frame_range:
-            raise SubmissionError("The 'input' token was not resolved correctly. "
-                                 "This token requires exactly one write node to be specified. "
-                                 "Please specify a write node or use a different frame range format.")
             
         job_info = {
             "Name": self.job_name,
@@ -675,14 +701,14 @@ class NukeSubmission:
             # Process comment tokens if it contains any
             if any(token in self.comment for token in ["{", "}"]):
                 if self.write_nodes and len(self.write_nodes) == 1:
-                    job_info["Comment"] = self._replace_comment_tokens(self.comment, self.write_nodes[0])
+                    job_info["Comment"] = self._replace_comment_tokens(self.comment, self.write_nodes[0], gsv_combination)
                 else:
-                    job_info["Comment"] = self._replace_comment_tokens(self.comment)
+                    job_info["Comment"] = self._replace_comment_tokens(self.comment, None, gsv_combination)
             else:
                 job_info["Comment"] = self.comment
                 
         # Add OutputFilename entries to job info
-        self._add_output_filenames_to_job_info(job_info)
+        self._add_output_filenames_to_job_info(job_info, gsv_combination)
         
         # Process extra_info fields if any
         if self.extra_info:
@@ -690,9 +716,9 @@ class NukeSubmission:
                 # Process tokens if the item contains any
                 if any(token in extra_info_item for token in ["{", "}"]):
                     if self.write_nodes and len(self.write_nodes) == 1:
-                        job_info[f"ExtraInfo{i}"] = self._replace_extrainfo_tokens(extra_info_item, self.write_nodes[0])
+                        job_info[f"ExtraInfo{i}"] = self._replace_extrainfo_tokens(extra_info_item, self.write_nodes[0], gsv_combination)
                     else:
-                        job_info[f"ExtraInfo{i}"] = self._replace_extrainfo_tokens(extra_info_item)
+                        job_info[f"ExtraInfo{i}"] = self._replace_extrainfo_tokens(extra_info_item, None, gsv_combination)
                 else:
                     job_info[f"ExtraInfo{i}"] = extra_info_item
             
@@ -716,13 +742,14 @@ class NukeSubmission:
         
         return job_info
         
-    def _add_output_filenames_to_job_info(self, job_info: Dict[str, Any]) -> None:
+    def _add_output_filenames_to_job_info(self, job_info: Dict[str, Any], gsv_combination=None) -> None:
         """Add OutputFilename# entries to job info.
         
         This allows the Deadline Monitor to display the "View Output Image" context menu option.
         
         Args:
             job_info: The job info dictionary to update
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
         """
         nuke = nuke_utils.nuke_module()
         
@@ -732,7 +759,7 @@ class NukeSubmission:
             for i, write_node_name in enumerate(self.write_nodes):
                 node = nuke.toNode(write_node_name)
                 if node and node.Class() == "Write" and not node['disable'].value():
-                    output_path = self._get_node_pretty_path(node)
+                    output_path = self._get_node_pretty_path(node, gsv_combination)
                     if output_path:
                         job_info[f"OutputFilename{i}"] = output_path
                         
@@ -741,7 +768,7 @@ class NukeSubmission:
             write_node_name = self.write_nodes[0]
             node = nuke.toNode(write_node_name)
             if node and node.Class() == "Write" and not node['disable'].value():
-                output_path = self._get_node_pretty_path(node)
+                output_path = self._get_node_pretty_path(node, gsv_combination)
                 if output_path:
                     job_info["OutputFilename0"] = output_path
                     
@@ -754,7 +781,7 @@ class NukeSubmission:
             
             # Add outputs for all enabled write nodes
             for i, node in enumerate(write_nodes):
-                output_path = self._get_node_pretty_path(node)
+                output_path = self._get_node_pretty_path(node, gsv_combination)
                 if output_path:
                     job_info[f"OutputFilename{i}"] = output_path
         
@@ -806,7 +833,7 @@ class NukeSubmission:
             plugin_info["WriteNodesAsSeparateJobs"] = "True"
             
             # Get write node frame ranges
-            write_node_info = self._get_write_node_frame_ranges()
+            write_node_info = self._get_write_node_frame_ranges(gsv_combination)
             
             # Add write node info to plugin info
             for i, (node_name, start_frame, end_frame) in enumerate(write_node_info):
@@ -840,20 +867,22 @@ class NukeSubmission:
             gsv_string = ",".join([f"{key}:{value}" for key, value in gsv_combination])
             plugin_info["GraphScopeVariables"] = gsv_string
             
-            # Also add individual entries for backward compatibility
-            for i, (key, value) in enumerate(gsv_combination):
-                plugin_info[f"GraphScopeVariable{i}"] = key
-                plugin_info[f"GraphScopeVariableValue{i}"] = value
+            # Remove individual GSV entries to avoid redundancy
+            # Don't add the individual entries that were causing duplication
         
         return plugin_info
     
-    def _get_write_node_frame_ranges(self) -> List[Tuple[str, int, int]]:
+    def _get_write_node_frame_ranges(self, gsv_combination=None) -> List[Tuple[str, int, int]]:
         """Get frame ranges for each write node using Nuke API.
         
+        Args:
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
+            
         Returns:
             List of tuples (node_name, start_frame, end_frame)
         """
-        nuke = nuke_utils.nuke_module()
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_queried()
         
         write_node_info = []
         
@@ -877,18 +906,28 @@ class NukeSubmission:
                 default_end = 100
         
         try:
-            # If the script is not currently open, we need to open it
-            if not self.script_is_open:
-                # Open the script
-                nuke.scriptOpen(str(self.script_path.absolute()))
+            # Apply GSV values if provided
+            if gsv_combination:
+                root_node = nuke.root()
+                if 'gsv' in root_node.knobs():
+                    gsv_knob = root_node['gsv']
+                    # Apply each GSV value
+                    for key, value in gsv_combination:
+                        try:
+                            gsv_knob.setGsvValue(f'__default__.{key}', value)
+                        except Exception as e:
+                            logger.warning(f"Failed to set GSV value {key}={value}: {e}")
             
             # Get write nodes by render order
-            write_nodes_by_order = self._get_write_nodes_by_render_order()
+            write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
             
             # Flatten the list of write nodes
             all_write_nodes = []
             for render_order in sorted(write_nodes_by_order.keys()):
                 all_write_nodes.extend(write_nodes_by_order[render_order])
+            
+            # Check if we're using input frame range
+            is_input_frame_range = re.search(r'\b(i|input)\b', self.frame_range)
             
             # For each write node, extract its frame range
             for node_name in all_write_nodes:
@@ -902,8 +941,9 @@ class NukeSubmission:
                             node_end = int(node['last'].value())
                             write_node_info.append((node_name, node_start, node_end))
                             continue
-                    # If not using node's frame range, try to get input frame range
-                    elif re.search(r'\b(i|input)\b', self.frame_range):
+                    # If we have the input token or render_order_dependencies is true with input token, 
+                    # try to get input frame range
+                    elif is_input_frame_range:
                         try:
                             # Get frame range from input
                             node_start = node.firstFrame()
@@ -921,21 +961,32 @@ class NukeSubmission:
         except Exception as e:
             raise SubmissionError(f"Failed to get write node frame ranges: {e}")
     
-    def _get_write_nodes_by_render_order(self) -> Dict[int, List[str]]:
+    def _get_write_nodes_by_render_order(self, gsv_combination=None) -> Dict[int, List[str]]:
         """Get write nodes grouped by render order using Nuke API.
         
+        Args:
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
+            
         Returns:
             Dictionary mapping render orders to lists of write node names
         """
-        nuke = nuke_utils.nuke_module()
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_queried()
         
         write_nodes_by_order = {}
         
         try:
-            # If the script is not currently open, we need to open it
-            if not self.script_is_open:
-                # Open the script
-                nuke.scriptOpen(str(self.script_path.absolute()))
+            # Apply GSV values if provided
+            if gsv_combination:
+                root_node = nuke.root()
+                if 'gsv' in root_node.knobs():
+                    gsv_knob = root_node['gsv']
+                    # Apply each GSV value
+                    for key, value in gsv_combination:
+                        try:
+                            gsv_knob.setGsvValue(f'__default__.{key}', value)
+                        except Exception as e:
+                            logger.warning(f"Failed to set GSV value {key}={value}: {e}")
             
             # Find all Write nodes
             for node in nuke.allNodes('Write'):
@@ -999,12 +1050,12 @@ class NukeSubmission:
                     # If using dependencies with GSVs
                     elif self.render_order_dependencies and self.write_nodes and len(self.write_nodes) > 1:
                         # Parse the Nuke script for write nodes and their render orders
-                        write_nodes_by_order = self._get_write_nodes_by_render_order()
+                        write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
                         
                         # Get write node frame ranges if use_nodes_frame_list is enabled
                         write_node_frames = {}
                         if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
-                            write_node_info = self._get_write_node_frame_ranges()
+                            write_node_info = self._get_write_node_frame_ranges(gsv_combination)
                             for node_name, start_frame, end_frame in write_node_info:
                                 write_node_frames[node_name] = (start_frame, end_frame)
                         
@@ -1031,19 +1082,19 @@ class NukeSubmission:
                                 
                                 # Update comment with tokens for this write node
                                 if "Comment" in node_job_info and any(token in node_job_info["Comment"] for token in ["{", "}"]):
-                                    node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node)
+                                    node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node, gsv_combination)
                                 
                                 # Update ExtraInfo fields with tokens for this write node
                                 for i, extra_info_item in enumerate(self.extra_info):
                                     extra_info_key = f"ExtraInfo{i}"
                                     if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
-                                        node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
+                                        node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node, gsv_combination)
                                 
                                 # Add output filename for this write node
                                 nuke = nuke_utils.nuke_module()
                                 node_obj = nuke.toNode(write_node)
                                 if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
-                                    output_path = self._get_node_pretty_path(node_obj)
+                                    output_path = self._get_node_pretty_path(node_obj, gsv_combination)
                                     if output_path:
                                         node_job_info["OutputFilename0"] = output_path
                                 

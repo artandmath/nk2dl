@@ -120,11 +120,11 @@ def node_pretty_path(node) -> str:
                     
                     # For each GSV variable found, replace with its value
                     for match in re.finditer(gsv_pattern, evaluated_path):
-                        logger.debug(f"Found unevaluated GSV variable: {match.group(1)}")
-
                         var_name = match.group(1)
                         var_value = gsv_knob.getGsvValue(var_name)
-                        
+
+                        logger.debug(f"Found unevaluated GSV variable: {var_name} = {var_value}")       
+
                         if var_value:
                             # Replace the GSV placeholder with its value
                             gsv_placeholder = match.group(0)  # %{var_name}

@@ -55,7 +55,7 @@ Root {
  floatLut scene_linear
  gsv  {
   __default__ {
-   shotcode ABC_0010 { { vp:type List } { vp:options { ABC_0010 ABC_0020 XYZ_0010 XYZ_0020 XYZ_0030 } } { vp:label "shot code" } }
+   shotcode ABC0020 { { vp:type List } { vp:options { ABC_0010 ABC_0020 XYZ_0010 XYZ_0020 XYZ_0030 ABC0020 } } { vp:label "shot code" } }
    res wh { { vp:type List } { vp:options { wh hh qh } } { vp:label resolution } }
    variable_of_string_type "this is a string"
   }
@@ -119,59 +119,6 @@ Root {
  addUserKnob {1 ReloadPlugin l reloadPlugin}
  ReloadPlugin True
  addUserKnob {1 PerformanceProfilerPath l performanceProfilerPath}
-}
-CheckerBoard2 {
- inputs 0
- name CheckerBoard1
- xpos -884
- ypos -140
-}
-CameraShake3 {
- name CameraShake3_1
- label "\[value amplitude] px at \[value frequency]"
- xpos -884
- ypos -37
- amplitude 100
- rotation 50
- cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
-}
-NoOp {
- name DeadlineSettings1
- xpos -884
- ypos 37
- addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
-}
-FrameRange {
- first_frame 1001
- last_frame 1100
- time ""
- name FrameRange2
- xpos -894
- ypos 64
-}
-Crop {
- box {0 0 1920 1080}
- name Crop1
- xpos -884
- ypos 105
-}
-Write {
- channels rgba
- file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames01_v001_%\{res\}.####.exr"
- file_type exr
- compression DWAA
- first_part rgba
- render_order 10
- ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write1
- xpos -884
- ypos 164
 }
 CheckerBoard2 {
  inputs 0
@@ -368,8 +315,8 @@ FrameRange {
  last_frame 1050
  time ""
  name FrameRange1
- xpos -489
- ypos 64
+ xpos -492
+ ypos 82
 }
 Crop {
  box {0 0 1920 1080}
@@ -394,13 +341,64 @@ Write {
  xpos -492
  ypos 230
 }
-Viewer {
+CheckerBoard2 {
  inputs 0
+ name CheckerBoard1
+ xpos -884
+ ypos -140
+}
+CameraShake3 {
+ name CameraShake3_1
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -884
+ ypos -37
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings1
+ xpos -884
+ ypos 37
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+FrameRange {
+ first_frame 1001
+ last_frame 1100
+ time ""
+ name FrameRange2
+ xpos -884
+ ypos 61
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop1
+ xpos -884
+ ypos 105
+}
+Write {
+ channels rgba
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames01_v001_%\{res\}.####.exr"
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 10
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write1
+ xpos -884
+ ypos 164
+}
+Viewer {
  frame_range 1001-1001
  viewerProcess "Rec.709 (ACES)"
  monitorOutNDISenderName "Nuke - renderWithDeadline - Viewer1"
  name Viewer1
- selected true
  xpos -492
  ypos 319
 }
