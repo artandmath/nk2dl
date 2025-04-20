@@ -50,41 +50,45 @@ class NukeSubmission:
                 job_dependencies: Optional[str] = None,
                 write_nodes_as_tasks: bool = False,
                 use_nodes_frame_list: bool = False,
-                script_is_open: bool = False):
+                script_is_open: bool = False,
+                extra_info: Optional[List[str]] = None):
         """Initialize a Nuke script submission.
         
         Args:
-            script_path: Path to the Nuke script (.nk file)
-            frame_range: Frame range to render (e.g. "1-100", "f-l")
-            output_path: Override for output path
-            job_name: Custom job name or template with tokens
-            batch_name: Batch name for grouping jobs
-            priority: Job priority (0-100)
-            pool: Deadline pool
-            group: Deadline group
-            chunk_size: Number of frames per task
-            department: Department name
-            comment: Job comment
+            script_path: Path to the Nuke script file
+            frame_range: Frame range to render (defaults to Nuke script settings)
+            output_path: Output directory for rendered files
+            job_name: Job name template (defaults to config value)
+            batch_name: Batch name template (defaults to config value)
+            priority: Job priority (defaults to config value)
+            pool: Worker pool (defaults to config value)
+            group: Worker group (defaults to config value)
+            chunk_size: Number of frames per task (defaults to config value)
+            department: Department (defaults to config value)
+            comment: Job comment (defaults to config value)
+                     Can include tokens like {script}, {ss}, {write}, {file}, etc.
             use_nuke_x: Whether to use NukeX for rendering
             use_batch_mode: Whether to use batch mode
-            render_threads: Number of threads to use
+            render_threads: Number of render threads
             use_gpu: Whether to use GPU for rendering
             gpu_override: Specific GPU to use
-            max_ram_usage: Maximum RAM usage in MB
+            max_ram_usage: Maximum RAM usage (MB)
             enforce_render_order: Whether to enforce write node render order
-            min_stack_size: Minimum stack size in MB
+            min_stack_size: Minimum stack size (MB)
             continue_on_error: Whether to continue rendering on error
             reload_plugins: Whether to reload plugins between tasks
-            use_profiler: Whether to use performance profiler
-            profile_dir: Directory for performance profile output
-            use_proxy: Whether to use proxy mode
+            use_profiler: Whether to use the performance profiler
+            profile_dir: Directory for performance profile files
+            use_proxy: Whether to use proxy mode for rendering
             write_nodes: List of write nodes to render
             render_mode: Render mode (full, proxy)
-            render_order_dependencies: Whether to create dependencies based on write node render order
-            job_dependencies: Comma or space delimited job IDs to add as dependencies
-            write_nodes_as_tasks: Whether to submit write nodes as separate tasks for the same job
+            render_order_dependencies: Whether to set job dependencies based on render order
+            job_dependencies: Comma or space separated list of job IDs
+            write_nodes_as_tasks: Whether to submit write nodes as separate tasks
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
             script_is_open: Whether the script is already open in the current Nuke session
+            extra_info: List of extra info fields with optional tokens for customization
+                       Each item supports the same tokens as job_name
         """
         # Validate that render_order_dependencies and write_nodes_as_tasks are not both True
         if render_order_dependencies and write_nodes_as_tasks:
@@ -117,12 +121,19 @@ class NukeSubmission:
         self.script_stem = self.script_path.stem
         
         # Store the batch_name template for later processing
-        self.batch_name_template = batch_name if batch_name else config.get('submission.batch_name_template', "{stem}")
+        self.batch_name_template = batch_name if batch_name else config.get('submission.batch_name_template', "{script_stem}")
         # Process batch name tokens first (since job name might depend on batch name)
         self.batch_name = self._replace_batch_name_tokens(self.batch_name_template)
         
         self.department = department if department is not None else config.get('submission.department')
-        self.comment = comment if comment is not None else config.get('submission.comment')
+        
+        # Load comment value or template
+        self.comment_template = comment if comment is not None else config.get('submission.comment_template', "")
+        # We'll process comment tokens later when preparing job info
+        self.comment = self.comment_template
+        
+        # Load ExtraInfo templates
+        self.extra_info = extra_info if extra_info is not None else config.get('submission.extra_info_templates', [])
         
         # Store the job_name template for later processing
         self.job_name_template = job_name if job_name else config.get('submission.job_name_template', "{batch} / {write} / {file}")
@@ -176,17 +187,147 @@ class NukeSubmission:
         
         # For job_name we'll do the replacement later when we have access to more information
 
+    def _replace_tokens(self, template: str, field_type: str, write_node: Optional[str] = None) -> str:
+        """Generic token replacement function for any field.
+        
+        Args:
+            template: Template string with tokens
+            field_type: Type of field ('job_name', 'batch_name', 'comment', 'extrainfo', etc.)
+            write_node: Optional write node name for write-node specific tokens
+            
+        Returns:
+            String with tokens replaced
+        
+        Raises:
+            ValueError: If a token is used that's not allowed for the field_type
+        """
+        import nuke
+        
+        # Start with the template
+        result = template
+        
+        # Define token groups
+        script_stem_tokens = ["{ss}", "{ns}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}"]
+        script_name_tokens = ["{s}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
+        file_stem_tokens = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
+        batch_name_tokens = ["{b}", "{bn}", "{batch}", "{batchname}", "{batch_name}"]
+        write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
+        output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
+        render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
+        frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
+        
+        # Define field-specific token restrictions
+        restricted_tokens_by_field = {
+            'batch_name': batch_name_tokens + write_node_tokens + output_tokens + render_order_tokens + frame_range_tokens + file_stem_tokens,
+            # Add more field types as needed
+        }
+        
+        # Check for restricted tokens
+        if field_type in restricted_tokens_by_field:
+            restricted_tokens = restricted_tokens_by_field[field_type]
+            for token in restricted_tokens:
+                if token in result:
+                    raise ValueError(f"Token {token} is not allowed in {field_type} field")
+        
+        # Define allowed tokens based on field type
+        # By default all tokens are allowed except those restricted above
+        allowed_token_groups = []
+        
+        # Always allow script name tokens for all field types
+        allowed_token_groups.extend([script_stem_tokens, script_name_tokens])
+        
+        # Add field-specific allowed tokens
+        if field_type != 'batch_name':  # Batch name can't reference itself or other specialized tokens
+            allowed_token_groups.extend([
+                batch_name_tokens,
+                frame_range_tokens,
+                write_node_tokens,
+                output_tokens,
+                render_order_tokens,
+                file_stem_tokens
+            ])
+        
+        # Replace tokens with their values
+        for token_group in allowed_token_groups:
+            for token in token_group:
+                # Skip token replacement if it's not in the template
+                if token not in result:
+                    continue
+                
+                # Get the value for each token type
+                if token in script_stem_tokens:
+                    value = self.script_stem
+                elif token in script_name_tokens:
+                    value = self.script_filename
+                elif token in file_stem_tokens:
+                    # File stem tokens require a write node to get output path
+                    if write_node:
+                        node = nuke.toNode(write_node)
+                        if node and node.Class() == "Write":
+                            try:
+                                if 'file' in node.knobs():
+                                    output_file = node['file'].evaluate()
+                                    # Extract stem from the output path
+                                    output_stem = os.path.splitext(os.path.basename(output_file))[0]
+                                    value = output_stem
+                                else:
+                                    value = self.script_stem  # Fallback to script stem
+                            except:
+                                logger.warning(f"Failed to get output filename stem for write node {write_node}")
+                                value = self.script_stem  # Fallback to script stem
+                        else:
+                            value = self.script_stem  # Fallback to script stem
+                    else:
+                        value = self.script_stem  # Fallback to script stem
+                elif token in batch_name_tokens:
+                    value = self.batch_name
+                elif token in frame_range_tokens:
+                    value = self.frame_range
+                elif write_node and token in write_node_tokens + output_tokens + render_order_tokens:
+                    # These tokens require a write node to be specified
+                    node = nuke.toNode(write_node)
+                    if node and node.Class() == "Write":
+                        if token in write_node_tokens:
+                            value = write_node
+                        elif token in render_order_tokens:
+                            value = "0"  # Default value
+                            if 'render_order' in node.knobs():
+                                value = str(int(node['render_order'].value()))
+                        elif token in output_tokens:
+                            # Try to get output filename
+                            try:
+                                if 'file' in node.knobs():
+                                    output_file = node['file'].evaluate()
+                                    value = os.path.basename(output_file)
+                                else:
+                                    value = ""
+                            except:
+                                logger.warning(f"Failed to get output filename for write node {write_node}")
+                                value = ""
+                    else:
+                        # Skip write node tokens if no valid write node
+                        continue
+                else:
+                    # Skip tokens that need a write node if none specified
+                    continue
+                
+                # Replace the token with its value
+                result = result.replace(token, value)
+        
+        return result
+
     def _replace_job_name_tokens(self, template: str, write_node: Optional[str] = None) -> str:
         """Replace tokens in job name template.
         
         Supported tokens:
-        - {stem}, {basestem}, {base_stem}: Script name without extension
-        - {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}: Full script name with extension
-        - {b}, {bn}, {batch}, {batchname}, {batch_name}: Batch name
-        - {w}, {wn}, {writenode}, {write}, {write_node}, {write_name}: Write node name
-        - {o}, {fn}, {file}, {filename}, {file_name}, {output}: Output filename
-        - {r}, {ro}, {renderorder}, {render_order}: Render order
-        - {x}, {f}, {fr}, {range}, {framerange}: Frame range
+        - Script stem tokens: {ss}, {ns}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}
+        - Script name tokens: {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
+        - Batch name tokens: {b}, {bn}, {batch}, {batchname}, {batch_name}
+        - Write node tokens: {w}, {wn}, {writenode}, {write}, {write_node}, {write_name}
+        - File stem tokens: {fs}, {fns}, {os}, {fstem}, {ostem}, {filestem}, {file_stem}, {filenamestem}, {filename_stem}, {outputstem}, {output_stem}
+        - Output tokens: {o}, {fn}, {file}, {filename}, {file_name}, {output}
+        - Render order tokens: {r}, {ro}, {renderorder}, {render_order}
+        - Frame range tokens: {x}, {f}, {fr}, {range}, {framerange}
 
         Args:
             template: Job name template with tokens
@@ -195,73 +336,14 @@ class NukeSubmission:
         Returns:
             Job name with tokens replaced
         """
-        import nuke
-        
-        # Start with the template
-        job_name = template
-        
-        # Batch name tokens
-        batch_name_tokens = ["{b}", "{bn}", "{batch}", "{batchname}", "{batch_name}"]
-        for token in batch_name_tokens:
-            job_name = job_name.replace(token, self.batch_name)
-            
-        # Script stem tokens (without extension)
-        stem_tokens = ["{stem}", "{basestem}", "{base_stem}"]
-        for token in stem_tokens:
-            job_name = job_name.replace(token, self.script_stem)
-        
-        # Full script name tokens (with extension)
-        script_name_tokens = ["{s}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
-        for token in script_name_tokens:
-            job_name = job_name.replace(token, self.script_filename)
-        
-        # Frame range tokens
-        frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
-        for token in frame_range_tokens:
-            job_name = job_name.replace(token, self.frame_range)
-            
-        # If we have a specific write node, we can replace write node related tokens
-        if write_node:
-            node = nuke.toNode(write_node)
-            if node and node.Class() == "Write":
-                # Write node name tokens
-                write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
-                for token in write_node_tokens:
-                    job_name = job_name.replace(token, write_node)
-                
-                # Render order tokens
-                render_order = "0"
-                if 'render_order' in node.knobs():
-                    render_order = str(int(node['render_order'].value()))
-                
-                render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
-                for token in render_order_tokens:
-                    job_name = job_name.replace(token, render_order)
-                
-                # Output filename tokens
-                output_file = ""
-                try:
-                    # Try to get the node's file path
-                    if 'file' in node.knobs():
-                        # Evaluate the file knob to get the actual path
-                        output_file = node['file'].evaluate()
-                        # Get just the filename without the directory path
-                        output_filename = os.path.basename(output_file)
-                        
-                        output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
-                        for token in output_tokens:
-                            job_name = job_name.replace(token, output_filename)
-                except:
-                    logger.warning(f"Failed to get output filename for write node {write_node}")
-        
-        return job_name
+        return self._replace_tokens(template, 'job_name', write_node)
 
     def _replace_batch_name_tokens(self, template: str) -> str:
         """Replace tokens in batch name template.
         
         Supported tokens:
-        - {stem}, {basestem}, {base_stem}: Script name without extension (e.g., 'renderWithDeadline_v001')
-        - {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}: Full script name with extension (e.g., 'renderWithDeadline_v001.nk')
+        - Script stem tokens: {ss}, {ns}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}
+        - Script name tokens: {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
 
         Args:
             template: Batch name template with tokens
@@ -269,20 +351,35 @@ class NukeSubmission:
         Returns:
             Batch name with tokens replaced
         """
-        # Start with the template
-        batch_name = template
+        return self._replace_tokens(template, 'batch_name')
+
+    def _replace_comment_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+        """Replace tokens in comment template.
         
-        # Script stem tokens (without extension)
-        stem_tokens = ["{stem}", "{basestem}", "{base_stem}"]
-        for token in stem_tokens:
-            batch_name = batch_name.replace(token, self.script_stem)
+        Supports the same tokens as job_name.
+
+        Args:
+            template: Comment template with tokens
+            write_node: Specific write node to use for token replacement
+
+        Returns:
+            Comment with tokens replaced
+        """
+        return self._replace_tokens(template, 'comment', write_node)
+
+    def _replace_extrainfo_tokens(self, template: str, write_node: Optional[str] = None) -> str:
+        """Replace tokens in extrainfo template.
         
-        # Full script name tokens (with extension)
-        script_name_tokens = ["{s}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
-        for token in script_name_tokens:
-            batch_name = batch_name.replace(token, self.script_filename)
-        
-        return batch_name
+        Supports the same tokens as job_name.
+
+        Args:
+            template: ExtraInfo template with tokens
+            write_node: Specific write node to use for token replacement
+
+        Returns:
+            ExtraInfo with tokens replaced
+        """
+        return self._replace_tokens(template, 'extrainfo', write_node)
 
     def _ensure_nuke_available(self) -> None:
         """Ensure that Nuke API is available.
@@ -354,7 +451,26 @@ class NukeSubmission:
         if self.department:
             job_info["Department"] = self.department
         if self.comment:
-            job_info["Comment"] = self.comment
+            # Process comment tokens if it contains any
+            if any(token in self.comment for token in ["{", "}"]):
+                if self.write_nodes and len(self.write_nodes) == 1:
+                    job_info["Comment"] = self._replace_comment_tokens(self.comment, self.write_nodes[0])
+                else:
+                    job_info["Comment"] = self._replace_comment_tokens(self.comment)
+            else:
+                job_info["Comment"] = self.comment
+        
+        # Process extra_info fields if any
+        if self.extra_info:
+            for i, extra_info_item in enumerate(self.extra_info):
+                # Process tokens if the item contains any
+                if any(token in extra_info_item for token in ["{", "}"]):
+                    if self.write_nodes and len(self.write_nodes) == 1:
+                        job_info[f"ExtraInfo{i}"] = self._replace_extrainfo_tokens(extra_info_item, self.write_nodes[0])
+                    else:
+                        job_info[f"ExtraInfo{i}"] = self._replace_extrainfo_tokens(extra_info_item)
+                else:
+                    job_info[f"ExtraInfo{i}"] = extra_info_item
             
         # If using write nodes as tasks, set special frame range
         if self.write_nodes_as_tasks and self.write_nodes:
@@ -634,6 +750,16 @@ class NukeSubmission:
                         # Update job name to include write node
                         node_job_info["Name"] = self._replace_job_name_tokens(self.job_name_template, write_node)
                         
+                        # Update comment with tokens for this write node
+                        if "Comment" in node_job_info and any(token in node_job_info["Comment"] for token in ["{", "}"]):
+                            node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node)
+                        
+                        # Update ExtraInfo fields with tokens for this write node
+                        for i, extra_info_item in enumerate(self.extra_info):
+                            extra_info_key = f"ExtraInfo{i}"
+                            if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
+                                node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
+                        
                         # Specify which write node to render
                         node_plugin_info["WriteNodes"] = write_node
                         
@@ -670,15 +796,43 @@ class NukeSubmission:
 def submit_nuke_script(script_path: str, **kwargs) -> str:
     """Submit a Nuke script to Deadline.
     
-    This is a convenience function for submitting a Nuke script without
-    creating a NukeSubmission instance directly.
-    
     Args:
-        script_path: Path to the Nuke script
-        **kwargs: Additional arguments to pass to NukeSubmission
-        
+        script_path: Path to the Nuke script file
+        **kwargs: Additional submission parameters
+          - frame_range: Frame range to render (defaults to Nuke script settings)
+          - output_path: Output directory for rendered files
+          - job_name: Job name template (defaults to config value)
+          - batch_name: Batch name template (defaults to config value)
+          - priority: Job priority (defaults to config value)
+          - pool: Worker pool (defaults to config value)
+          - group: Worker group (defaults to config value)
+          - chunk_size: Number of frames per task (defaults to config value)
+          - department: Department (defaults to config value)
+          - comment: Job comment (defaults to config value)
+          - use_nuke_x: Whether to use NukeX for rendering
+          - use_batch_mode: Whether to use batch mode
+          - render_threads: Number of render threads
+          - use_gpu: Whether to use GPU for rendering
+          - gpu_override: Specific GPU to use
+          - max_ram_usage: Maximum RAM usage (MB)
+          - enforce_render_order: Whether to enforce write node render order
+          - min_stack_size: Minimum stack size (MB)
+          - continue_on_error: Whether to continue rendering on error
+          - reload_plugins: Whether to reload plugins between tasks
+          - use_profiler: Whether to use the performance profiler
+          - profile_dir: Directory for performance profile files
+          - use_proxy: Whether to use proxy mode for rendering
+          - write_nodes: List of write nodes to render
+          - render_mode: Render mode (full, proxy)
+          - render_order_dependencies: Whether to set job dependencies based on render order
+          - job_dependencies: Comma or space separated list of job IDs
+          - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
+          - use_nodes_frame_list: Whether to use node-specific frame lists
+          - script_is_open: Whether the script is already open in the current Nuke session
+          - extra_info: List of extra info fields
+    
     Returns:
-        Job ID of the submitted job
+        Submission ID for the submitted job
     """
-    submission = NukeSubmission(script_path, **kwargs)
+    submission = NukeSubmission(script_path=script_path, **kwargs)
     return submission.submit() 

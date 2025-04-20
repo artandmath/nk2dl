@@ -19,10 +19,11 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="DAG.1"/>
                     <page id="Curve Editor.1"/>
                     <page id="DopeSheet.1"/>
+                    <page id="DAG.2"/>
                 </dock>
             </splitter>
             <split size="615"/>
-            <dock id="" activePageId="uk.co.thefoundry.scripteditor.1">
+            <dock id="" activePageId="Properties.1">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
@@ -155,6 +156,14 @@ NoOp {
  JobInfoChunkSize 5
  addUserKnob {3 PluginInfoRamUse}
 }
+FrameRange {
+ first_frame 1001
+ last_frame 1100
+ time ""
+ name FrameRange2
+ xpos -894
+ ypos 64
+}
 Crop {
  box {0 0 1920 1080}
  name Crop1
@@ -174,7 +183,6 @@ Write {
  display ACES
  view Rec.709
  name Write1
- selected true
  xpos -884
  ypos 164
 }
@@ -203,6 +211,14 @@ NoOp {
  JobInfoChunkSize 5
  addUserKnob {3 PluginInfoRamUse}
 }
+FrameRange {
+ first_frame 1001
+ last_frame 1200
+ time ""
+ name FrameRange3
+ xpos -696
+ ypos 69
+}
 Crop {
  box {0 0 1920 1080}
  name Crop3
@@ -222,10 +238,31 @@ Write {
  display ACES
  view Rec.709
  name Write2
- selected true
  xpos -699
  ypos 162
 }
+LiveGroup {
+ inputs 0
+ modified true
+ name LiveGroup1
+ xpos -203
+ ypos -128
+}
+ LiveInput {
+  inputs 0
+  liveGroup {{0} LiveGroup1}
+  shownWarningFile ""
+  file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
+  name LiveInput1
+  selected true
+  xpos 0
+ }
+ Output {
+  name Output1
+  xpos 0
+  ypos 300
+ }
+end_group
 push $N5315800
 Grade {
  white {1 0 1 1}
@@ -272,7 +309,6 @@ Write {
  display ACES
  view Rec.709
  name Write3
- selected true
  xpos -492
  ypos 163
 }
