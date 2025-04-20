@@ -207,8 +207,8 @@ class NukeSubmission:
         result = template
         
         # Define token groups
-        script_stem_tokens = ["{ss}", "{ns}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}"]
-        script_name_tokens = ["{s}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
+        script_stem_tokens = ["{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
+        script_name_tokens = ["{s}", "{ns}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
         file_stem_tokens = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
         batch_name_tokens = ["{b}", "{bn}", "{batch}", "{batchname}", "{batch_name}"]
         write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
@@ -216,21 +216,7 @@ class NukeSubmission:
         render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
         frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
         
-        # Define field-specific token restrictions
-        restricted_tokens_by_field = {
-            'batch_name': batch_name_tokens + write_node_tokens + output_tokens + render_order_tokens + frame_range_tokens + file_stem_tokens,
-            # Add more field types as needed
-        }
-        
-        # Check for restricted tokens
-        if field_type in restricted_tokens_by_field:
-            restricted_tokens = restricted_tokens_by_field[field_type]
-            for token in restricted_tokens:
-                if token in result:
-                    raise ValueError(f"Token {token} is not allowed in {field_type} field")
-        
         # Define allowed tokens based on field type
-        # By default all tokens are allowed except those restricted above
         allowed_token_groups = []
         
         # Always allow script name tokens for all field types
@@ -316,12 +302,54 @@ class NukeSubmission:
         
         return result
 
+    def _replace_batch_name_tokens(self, template: str) -> str:
+        """Replace tokens in batch name template.
+        
+        Supported tokens (ONLY these are allowed):
+        - Script stem tokens: {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}, {nuke_script_stem}
+        - Script name tokens: {s}, {ns}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
+        
+        Restricted tokens (NOT allowed):
+        - Batch name tokens: {b}, {bn}, {batch}, {batchname}, {batch_name}
+        - Write node tokens: {w}, {wn}, {write}, {writenode}, {write_node}, {write_name}
+        - Output tokens: {o}, {fn}, {file}, {filename}, {file_name}, {output}
+        - Render order tokens: {r}, {ro}, {renderorder}, {render_order}
+        - Frame range tokens: {x}, {f}, {fr}, {range}, {framerange}
+        - File stem tokens: {fs}, {fns}, {os}, {fstem}, {ostem}, {filestem}, {file_stem}, {filenamestem}, {filename_stem}, {outputstem}, {output_stem}
+
+        Args:
+            template: Batch name template with tokens
+
+        Returns:
+            Batch name with tokens replaced
+            
+        Raises:
+            ValueError: If a restricted token is used in batch_name
+        """
+        # Define restricted tokens for batch_name
+        batch_name_tokens = ["{b}", "{bn}", "{batch}", "{batchname}", "{batch_name}"]
+        write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
+        output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
+        render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
+        frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
+        file_stem_tokens = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
+        
+        restricted_tokens = batch_name_tokens + write_node_tokens + output_tokens + render_order_tokens + frame_range_tokens + file_stem_tokens
+        
+        # Check for restricted tokens
+        for token in restricted_tokens:
+            if token in template:
+                raise ValueError(f"Token {token} is not allowed in batch_name field")
+        
+        # Call the generic token replacement method
+        return self._replace_tokens(template, 'batch_name')
+
     def _replace_job_name_tokens(self, template: str, write_node: Optional[str] = None) -> str:
         """Replace tokens in job name template.
         
         Supported tokens:
-        - Script stem tokens: {ss}, {ns}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}
-        - Script name tokens: {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
+        - Script stem tokens: {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}, {nuke_script_stem}
+        - Script name tokens: {s}, {ns}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
         - Batch name tokens: {b}, {bn}, {batch}, {batchname}, {batch_name}
         - Write node tokens: {w}, {wn}, {writenode}, {write}, {write_node}, {write_name}
         - File stem tokens: {fs}, {fns}, {os}, {fstem}, {ostem}, {filestem}, {file_stem}, {filenamestem}, {filename_stem}, {outputstem}, {output_stem}
@@ -337,21 +365,6 @@ class NukeSubmission:
             Job name with tokens replaced
         """
         return self._replace_tokens(template, 'job_name', write_node)
-
-    def _replace_batch_name_tokens(self, template: str) -> str:
-        """Replace tokens in batch name template.
-        
-        Supported tokens:
-        - Script stem tokens: {ss}, {ns}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}
-        - Script name tokens: {s}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
-
-        Args:
-            template: Batch name template with tokens
-
-        Returns:
-            Batch name with tokens replaced
-        """
-        return self._replace_tokens(template, 'batch_name')
 
     def _replace_comment_tokens(self, template: str, write_node: Optional[str] = None) -> str:
         """Replace tokens in comment template.
