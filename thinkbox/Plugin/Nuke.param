@@ -1,0 +1,341 @@
+[About]
+Type=label
+Label=About
+Category=About Plugin
+CategoryOrder=-1
+Index=0
+Default=Nuke Plugin for Deadline
+Description=Not configurable.
+
+[ConcurrentTasks]
+Type=label
+Label=ConcurrentTasks
+Category=About Plugin
+CategoryOrder=-1
+Index=0
+Default=True
+Description=Not configurable.
+
+[RenderExecutable6_0]
+Type=multilinemultifilename
+Category=Nuke 6 Render Executables
+CategoryOrder=0
+CategoryIndex=0
+Label=Nuke 6.0 Render Executable
+Default=C:\Program Files\Nuke6.0v1\Nuke6.0.exe;/usr/local/Nuke6.0v1/Nuke6.0;/Applications/Nuke6.0v1/Nuke6.0v1.app/Contents/MacOS/Nuke6.0v1
+Description=The path to the Nuke 6.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable6_1]
+Type=multilinemultifilename
+Category=Nuke 6 Render Executables
+CategoryOrder=0
+CategoryIndex=1
+Label=Nuke 6.1 Render Executable
+Default=C:\Program Files\Nuke6.1v1\Nuke6.1.exe;/usr/local/Nuke6.1v1/Nuke6.1;/Applications/Nuke6.1v1/Nuke6.1v1.app/Contents/MacOS/Nuke6.1v1
+Description=The path to the Nuke 6.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable6_2]
+Type=multilinemultifilename
+Category=Nuke 6 Render Executables
+CategoryOrder=0
+CategoryIndex=2
+Label=Nuke 6.2 Render Executable
+Default=C:\Program Files\Nuke6.2v1\Nuke6.2.exe;/usr/local/Nuke6.2v1/Nuke6.2;/Applications/Nuke6.2v1/Nuke6.2v1.app/Contents/MacOS/Nuke6.2v1
+Description=The path to the Nuke 6.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable6_3]
+Type=multilinemultifilename
+Category=Nuke 6 Render Executables
+CategoryOrder=0
+CategoryIndex=3
+Label=Nuke 6.3 Render Executable
+Default=C:\Program Files\Nuke6.3v1\Nuke6.3.exe;/usr/local/Nuke6.3v1/Nuke6.3;/Applications/Nuke6.3v1/Nuke6.3v1.app/Contents/MacOS/Nuke6.3v1
+Description=The path to the Nuke 6.3 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable6_4]
+Type=multilinemultifilename
+Category=Nuke 6 Render Executables
+CategoryOrder=0
+CategoryIndex=4
+Label=Nuke 6.4 Render Executable
+Default=C:\Program Files\Nuke6.4v1\Nuke6.4.exe;/usr/local/Nuke6.4v1/Nuke6.4;/Applications/Nuke6.4v1/Nuke6.4v1.app/Contents/MacOS/Nuke6.4v1
+Description=The path to the Nuke 6.4 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable7_0]
+Type=multilinemultifilename
+Category=Nuke 7 Render Executables
+CategoryOrder=1
+CategoryIndex=0
+Label=Nuke 7.0 Render Executable
+Default=C:\Program Files\Nuke7.0v1\Nuke7.0.exe;/usr/local/Nuke7.0v1/Nuke7.0;/Applications/Nuke7.0v1/Nuke7.0v1.app/Contents/MacOS/Nuke7.0v1
+Description=The path to the Nuke 7.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable7_1]
+Type=multilinemultifilename
+Category=Nuke 7 Render Executables
+CategoryOrder=1
+CategoryIndex=1
+Label=Nuke 7.1 Render Executable
+Default=C:\Program Files\Nuke7.1v1\Nuke7.1.exe;/usr/local/Nuke7.1v1/Nuke7.1;/Applications/Nuke7.1v1/Nuke7.1v1.app/Contents/MacOS/Nuke7.1v1
+Description=The path to the Nuke 7.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable7_2]
+Type=multilinemultifilename
+Category=Nuke 7 Render Executables
+CategoryOrder=1
+CategoryIndex=2
+Label=Nuke 7.2 Render Executable
+Default=C:\Program Files\Nuke7.2v1\Nuke7.2.exe;/usr/local/Nuke7.2v1/Nuke7.2;/Applications/Nuke7.2v1/Nuke7.2v1.app/Contents/MacOS/Nuke7.2v1
+Description=The path to the Nuke 7.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable7_3]
+Type=multilinemultifilename
+Category=Nuke 7 Render Executables
+CategoryOrder=1
+CategoryIndex=3
+Label=Nuke 7.3 Render Executable
+Default=C:\Program Files\Nuke7.3v1\Nuke7.3.exe;/usr/local/Nuke7.3v1/Nuke7.3;/Applications/Nuke7.3v1/Nuke7.3v1.app/Contents/MacOS/Nuke7.3v1
+Description=The path to the Nuke 7.3 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable7_4]
+Type=multilinemultifilename
+Category=Nuke 7 Render Executables
+CategoryOrder=1
+CategoryIndex=4
+Label=Nuke 7.4 Render Executable
+Default=C:\Program Files\Nuke7.4v1\Nuke7.4.exe;/usr/local/Nuke7.4v1/Nuke7.4;/Applications/Nuke7.4v1/Nuke7.4v1.app/Contents/MacOS/Nuke7.4v1
+Description=The path to the Nuke 7.4 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable8_0]
+Type=multilinemultifilename
+Category=Nuke 8 Render Executables
+CategoryOrder=2
+CategoryIndex=0
+Label=Nuke 8.0 Render Executable
+Default=C:\Program Files\Nuke8.0v1\Nuke8.0.exe;/usr/local/Nuke8.0v1/Nuke8.0;/Applications/Nuke8.0v1/Nuke8.0v1.app/Contents/MacOS/Nuke8.0v1
+Description=The path to the Nuke 8.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable8_1]
+Type=multilinemultifilename
+Category=Nuke 8 Render Executables
+CategoryOrder=2
+CategoryIndex=1
+Label=Nuke 8.1 Render Executable
+Default=C:\Program Files\Nuke8.1v1\Nuke8.1.exe;/usr/local/Nuke8.1v1/Nuke8.1;/Applications/Nuke8.1v1/Nuke8.1v1.app/Contents/MacOS/Nuke8.1v1
+Description=The path to the Nuke 8.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable8_2]
+Type=multilinemultifilename
+Category=Nuke 8 Render Executables
+CategoryOrder=2
+CategoryIndex=2
+Label=Nuke 8.2 Render Executable
+Default=C:\Program Files\Nuke8.2v1\Nuke8.2.exe;/usr/local/Nuke8.2v1/Nuke8.2;/Applications/Nuke8.2v1/Nuke8.2v1.app/Contents/MacOS/Nuke8.2v1
+Description=The path to the Nuke 8.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable8_3]
+Type=multilinemultifilename
+Category=Nuke 8 Render Executables
+CategoryOrder=2
+CategoryIndex=3
+Label=Nuke 8.3 Render Executable
+Default=C:\Program Files\Nuke8.3v1\Nuke8.3.exe;/usr/local/Nuke8.3v1/Nuke8.3;/Applications/Nuke8.3v1/Nuke8.3v1.app/Contents/MacOS/Nuke8.3v1
+Description=The path to the Nuke 8.3 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable8_4]
+Type=multilinemultifilename
+Category=Nuke 8 Render Executables
+CategoryOrder=2
+CategoryIndex=4
+Label=Nuke 8.4 Render Executable
+Default=C:\Program Files\Nuke8.4v1\Nuke8.4.exe;/usr/local/Nuke8.4v1/Nuke8.4;/Applications/Nuke8.4v1/Nuke8.4v1.app/Contents/MacOS/Nuke8.4v1
+Description=The path to the Nuke 8.4 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable9_0]
+Type=multilinemultifilename
+Category=Nuke 9 Render Executables
+CategoryOrder=3
+CategoryIndex=0
+Label=Nuke 9.0 Render Executable
+Default=C:\Program Files\Nuke9.0v1\Nuke9.0.exe;/usr/local/Nuke9.0v1/Nuke9.0;/Applications/Nuke9.0v1/Nuke9.0v1.app/Contents/MacOS/Nuke9.0v1
+Description=The path to the Nuke 9.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable10_0]
+Type=multilinemultifilename
+Category=Nuke 10 Render Executables
+CategoryOrder=4
+CategoryIndex=0
+Label=Nuke 10.0 Render Executable
+Default=C:\Program Files\Nuke10.0v1\Nuke10.0.exe;/usr/local/Nuke10.0v1/Nuke10.0;/Applications/Nuke10.0v1/Nuke10.0v1.app/Contents/MacOS/Nuke10.0v1
+Description=The path to the Nuke 10.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable10_5]
+Type=multilinemultifilename
+Category=Nuke 10 Render Executables
+CategoryOrder=4
+CategoryIndex=1
+Label=Nuke 10.5 Render Executable
+Default=C:\Program Files\Nuke10.5v1\Nuke10.5.exe;/usr/local/Nuke10.5v1/Nuke10.5;/Applications/Nuke10.5v1/Nuke10.5v1.app/Contents/MacOS/Nuke10.5v1
+Description=The path to the Nuke 10.5 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable11_0]
+Type=multilinemultifilename
+Category=Nuke 11 Render Executables
+CategoryOrder=5
+CategoryIndex=0
+Label=Nuke 11.0 Render Executable
+Default=C:\Program Files\Nuke11.0v1\Nuke11.0.exe;/usr/local/Nuke11.0v1/Nuke11.0;/Applications/Nuke11.0v1/Nuke11.0v1.app/Contents/MacOS/Nuke11.0v1
+Description=The path to the Nuke 11.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable11_1]
+Type=multilinemultifilename
+Category=Nuke 11 Render Executables
+CategoryOrder=5
+CategoryIndex=1
+Label=Nuke 11.1 Render Executable
+Default=C:\Program Files\Nuke11.1v1\Nuke11.1.exe;/usr/local/Nuke11.1v1/Nuke11.1;/Applications/Nuke11.1v1/Nuke11.1v1.app/Contents/MacOS/Nuke11.1v1
+Description=The path to the Nuke 11.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable11_2]
+Type=multilinemultifilename
+Category=Nuke 11 Render Executables
+CategoryOrder=5
+CategoryIndex=2
+Label=Nuke 11.2 Render Executable
+Default=C:\Program Files\Nuke11.2v1\Nuke11.2.exe;/usr/local/Nuke11.2v1/Nuke11.2;/Applications/Nuke11.2v1/Nuke11.2v1.app/Contents/MacOS/Nuke11.2v1
+Description=The path to the Nuke 11.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable11_3]
+Type=multilinemultifilename
+Category=Nuke 11 Render Executables
+CategoryOrder=5
+CategoryIndex=3
+Label=Nuke 11.3 Render Executable
+Default=C:\Program Files\Nuke11.3v1\Nuke11.3.exe;/usr/local/Nuke11.3v1/Nuke11.3;/Applications/Nuke11.3v1/Nuke11.3v1.app/Contents/MacOS/Nuke11.3v1
+Description=The path to the Nuke 11.3 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable12_0]
+Type=multilinemultifilename
+Category=Nuke 12 Render Executables
+CategoryOrder=6
+CategoryIndex=0
+Label=Nuke 12.0 Render Executable
+Default=C:\Program Files\Nuke12.0v1\Nuke12.0.exe;/usr/local/Nuke12.0v1/Nuke12.0;/Applications/Nuke12.0v1/Nuke12.0v1.app/Contents/MacOS/Nuke12.0v1
+Description=The path to the Nuke 12.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable12_1]
+Type=multilinemultifilename
+Category=Nuke 12 Render Executables
+CategoryOrder=6
+CategoryIndex=1
+Label=Nuke 12.1 Render Executable
+Default=C:\Program Files\Nuke12.1v2\Nuke12.1.exe;/usr/local/Nuke12.1v2/Nuke12.1;/Applications/Nuke12.1v2/Nuke12.1v2.app/Contents/MacOS/Nuke12.1
+Description=The path to the Nuke 12.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable12_2]
+Type=multilinemultifilename
+Category=Nuke 12 Render Executables
+CategoryOrder=6
+CategoryIndex=2
+Label=Nuke 12.2 Render Executable
+Default=C:\Program Files\Nuke12.2v3\Nuke12.2.exe;/usr/local/Nuke12.2v3/Nuke12.2;/Applications/Nuke12.2v3/Nuke12.2v3.app/Contents/MacOS/Nuke12.2
+Description=The path to the Nuke 12.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable13_0]
+Type=multilinemultifilename
+Category=Nuke 13 Render Executables
+CategoryOrder=7
+CategoryIndex=0
+Label=Nuke 13.0 Render Executable
+Default=C:\Program Files\Nuke13.0v1\Nuke13.0.exe;/usr/local/Nuke13.0v1/Nuke13.0;/Applications/Nuke13.0v1/Nuke13.0v1.app/Contents/MacOS/Nuke13.0
+Description=The path to the Nuke 13.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable13_1]
+Type=multilinemultifilename
+Category=Nuke 13 Render Executables
+CategoryOrder=7
+CategoryIndex=1
+Label=Nuke 13.1 Render Executable
+Default=C:\Program Files\Nuke13.1v5\Nuke13.1.exe;/usr/local/Nuke13.1v5/Nuke13.1;/Applications/Nuke13.1v5/Nuke13.1v5.app/Contents/MacOS/Nuke13.1
+Description=The path to the Nuke 13.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable13_2]
+Type=multilinemultifilename
+Category=Nuke 13 Render Executables
+CategoryOrder=7
+CategoryIndex=2
+Label=Nuke 13.2 Render Executable
+Default=C:\Program Files\Nuke13.2v6\Nuke13.2.exe;/usr/local/Nuke13.2v6/Nuke13.2;/Applications/Nuke13.2v6/Nuke13.2v6.app/Contents/MacOS/Nuke13.2
+Description=The path to the Nuke 13.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable14_0]
+Type=multilinemultifilename
+Category=Nuke 14 Render Executables
+CategoryOrder=8
+CategoryIndex=1
+Label=Nuke 14.0 Render Executable
+Default=C:\Program Files\Nuke14.0v2\Nuke14.0.exe;/usr/local/Nuke14.0v2/Nuke14.0;/Applications/Nuke14.0v2/Nuke14.0v2.app/Contents/MacOS/Nuke14.0
+Description=The path to the Nuke 14.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable14_1]
+Type=multilinemultifilename
+Category=Nuke 14 Render Executables
+CategoryOrder=8
+CategoryIndex=2
+Label=Nuke 14.1 Render Executable
+Default=C:\Program Files\Nuke14.1v4\Nuke14.1.exe;/usr/local/Nuke14.1v4/Nuke14.1;/Applications/Nuke14.1v4/Nuke14.1v4.app/Contents/MacOS/Nuke14.1
+Description=The path to the Nuke 14.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable15_0]
+Type=multilinemultifilename
+Category=Nuke 15 Render Executables
+CategoryOrder=9
+CategoryIndex=1
+Label=Nuke 15.0 Render Executable
+Default=C:\Program Files\Nuke15.0v4\Nuke15.0.exe;/usr/local/Nuke15.0v4/Nuke15.0;/Applications/Nuke15.0v4/Nuke15.0v4.app/Contents/MacOS/Nuke15.0
+Description=The path to the Nuke 15.0 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable15_1]
+Type=multilinemultifilename
+Category=Nuke 15 Render Executables
+CategoryOrder=10
+CategoryIndex=1
+Label=Nuke 15.1 Render Executable
+Default=C:\Program Files\Nuke15.1v1\Nuke15.1.exe;/usr/local/Nuke15.1v4/Nuke15.1/Applications/Nuke15.14/Nuke15.1v4.app/Contents/MacOS/Nuke15.1
+Description=The path to the Nuke 15.1 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable15_2]
+Type=multilinemultifilename
+Category=Nuke 15 Render Executables
+CategoryOrder=11
+CategoryIndex=1
+Label=Nuke 15.2 Render Executable
+Default=C:\Program Files\Nuke15.2v1\Nuke15.2.exe;/usr/local/Nuke15.2v1/Nuke15.1/Applications/Nuke15.2/Nuke15.2v1.app/Contents/MacOS/Nuke15.2
+Description=The path to the Nuke 15.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[InteractiveSlaves]
+Type=slavelist
+Category=Licensing Options
+CategoryOrder=50
+CategoryIndex=0
+Label=Workers To Use Interactive License
+Default=
+Description=A list of Workers that should use an interactive Nuke license instead of a render license. Use a , to separate multiple Worker names, for example: worker001,worker002,worker003.
+
+[PrepForOFX]
+Type=boolean
+Category=OFX Cache
+CategoryOrder=60
+CategoryIndex=0
+Label=Prepare OFX Cache Before Rendering
+Default=true
+Description=If enabled, Deadline will try to create the temporary ofx plugin cache folder before rendering, which helps ensure that comps that use OFX plugins render properly.
+
+[EnablePathMapping]
+Type=boolean
+Category=Path Mapping (For Mixed Farms)
+CategoryOrder=70
+CategoryIndex=0
+Label=Enable Path Mapping
+Default=true
+Description=If enabled, a temporary Nuke file will be created locally on the Worker for rendering because Deadline does the path mapping directly in the Nuke file. This feature can be turned off if there are no Path Mapping entries defined in the Repository Options.

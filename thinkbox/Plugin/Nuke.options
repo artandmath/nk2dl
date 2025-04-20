@@ -1,0 +1,170 @@
+[SceneFile]
+Type=filename
+Label=Scene Filename
+Category=Scene File
+Index=0
+Description=The scene filename as it exists on the network.
+Required=false
+DisableIfBlank=true
+
+[Version]
+Type=label
+Label=Version
+Category=Version Info
+Index=1
+Description=The version of Nuke to render with.
+Required=false
+DisableIfBlank=true
+
+[NukeX]
+Type=boolean
+Label=Render With NukeX
+Category=Version Info
+Index=2
+Description=If checked, NukeX will be used instead of just Nuke.
+Required=false
+DisableIfBlank=true
+
+[BatchMode]
+Type=boolean
+Label=Batch Mode
+Category=Rendering Options
+Index=0
+Description=This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.
+Required=false
+DisableIfBlank=true
+
+[BatchModeIsMovie]
+Type=boolean
+Label=Is Movie (Batch Mode only)
+Category=Rendering Options
+Index=1
+Description=If checked, Deadline will render as a single chunk in Batch Mode, instead of rendering each frame separately. This is necessary for movie renders, otherwise only the last frame is written to the output file.
+Required=false
+DisableIfBlank=true
+
+[ContinueOnError]
+Type=boolean
+Label=Continue On Error
+Category=Rendering Options
+Index=4
+Description=If checked Nuke will attempt to render subsequent frames in the range after an error. Otherwise, Nuke will stop on the first error.
+Required=false
+DisableIfBlank=true
+
+[EnforceRenderOrder]
+Type=boolean
+Label=Enforce Write Node Render Order
+Category=Rendering Options
+Index=5
+Description=Forces Nuke to obey the render order of Write nodes.
+Required=false
+DisableIfBlank=true
+
+[RenderMode]
+Type=enum
+Values=Use Scene Settings;Render Full Resolution;Render using Proxies
+Label=Render Mode
+Category=Rendering Options
+Index=6
+Description=Whether or not the scene should be rendered in full resolution or using proxies.
+Required=false
+DisableIfBlank=true
+
+[UseGpu]
+Type=boolean
+Label=Use the GPU For Rendering
+Category=Rendering Options
+Index=7
+Description=If Nuke should also use the GPU for rendering.
+Required=false
+DisableIfBlank=true
+
+[GpuOverride]
+Type=integer
+Minimum=0
+Maximum=15
+Label=GPU Override
+Category=Rendering Options
+Index=8
+Description=The GPU that Nuke should use if you are using the GPU for rendering. ( Used for Nuke 8 and higher. )
+Required=false
+DisableIfBlank=true
+
+[Threads]
+Type=integer
+Minimum=0
+Maximum=128
+Label=Rendering Threads
+Category=Rendering Options
+Index=9
+Description=The number of threads to use for rendering. Set to 0 to have Nuke automatically determine the optimal thread count.
+Required=false
+DisableIfBlank=true
+
+[RamUse]
+Type=integer
+Minimum=0
+Maximum=64000
+Label=Maximum RAM Usage (MB)
+Category=Rendering Options
+Index=10
+Description=The maximum RAM usage to allow. Set to 0 to not enforce a maximum amount of RAM.
+Required=false
+DisableIfBlank=true
+
+[StackSize]
+Type=integer
+Minimum=0
+Maximum=64000
+Label=Minimum Stack Size (MB)
+Category=Rendering Options
+Index=11
+Description=The minimum stack size to use. Set to 0 to not enforce a minimum stack size.
+Required=false
+DisableIfBlank=true
+
+[Views]
+Type=string
+Label=View(s) to Render
+Category=Rendering Options
+Index=12
+Description=A comma separated list of the views to render.
+Required=false
+DisableIfBlank=true
+
+[PerformanceProfiler]
+Type=boolean
+Label=Enable Performance Profiler
+Category=Rendering Options
+Index=13
+Description=If enabled Nuke will profile the performance of the Nuke DAG whilst rendering and create a *.xml file for later analysis.
+Required=false
+DisableIfBlank=true
+
+[PerformanceProfilerDir]
+Type=Folder
+Label=Performance Profiler XML Directory
+Category=Rendering Options
+Index=14
+Description=If Performance Profiler is enabled, define the directory on the network where the *.xml files will be saved.
+Required=false
+DisableIfBlank=true
+
+[ScriptJob]
+Type=boolean
+Label=Script Job
+Category=Script Job
+Index=0
+Description=If enabled, a script will be run instead of rendering the Nuke scene.
+Required=false
+DisableIfBlank=true
+
+[ScriptFilename]
+Type=filename
+Label=Script Filename
+Category=Script Job
+Index=1
+Description=The script filename as it exists on the network.
+Required=false
+DisableIfBlank=true

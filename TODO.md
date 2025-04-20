@@ -15,7 +15,8 @@
   - [X] Add special token support (f, l, m, hero)
 - [X] Develop core submission
   - [X] Core job submission logic
-  - [ ] Dependency management
+  - [X] Dependency management
+  - [ ] Graph Scope Variables
 
 ## Phase 3: CLI Implementation
 - [ ] Create CLI argument parser

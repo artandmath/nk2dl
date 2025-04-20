@@ -1,5 +1,5 @@
-#! C:/Program Files/Nuke15.1v1/nuke-15.1.1.dll -nx
-version 15.1 v1
+#! C:/Program Files/Nuke15.2v1/nuke-15.2.1.dll -nx
+version 15.2 v1
 define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 <layout version="1.0">
     <window x="-1" y="-7" w="2560" h="1369" maximized="1" screen="0">
@@ -8,7 +8,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
             <dock id="" hideTitles="1" activePageId="Toolbar.1">
                 <page id="Toolbar.1"/>
             </dock>
-            <split size="1897" stretch="1"/>
+            <split size="1159" stretch="1"/>
             <splitter orientation="2">
                 <split size="779"/>
                 <dock id="" activePageId="Viewer.1">
@@ -19,15 +19,13 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="DAG.1"/>
                     <page id="Curve Editor.1"/>
                     <page id="DopeSheet.1"/>
-                    <page id="DAG.2"/>
                 </dock>
             </splitter>
-            <split size="615"/>
+            <split size="1353"/>
             <dock id="" activePageId="Properties.1">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
-                <page id="uk.co.thefoundry.scripteditor.1"/>
             </dock>
         </splitter>
     </window>
@@ -54,6 +52,16 @@ Root {
  int16Lut texture_paint
  logLut compositing_log
  floatLut scene_linear
+ gsv  {
+  __default__ {
+   shotcode ABC_0010 { { vp:type List } { vp:options { ABC_0010 ABC_0020 XYZ_0010 XYZ_0020 XYZ_0030 } } { vp:label "shot code" } }
+   res wh { { vp:type List } { vp:options { wh hh qh } } { vp:label resolution } }
+  }
+  __panel__ {
+   tab {Main}
+  }
+ 
+}
  addUserKnob {20 Deadline}
  addUserKnob {1 FrameListMode l frameListMode}
  FrameListMode Global
@@ -110,26 +118,58 @@ Root {
  ReloadPlugin True
  addUserKnob {1 PerformanceProfilerPath l performanceProfilerPath}
 }
-Read {
+CheckerBoard2 {
  inputs 0
- file_type exr
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.%04d.exr
- last 100
- origlast 100
- origset true
- name Read1
- xpos -492
- ypos -139
+ name CheckerBoard2
+ xpos -699
+ ypos -142
 }
-set N5315800 [stack 0]
-Viewer {
- frame 1001
- frame_range 1001-1001
- viewerProcess "Rec.709 (ACES)"
- monitorOutNDISenderName "Nuke - renderWithDeadline - Viewer1"
- name Viewer1
- xpos -40
- ypos -9
+CameraShake3 {
+ name CameraShake3_2
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -699
+ ypos -39
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings3
+ xpos -699
+ ypos 35
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+FrameRange {
+ first_frame 1001
+ last_frame 1200
+ time ""
+ name FrameRange3
+ xpos -696
+ ypos 69
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop3
+ xpos -699
+ ypos 103
+}
+Write {
+ channels rgba
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames02_v001_%\{res\}.####.exr"
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 10
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write2
+ xpos -699
+ ypos 162
 }
 CheckerBoard2 {
  inputs 0
@@ -172,13 +212,11 @@ Crop {
 }
 Write {
  channels rgba
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.####.exr
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames01_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
  render_order 10
- in_colorspace scene_linear
- out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -186,84 +224,17 @@ Write {
  xpos -884
  ypos 164
 }
-CheckerBoard2 {
+Read {
  inputs 0
- name CheckerBoard2
- xpos -699
- ypos -142
-}
-CameraShake3 {
- name CameraShake3_2
- label "\[value amplitude] px at \[value frequency]"
- xpos -699
- ypos -39
- amplitude 100
- rotation 50
- cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
-}
-NoOp {
- name DeadlineSettings3
- xpos -699
- ypos 35
- addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
-}
-FrameRange {
- first_frame 1001
- last_frame 1200
- time ""
- name FrameRange3
- xpos -696
- ypos 69
-}
-Crop {
- box {0 0 1920 1080}
- name Crop3
- xpos -699
- ypos 103
-}
-Write {
- channels rgba
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames02_v001.####.exr
  file_type exr
- compression DWAA
- first_part rgba
- render_order 10
- in_colorspace scene_linear
- out_colorspace scene_linear
- ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write2
- xpos -699
- ypos 162
+ file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.%04d.exr
+ last 100
+ origlast 100
+ origset true
+ name Read1
+ xpos -492
+ ypos -139
 }
-LiveGroup {
- inputs 0
- modified true
- name LiveGroup1
- xpos -203
- ypos -128
-}
- LiveInput {
-  inputs 0
-  liveGroup {{0} LiveGroup1}
-  shownWarningFile ""
-  file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
-  name LiveInput1
-  selected true
-  xpos 0
- }
- Output {
-  name Output1
-  xpos 0
-  ypos 300
- }
-end_group
-push $N5315800
 Grade {
  white {1 0 1 1}
  white_panelDropped true
@@ -297,7 +268,7 @@ Crop {
 }
 Write {
  channels rgba
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames03_v001.####.exr
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames03_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
@@ -311,4 +282,12 @@ Write {
  name Write3
  xpos -492
  ypos 163
+}
+Viewer {
+ frame_range 1001-1001
+ viewerProcess "Rec.709 (ACES)"
+ monitorOutNDISenderName "Nuke - renderWithDeadline - Viewer1"
+ name Viewer1
+ xpos -512
+ ypos 283
 }

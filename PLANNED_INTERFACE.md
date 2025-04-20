@@ -270,6 +270,33 @@ Options:
    --OnJobComplete=Archive
    --OnJobComplete Delete
 
+--Var, --Variable, --GSV
+   Optional, string
+   Default value: Nothing
+   Graph scope viables (Avaialble in nuke 15.2 and later)
+   Can be used multiple times to create batches from variables
+   Brackets can be used to create batches from variables
+   The colon in "var:" denotes variable name, values after "var:" are comma delimeted variable values until next colon is encounted, which then denotes the next variable name.
+   If no variable value is specified, all items for that variable are rendered
+   Usage:
+   --Var sequence:ABC,shot:
+      submit all shots under sequence ABC
+   --Var (sequence:XYZ,shot:143,123,890)(sequnce:RST,shot:334,999)
+      submit XYZ142 XYZ123 XYZ890 RST334 RST999
+   --Var=sequence:XYZ,shot:143,123,890 --Var=sequnce:RST,shot:334,999
+      submit XYZ142 XYZ123 XYZ890 RST334 RST999
+
+-V, -VV, -Verbose, -Verbosity, -Logging
+   Optional, string
+   Default value: INFO
+   Values: INFO, DEBUG, NOTSET
+      -V, -Verbose are shorthand for -Logging DEBUG
+      -VV is shorthand for -Logging NOTSET
+      -Logging and -Verbosity can be used interchangeably
+   Usage:
+      -Logging DEBUG
+      -Verbosity=DEBUG
+
 The options are case insensitive on the left side of the argument, and case sensitive on the second side. For example the following arguments are the same:
    --WriteNodes=Write4,Write6
    --writenodes=Write4,Write6

@@ -1,5 +1,5 @@
-#! C:/Program Files/Nuke15.1v1/nuke-15.1.1.dll -nx
-version 15.1 v1
+#! C:/Program Files/Nuke15.2v1/nuke-15.2.1.dll -nx
+version 15.2 v1
 define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 <layout version="1.0">
     <window x="-1" y="-7" w="2560" h="1369" maximized="1" screen="0">
@@ -8,7 +8,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
             <dock id="" hideTitles="1" activePageId="Toolbar.1">
                 <page id="Toolbar.1"/>
             </dock>
-            <split size="1897" stretch="1"/>
+            <split size="1159" stretch="1"/>
             <splitter orientation="2">
                 <split size="779"/>
                 <dock id="" activePageId="Viewer.1">
@@ -21,11 +21,12 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="DopeSheet.1"/>
                 </dock>
             </splitter>
-            <split size="615"/>
-            <dock id="" activePageId="Properties.1">
+            <split size="1353"/>
+            <dock id="" activePageId="Properties.1" focus="true">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
+                <page id="Variables.1"/>
             </dock>
         </splitter>
     </window>
@@ -34,7 +35,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 Root {
  inputs 0
  name C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
- frame 6
+ frame 1001
  first_frame 1001
  last_frame 1100
  lock_range true
@@ -52,11 +53,21 @@ Root {
  int16Lut texture_paint
  logLut compositing_log
  floatLut scene_linear
+ gsv  {
+  __default__ {
+   sequence ABC { { vp:type List } { vp:options { ABC XYZ } } { vp:label Sequence } }
+   shotcode ABC_0010 { { vp:type List } { vp:options { ABC_0010 ABC_0020 XYZ_0010 XYZ_0020 XYZ_0030 } } { vp:label "shot code" } }
+  }
+  __panel__ {
+   tab {Main}
+  }
+ 
+}
  addUserKnob {20 Deadline}
  addUserKnob {1 FrameListMode l frameListMode}
  FrameListMode Global
  addUserKnob {1 CustomFrameList l customFrameList}
- CustomFrameList 1-100
+ CustomFrameList 1001-1100
  addUserKnob {1 Department l department}
  addUserKnob {1 Pool l pool}
  Pool nuke
@@ -108,27 +119,6 @@ Root {
  ReloadPlugin True
  addUserKnob {1 PerformanceProfilerPath l performanceProfilerPath}
 }
-Read {
- inputs 0
- file_type exr
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.%04d.exr
- last 100
- origlast 100
- origset true
- name Read1
- xpos -492
- ypos -139
-}
-set N3c3ed800 [stack 0]
-Viewer {
- frame 6
- frame_range 1-100
- viewerProcess "Rec.709 (ACES)"
- monitorOutNDISenderName "Nuke - test - Viewer1"
- name Viewer1
- xpos -40
- ypos -9
-}
 CheckerBoard2 {
  inputs 0
  name CheckerBoard1
@@ -154,6 +144,14 @@ NoOp {
  JobInfoChunkSize 5
  addUserKnob {3 PluginInfoRamUse}
 }
+FrameRange {
+ first_frame 1001
+ last_frame 1100
+ time ""
+ name FrameRange2
+ xpos -894
+ ypos 64
+}
 Crop {
  box {0 0 1920 1080}
  name Crop1
@@ -167,6 +165,8 @@ Write {
  compression DWAA
  first_part rgba
  render_order 10
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -199,6 +199,14 @@ NoOp {
  JobInfoChunkSize 5
  addUserKnob {3 PluginInfoRamUse}
 }
+FrameRange {
+ first_frame 1001
+ last_frame 1200
+ time ""
+ name FrameRange3
+ xpos -696
+ ypos 69
+}
 Crop {
  box {0 0 1920 1080}
  name Crop3
@@ -212,6 +220,8 @@ Write {
  compression DWAA
  first_part rgba
  render_order 10
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -219,7 +229,17 @@ Write {
  xpos -699
  ypos 162
 }
-push $N3c3ed800
+Read {
+ inputs 0
+ file_type exr
+ file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames01_v001.%04d.exr
+ last 100
+ origlast 100
+ origset true
+ name Read1
+ xpos -492
+ ypos -139
+}
 Grade {
  white {1 0 1 1}
  white_panelDropped true
@@ -237,6 +257,14 @@ NoOp {
  JobInfoChunkSize 5
  addUserKnob {3 PluginInfoRamUse}
 }
+FrameRange {
+ first_frame 1001
+ last_frame 1050
+ time ""
+ name FrameRange1
+ xpos -489
+ ypos 64
+}
 Crop {
  box {0 0 1920 1080}
  name Crop2
@@ -245,16 +273,26 @@ Crop {
 }
 Write {
  channels rgba
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames03_v001.####.exr
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/testFrames03\{test\}_v001.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
  render_order 20
+ first {{first_frame}}
+ last {{last_frame}}
+ use_limit true
  ocioColorspace scene_linear
  display ACES
  view Rec.709
  name Write3
- selected true
  xpos -492
- ypos 165
+ ypos 163
+}
+Viewer {
+ frame_range 1001-1001
+ viewerProcess "Rec.709 (ACES)"
+ monitorOutNDISenderName "Nuke - renderWithDeadline - Viewer1"
+ name Viewer1
+ xpos -40
+ ypos -9
 }
