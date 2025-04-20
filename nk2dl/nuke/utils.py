@@ -26,6 +26,7 @@ def nuke_module():
     global _nuke_module
     if _nuke_module is None:
         try:
+            logger.info("Importing Nuke module. This may take a while...")
             import nuke
             _nuke_module = nuke
         except (ImportError, ModuleNotFoundError):

@@ -278,11 +278,12 @@ class NukeSubmission:
         Returns:
             String with tokens replaced
         """
-        # Ensure the script is open
-        nuke = self._ensure_script_can_be_queried()
-        
+
         # Apply GSV values if provided
         if gsv_combination:
+            # Ensure the script is open
+            nuke = self._ensure_script_can_be_queried()
+
             root_node = nuke.root()
             if 'gsv' in root_node.knobs():
                 gsv_knob = root_node['gsv']
@@ -305,6 +306,7 @@ class NukeSubmission:
         output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
         render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
         frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
+        gsv_tokens = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}", "{graph_scope_vars}", "{graph_scope_variables}"]
         
         # Include all token groups
         allowed_token_groups = [
@@ -315,7 +317,8 @@ class NukeSubmission:
             frame_range_tokens,
             write_node_tokens,
             output_tokens,
-            render_order_tokens
+            render_order_tokens,
+            gsv_tokens
         ]
         
         # Replace tokens with their values
@@ -333,6 +336,9 @@ class NukeSubmission:
                 elif token in file_stem_tokens:
                     # File stem tokens require a write node to get output path
                     if write_node:
+                        # Ensure the script is open
+                        nuke = self._ensure_script_can_be_queried()
+
                         node = nuke.toNode(write_node)
                         if node and node.Class() == "Write":
                             try:
@@ -351,8 +357,17 @@ class NukeSubmission:
                     value = self.batch_name
                 elif token in frame_range_tokens:
                     value = self.frame_range
+                elif token in gsv_tokens:
+                    # Handle GSV token replacement
+                    if gsv_combination:
+                        # Format as key1=value1,key2=value2
+                        value = ",".join([f"{key}={value}" for key, value in gsv_combination])
+                    else:
+                        value = ""  # Empty string if no GSV combination provided
                 elif write_node and token in write_node_tokens + output_tokens + render_order_tokens:
-                    # These tokens require a write node to be specified
+                    # Ensure the script is open
+                    nuke = self._ensure_script_can_be_queried()
+
                     node = nuke.toNode(write_node)
                     if node and node.Class() == "Write":
                         if token in write_node_tokens:

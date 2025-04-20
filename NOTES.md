@@ -39,6 +39,35 @@ job_id = submit_nuke_script(
     continue_on_error=True
 )
 
+from nk2dl.nuke import submit_nuke_script
+job_id = submit_nuke_script(
+    "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk",
+    frame_range="input",
+    chunk_size=50,
+    priority=75,
+    use_nuke_x=True,
+    render_threads=16,
+    use_gpu=True,
+    render_order_dependencies=True,
+    write_nodes=["Write1","Write2","Write3","Write4","Write5"],
+    use_nodes_frame_list=True,
+    continue_on_error=True,
+    graph_scope_variables=["shotcode:ABC_0010,ABC_0020"]
+)
+
+from nk2dl.nuke import submit_nuke_script
+job_id = submit_nuke_script(
+    "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk",
+    frame_range="f-l",
+    chunk_size=50,
+    priority=75,
+    use_nuke_x=True,
+    render_threads=16,
+    use_gpu=True,
+    use_nodes_frame_list=True,
+    continue_on_error=True
+)
+
 
 from nk2dl.nuke import submit_nuke_script
 job_id = submit_nuke_script(
