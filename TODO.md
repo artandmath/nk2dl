@@ -16,15 +16,16 @@
 - [X] Develop core submission
   - [X] Core job submission logic
   - [X] Dependency management
-  - [ ] Graph Scope Variables
+  - [X] Graph Scope Variables
 
 ## Phase 3: CLI Implementation
 - [ ] Create CLI argument parser
-  - [ ] Support all defined options from PLANNED_INTERFACE.md
+  - [ ] Support all defined options from PLANNED_INTERFACE.md and nk2dl.nuke.submission
   - [ ] Handle environment variables
+  - [ ] Detailed help that is in the vein of PLANNED_INTERFACE.md-- can be programatically generated and more standardized to help documentation for cli tools
 - [ ] Implement CLI commands
   - [ ] `submit` command
-  - [ ] Utility commands
+  - [ ] `config` commands
   - [ ] Error handling and output formatting
 - [ ] Write CLI tests
   - [ ] Unit tests
