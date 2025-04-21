@@ -57,5 +57,25 @@ def setup_logging(name: Optional[str] = None) -> logging.Logger:
     
     return logger
 
+
+def configure_logging(level: str = None) -> None:
+    """Configure logging level dynamically.
+    
+    Args:
+        level: Logging level to set (INFO, DEBUG, NOTSET)
+    """
+    if level:
+        # Update root logger
+        root_logger = logging.getLogger()
+        root_logger.setLevel(getattr(logging, level.upper()))
+        
+        # Update nk2dl logger
+        nk2dl_logger = logging.getLogger('nk2dl')
+        nk2dl_logger.setLevel(getattr(logging, level.upper()))
+        
+        # Log the level change
+        logger.debug(f"Logging level set to {level}")
+
+
 # Create default logger
 logger = setup_logging('nk2dl') 

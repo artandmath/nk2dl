@@ -55,6 +55,19 @@ job_id = submit_nuke_script(
     graph_scope_variables=["shotcode:ABC_0010,ABC_0020"]
 )
 
+python -m nk2dl submit `
+  "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk" `
+  --Frames input `
+  --FramesPerTask 50 `
+  --Priority 75 `
+  --UseNukeX `
+  --RenderThreads 16 `
+  --UseGPU `
+  --RenderOrderDependencies `
+  --WriteNodes Write1,Write2,Write3,Write4,Write5 `
+  --NodeFrameRange `
+  --ContinueOnError `
+  --Var "shotcode:ABC_0010,ABC_0020"
 
 from nk2dl.nuke import submit_nuke_script
 job_id = submit_nuke_script(

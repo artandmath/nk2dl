@@ -1,0 +1,11 @@
+#!/usr/bin/env python
+"""Nuke to Deadline Submitter (nk2dl) command line interface.
+
+This script is the main entry point for the nk2dl CLI.
+"""
+
+import sys
+from nk2dl.cli.commands import main
+
+if __name__ == "__main__":
+    sys.exit(main()) 

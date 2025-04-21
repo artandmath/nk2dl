@@ -1134,8 +1134,8 @@ class NukeSubmission:
                         # Get sorted write nodes
                         sorted_write_nodes = self._get_sorted_write_nodes(gsv_combination)
                         
-                        # Process in sorted order
-                        previous_job_ids = []
+                        # Track job IDs by render order
+                        jobs_by_render_order = {}
                         job_id = None
                         
                         # Count existing dependencies from the user-specified ones
@@ -1143,8 +1143,25 @@ class NukeSubmission:
                         if self.job_dependencies:
                             dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
                         
-                        # Submit each node based on sorting options
+                        # Get render orders for all write nodes
+                        nuke = nuke_utils.nuke_module()
+                        write_node_render_orders = {}
                         for write_node in sorted_write_nodes:
+                            node_obj = nuke.toNode(write_node)
+                            render_order = 0
+                            if node_obj and 'render_order' in node_obj.knobs():
+                                render_order = int(node_obj['render_order'].value())
+                            write_node_render_orders[write_node] = render_order
+                        
+                        # Find all unique render orders and sort them
+                        unique_render_orders = sorted(set(write_node_render_orders.values()))
+                        
+                        # Submit each node based on sorting options
+                        last_processed_render_order = None
+                        for write_node in sorted_write_nodes:
+                            # Get render order for this node
+                            render_order = write_node_render_orders[write_node]
+                            
                             # Clone job info for this write node and GSV combination
                             node_job_info = job_info.copy()
                             node_plugin_info = plugin_info.copy()
@@ -1163,7 +1180,6 @@ class NukeSubmission:
                                     node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node, gsv_combination)
                             
                             # Add output filename for this write node
-                            nuke = nuke_utils.nuke_module()
                             node_obj = nuke.toNode(write_node)
                             if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
                                 output_path = self._get_node_pretty_path(node_obj, gsv_combination)
@@ -1178,21 +1194,34 @@ class NukeSubmission:
                                 start_frame, end_frame = write_node_frames[write_node]
                                 node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                             
-                            # Set dependencies if we have previous jobs and using render_order_dependencies
-                            if previous_job_ids and self.render_order_dependencies:
-                                # Set dependencies as individual entries, with index continuing from user dependencies
-                                for i, dep_id in enumerate(previous_job_ids):
-                                    node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
+                            # Set dependencies if using render_order_dependencies
+                            if self.render_order_dependencies:
+                                # Find the index of the current render order in our sorted list
+                                current_index = unique_render_orders.index(render_order)
                                 
+                                # If this is not the lowest render order
+                                if current_index > 0:
+                                    # Get the immediate previous render order
+                                    previous_order = unique_render_orders[current_index - 1]
+                                    
+                                    # Add all jobs from the previous render order as dependencies
+                                    if previous_order in jobs_by_render_order:
+                                        for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
+                                            node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
+                            
                             # Submit to Deadline
                             job_id = deadline.submit_job(node_job_info, node_plugin_info)
                             
-                            # Track job ID
-                            submitted_job_ids.append(job_id)
+                            # Track job ID by render order
+                            if render_order not in jobs_by_render_order:
+                                jobs_by_render_order[render_order] = []
+                            jobs_by_render_order[render_order].append(job_id)
                             
-                            # Update previous_job_ids for dependencies if using render_order_dependencies
-                            if self.render_order_dependencies:
-                                previous_job_ids = [job_id]
+                            # Track last processed render order
+                            last_processed_render_order = render_order
+                            
+                            # Add to submitted job IDs list
+                            submitted_job_ids.append(job_id)
                     
                     else:
                         # Regular submission without separate jobs/tasks
@@ -1228,8 +1257,8 @@ class NukeSubmission:
                     # Get sorted write nodes
                     sorted_write_nodes = self._get_sorted_write_nodes()
                     
-                    # Process in sorted order
-                    previous_job_ids = []
+                    # Track job IDs by render order
+                    jobs_by_render_order = {}
                     job_id = None
                     
                     # Count existing dependencies from the user-specified ones
@@ -1237,8 +1266,25 @@ class NukeSubmission:
                     if self.job_dependencies:
                         dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
                     
-                    # Submit each node based on sorting options
+                    # Get render orders for all write nodes
+                    nuke = nuke_utils.nuke_module()
+                    write_node_render_orders = {}
                     for write_node in sorted_write_nodes:
+                        node_obj = nuke.toNode(write_node)
+                        render_order = 0
+                        if node_obj and 'render_order' in node_obj.knobs():
+                            render_order = int(node_obj['render_order'].value())
+                        write_node_render_orders[write_node] = render_order
+                    
+                    # Find all unique render orders and sort them
+                    unique_render_orders = sorted(set(write_node_render_orders.values()))
+                    
+                    # Submit each node based on sorting options
+                    last_processed_render_order = None
+                    for write_node in sorted_write_nodes:
+                        # Get render order for this node
+                        render_order = write_node_render_orders[write_node]
+                        
                         # Clone job info for this write node
                         node_job_info = job_info.copy()
                         node_plugin_info = plugin_info.copy()
@@ -1257,7 +1303,6 @@ class NukeSubmission:
                                 node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
                         
                         # Add output filename for this write node
-                        nuke = nuke_utils.nuke_module()
                         node_obj = nuke.toNode(write_node)
                         if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
                             output_path = self._get_node_pretty_path(node_obj)
@@ -1272,18 +1317,31 @@ class NukeSubmission:
                             start_frame, end_frame = write_node_frames[write_node]
                             node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                         
-                        # Set dependencies if we have previous jobs and using render_order_dependencies
-                        if previous_job_ids and self.render_order_dependencies:
-                            # Set dependencies as individual entries, with index continuing from user dependencies
-                            for i, dep_id in enumerate(previous_job_ids):
-                                node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
+                        # Set dependencies if using render_order_dependencies
+                        if self.render_order_dependencies:
+                            # Find the index of the current render order in our sorted list
+                            current_index = unique_render_orders.index(render_order)
                             
+                            # If this is not the lowest render order
+                            if current_index > 0:
+                                # Get the immediate previous render order
+                                previous_order = unique_render_orders[current_index - 1]
+                                
+                                # Add all jobs from the previous render order as dependencies
+                                if previous_order in jobs_by_render_order:
+                                    for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
+                                        node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
+                        
                         # Submit to Deadline
                         job_id = deadline.submit_job(node_job_info, node_plugin_info)
                         
-                        # Update previous_job_ids for dependencies if using render_order_dependencies
-                        if self.render_order_dependencies:
-                            previous_job_ids = [job_id]
+                        # Track job ID by render order
+                        if render_order not in jobs_by_render_order:
+                            jobs_by_render_order[render_order] = []
+                        jobs_by_render_order[render_order].append(job_id)
+                        
+                        # Track last processed render order
+                        last_processed_render_order = render_order
                     
                     logger.info(f"Jobs submitted as separate jobs. Last Job ID: {job_id}")
                     return job_id

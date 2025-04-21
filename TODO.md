@@ -19,16 +19,16 @@
   - [X] Graph Scope Variables
 
 ## Phase 3: CLI Implementation
-- [ ] Create CLI argument parser
-  - [ ] Support all defined options from PLANNED_INTERFACE.md and nk2dl.nuke.submission
-  - [ ] Handle environment variables
-  - [ ] Detailed help that is in the vein of PLANNED_INTERFACE.md-- can be programatically generated and more standardized to help documentation for cli tools
-- [ ] Implement CLI commands
-  - [ ] `submit` command
-  - [ ] `config` commands
-  - [ ] Error handling and output formatting
-- [ ] Write CLI tests
-  - [ ] Unit tests
+- [X] Create CLI argument parser
+  - [X] Support all defined options from PLANNED_INTERFACE.md and nk2dl.nuke.submission
+  - [X] Handle environment variables
+  - [X] Detailed help that is in the vein of PLANNED_INTERFACE.md-- can be programatically generated and more standardized to help documentation for cli tools
+- [X] Implement CLI commands
+  - [X] `submit` command
+  - [X] `config` commands
+  - [X] Error handling and output formatting
+- [X] Write CLI tests
+  - [X] Unit tests
   - [ ] Integration tests
   - [ ] Documentation
 
