@@ -49,6 +49,8 @@ class NukeSubmission:
                 render_mode: str = "full",
                 write_nodes_as_tasks: bool = False,
                 write_nodes_as_separate_jobs: bool = False,
+                submit_alphabetically: bool = False,
+                submit_in_render_order: bool = False,
                 render_order_dependencies: bool = False,
                 job_dependencies: Optional[str] = None,
                 use_nodes_frame_list: bool = False,
@@ -88,6 +90,8 @@ class NukeSubmission:
             render_mode: Render mode (full, proxy)
             write_nodes_as_tasks: Whether to submit write nodes as separate tasks
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
+            submit_alphabetically: Whether to sort write nodes alphabetically by name
+            submit_in_render_order: Whether to sort write nodes by render order
             render_order_dependencies: Whether to set job dependencies based on render order
             job_dependencies: Comma or space separated list of job IDs
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
@@ -122,7 +126,7 @@ class NukeSubmission:
             raise SubmissionError("Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs or render_order_dependencies simultaneously")
         
         # Check if write_nodes_as_tasks is enabled with a custom frame range but use_nodes_frame_list is disabled
-        if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not frame_range.lower() in ['f-l', 'first-last', 'f', 'l', 'first', 'last', 'i', 'input', 'h', 'hero']:
+        if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not frame_range.lower() in ['f-l', 'first-last', 'f', 'm', 'l', 'first', 'middle', 'last', 'i', 'input']:
             raise SubmissionError("Custom frame list is not supported when submitting write nodes as separate tasks. "
                                  "Please use global (f-l) or input (i) frame ranges, or enable use_nodes_frame_list.")
             
@@ -182,6 +186,8 @@ class NukeSubmission:
         self.job_dependencies = job_dependencies
         self.write_nodes_as_tasks = write_nodes_as_tasks if isinstance(write_nodes_as_tasks, bool) else config.get('submission.write_nodes_as_tasks', False)
         self.write_nodes_as_separate_jobs = write_nodes_as_separate_jobs if isinstance(write_nodes_as_separate_jobs, bool) else config.get('submission.write_nodes_as_separate_jobs', False)
+        self.submit_alphabetically = submit_alphabetically if isinstance(submit_alphabetically, bool) else config.get('submission.submit_alphabetically', False)
+        self.submit_in_render_order = submit_in_render_order if isinstance(submit_in_render_order, bool) else config.get('submission.submit_in_render_order', False)
         self.use_nodes_frame_list = use_nodes_frame_list if isinstance(use_nodes_frame_list, bool) else config.get('submission.use_nodes_frame_list', False)
         self.script_is_open = script_is_open
         
@@ -993,6 +999,7 @@ class NukeSubmission:
         nuke = self._ensure_script_can_be_queried()
         
         write_nodes_by_order = {}
+        write_nodes_info = []
         
         try:
             # Apply GSV values if provided
@@ -1016,27 +1023,76 @@ class NukeSubmission:
                 if 'render_order' in node.knobs():
                     render_order = int(node['render_order'].value())
                 
-                # Add to dictionary
-                if render_order not in write_nodes_by_order:
-                    write_nodes_by_order[render_order] = []
-                write_nodes_by_order[render_order].append(node_name)
+                # Store node information for sorting
+                write_nodes_info.append((node_name, render_order))
             
             # If we're filtering to specific write nodes, only keep those
             if self.write_nodes:
                 write_nodes_set = set(self.write_nodes)
-                for order in list(write_nodes_by_order.keys()):
-                    write_nodes_by_order[order] = [
-                        node for node in write_nodes_by_order[order] 
-                        if node in write_nodes_set
-                    ]
-                    # Remove empty lists
-                    if not write_nodes_by_order[order]:
-                        del write_nodes_by_order[order]
+                write_nodes_info = [
+                    (node_name, render_order) for node_name, render_order in write_nodes_info
+                    if node_name in write_nodes_set
+                ]
+            
+            # Handle sorting based on options
+            if self.submit_in_render_order and self.submit_alphabetically:
+                # Sort by render order first, then alphabetically within render order groups
+                write_nodes_info.sort(key=lambda x: (x[1], x[0]))
+            elif self.submit_in_render_order:
+                # Sort by render order only
+                write_nodes_info.sort(key=lambda x: x[1])
+            elif self.submit_alphabetically:
+                # Sort alphabetically by node name
+                write_nodes_info.sort(key=lambda x: x[0])
+            # Otherwise, keep the original order (or filtered order if write_nodes was specified)
+            
+            # Group by render order for later processing
+            for node_name, render_order in write_nodes_info:
+                if render_order not in write_nodes_by_order:
+                    write_nodes_by_order[render_order] = []
+                write_nodes_by_order[render_order].append(node_name)
             
             return write_nodes_by_order
         except Exception as e:
-            raise SubmissionError(f"Failed to get write nodes by render order: {e}")    
-    
+            raise SubmissionError(f"Failed to get write nodes by render order: {e}")
+
+    def _get_sorted_write_nodes(self, gsv_combination=None) -> List[str]:
+        """Get write nodes sorted according to submission options.
+        
+        Args:
+            gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
+            
+        Returns:
+            List of write node names sorted as specified by options
+        """
+        write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
+        sorted_nodes = []
+        
+        # Process the write nodes based on the sorting options
+        if self.submit_in_render_order:
+            # Go through render orders in ascending order
+            for render_order in sorted(write_nodes_by_order.keys()):
+                nodes_in_order = write_nodes_by_order[render_order]
+                
+                # If also sorting alphabetically, sort this group
+                if self.submit_alphabetically:
+                    nodes_in_order.sort()
+                
+                sorted_nodes.extend(nodes_in_order)
+        else:
+            # Collect all nodes
+            all_nodes = []
+            for render_order in sorted(write_nodes_by_order.keys()):
+                all_nodes.extend(write_nodes_by_order[render_order])
+            
+            # If sorting alphabetically, sort the collected nodes
+            if self.submit_alphabetically:
+                all_nodes.sort()
+            
+            sorted_nodes = all_nodes
+            
+        return sorted_nodes
+
     def submit(self) -> str:
         """Submit the Nuke script to Deadline.
         
@@ -1068,9 +1124,6 @@ class NukeSubmission:
                     
                     # If using separate jobs or dependencies with GSVs
                     elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
-                        # Parse the Nuke script for write nodes and their render orders
-                        write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
-                        
                         # Get write node frame ranges if use_nodes_frame_list is enabled
                         write_node_frames = {}
                         if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
@@ -1078,7 +1131,10 @@ class NukeSubmission:
                             for node_name, start_frame, end_frame in write_node_info:
                                 write_node_frames[node_name] = (start_frame, end_frame)
                         
-                        # Process in ascending render order
+                        # Get sorted write nodes
+                        sorted_write_nodes = self._get_sorted_write_nodes(gsv_combination)
+                        
+                        # Process in sorted order
                         previous_job_ids = []
                         job_id = None
                         
@@ -1087,58 +1143,56 @@ class NukeSubmission:
                         if self.job_dependencies:
                             dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
                         
-                        for render_order in sorted(write_nodes_by_order.keys()):
-                            current_job_ids = []
+                        # Submit each node based on sorting options
+                        for write_node in sorted_write_nodes:
+                            # Clone job info for this write node and GSV combination
+                            node_job_info = job_info.copy()
+                            node_plugin_info = plugin_info.copy()
                             
-                            # Submit each node in this render order group
-                            for write_node in write_nodes_by_order[render_order]:
-                                # Clone job info for this write node and GSV combination
-                                node_job_info = job_info.copy()
-                                node_plugin_info = plugin_info.copy()
-                                
-                                # Update job name to include write node
-                                node_job_info["Name"] = self._get_gsv_job_name(gsv_combination, write_node)
-                                
-                                # Update comment with tokens for this write node
-                                if "Comment" in node_job_info and any(token in node_job_info["Comment"] for token in ["{", "}"]):
-                                    node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node, gsv_combination)
-                                
-                                # Update ExtraInfo fields with tokens for this write node
-                                for i, extra_info_item in enumerate(self.extra_info):
-                                    extra_info_key = f"ExtraInfo{i}"
-                                    if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
-                                        node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node, gsv_combination)
-                                
-                                # Add output filename for this write node
-                                nuke = nuke_utils.nuke_module()
-                                node_obj = nuke.toNode(write_node)
-                                if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
-                                    output_path = self._get_node_pretty_path(node_obj, gsv_combination)
-                                    if output_path:
-                                        node_job_info["OutputFilename0"] = output_path
-                                
-                                # Specify which write node to render
-                                node_plugin_info["WriteNodes"] = write_node
-                                
-                                # Override frame range if use_nodes_frame_list is enabled and frame range is available
-                                if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
-                                    start_frame, end_frame = write_node_frames[write_node]
-                                    node_job_info["Frames"] = f"{start_frame}-{end_frame}"
-                                
-                                # Set dependencies if we have previous jobs and using render_order_dependencies
-                                if previous_job_ids and self.render_order_dependencies:
-                                    # Set dependencies as individual entries, with index continuing from user dependencies
-                                    for i, dep_id in enumerate(previous_job_ids):
-                                        node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
-                                    
-                                # Submit to Deadline
-                                job_id = deadline.submit_job(node_job_info, node_plugin_info)
-                                current_job_ids.append(job_id)
-                                submitted_job_ids.append(job_id)
+                            # Update job name to include write node
+                            node_job_info["Name"] = self._get_gsv_job_name(gsv_combination, write_node)
                             
-                            # Update previous_job_ids for next render order group if using render_order_dependencies
+                            # Update comment with tokens for this write node
+                            if "Comment" in node_job_info and any(token in node_job_info["Comment"] for token in ["{", "}"]):
+                                node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node, gsv_combination)
+                            
+                            # Update ExtraInfo fields with tokens for this write node
+                            for i, extra_info_item in enumerate(self.extra_info):
+                                extra_info_key = f"ExtraInfo{i}"
+                                if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
+                                    node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node, gsv_combination)
+                            
+                            # Add output filename for this write node
+                            nuke = nuke_utils.nuke_module()
+                            node_obj = nuke.toNode(write_node)
+                            if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
+                                output_path = self._get_node_pretty_path(node_obj, gsv_combination)
+                                if output_path:
+                                    node_job_info["OutputFilename0"] = output_path
+                            
+                            # Specify which write node to render
+                            node_plugin_info["WriteNodes"] = write_node
+                            
+                            # Override frame range if use_nodes_frame_list is enabled and frame range is available
+                            if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
+                                start_frame, end_frame = write_node_frames[write_node]
+                                node_job_info["Frames"] = f"{start_frame}-{end_frame}"
+                            
+                            # Set dependencies if we have previous jobs and using render_order_dependencies
+                            if previous_job_ids and self.render_order_dependencies:
+                                # Set dependencies as individual entries, with index continuing from user dependencies
+                                for i, dep_id in enumerate(previous_job_ids):
+                                    node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
+                                
+                            # Submit to Deadline
+                            job_id = deadline.submit_job(node_job_info, node_plugin_info)
+                            
+                            # Track job ID
+                            submitted_job_ids.append(job_id)
+                            
+                            # Update previous_job_ids for dependencies if using render_order_dependencies
                             if self.render_order_dependencies:
-                                previous_job_ids = current_job_ids
+                                previous_job_ids = [job_id]
                     
                     else:
                         # Regular submission without separate jobs/tasks
@@ -1164,9 +1218,6 @@ class NukeSubmission:
                 
                 # If using separate jobs or dependencies
                 elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
-                    # Parse the Nuke script for write nodes and their render orders
-                    write_nodes_by_order = self._get_write_nodes_by_render_order()
-                    
                     # Get write node frame ranges if use_nodes_frame_list is enabled
                     write_node_frames = {}
                     if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
@@ -1174,7 +1225,10 @@ class NukeSubmission:
                         for node_name, start_frame, end_frame in write_node_info:
                             write_node_frames[node_name] = (start_frame, end_frame)
                     
-                    # Process in ascending render order
+                    # Get sorted write nodes
+                    sorted_write_nodes = self._get_sorted_write_nodes()
+                    
+                    # Process in sorted order
                     previous_job_ids = []
                     job_id = None
                     
@@ -1183,57 +1237,53 @@ class NukeSubmission:
                     if self.job_dependencies:
                         dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
                     
-                    for render_order in sorted(write_nodes_by_order.keys()):
-                        current_job_ids = []
+                    # Submit each node based on sorting options
+                    for write_node in sorted_write_nodes:
+                        # Clone job info for this write node
+                        node_job_info = job_info.copy()
+                        node_plugin_info = plugin_info.copy()
                         
-                        # Submit each node in this render order group
-                        for write_node in write_nodes_by_order[render_order]:
-                            # Clone job info for this write node
-                            node_job_info = job_info.copy()
-                            node_plugin_info = plugin_info.copy()
-                            
-                            # Update job name to include write node
-                            node_job_info["Name"] = self._replace_job_name_tokens(self.job_name_template, write_node)
-                            
-                            # Update comment with tokens for this write node
-                            if "Comment" in node_job_info and any(token in node_job_info["Comment"] for token in ["{", "}"]):
-                                node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node)
-                            
-                            # Update ExtraInfo fields with tokens for this write node
-                            for i, extra_info_item in enumerate(self.extra_info):
-                                extra_info_key = f"ExtraInfo{i}"
-                                if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
-                                    node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
-                            
-                            # Add output filename for this write node
-                            nuke = nuke_utils.nuke_module()
-                            node_obj = nuke.toNode(write_node)
-                            if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
-                                output_path = self._get_node_pretty_path(node_obj)
-                                if output_path:
-                                    node_job_info["OutputFilename0"] = output_path
-                            
-                            # Specify which write node to render
-                            node_plugin_info["WriteNodes"] = write_node
-                            
-                            # Override frame range if use_nodes_frame_list is enabled and frame range is available
-                            if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
-                                start_frame, end_frame = write_node_frames[write_node]
-                                node_job_info["Frames"] = f"{start_frame}-{end_frame}"
-                            
-                            # Set dependencies if we have previous jobs and using render_order_dependencies
-                            if previous_job_ids and self.render_order_dependencies:
-                                # Set dependencies as individual entries, with index continuing from user dependencies
-                                for i, dep_id in enumerate(previous_job_ids):
-                                    node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
-                                
-                            # Submit to Deadline
-                            job_id = deadline.submit_job(node_job_info, node_plugin_info)
-                            current_job_ids.append(job_id)
+                        # Update job name to include write node
+                        node_job_info["Name"] = self._replace_job_name_tokens(self.job_name_template, write_node)
                         
-                        # Update previous_job_ids for next render order group if using render_order_dependencies
+                        # Update comment with tokens for this write node
+                        if "Comment" in node_job_info and any(token in node_job_info["Comment"] for token in ["{", "}"]):
+                            node_job_info["Comment"] = self._replace_comment_tokens(self.comment, write_node)
+                        
+                        # Update ExtraInfo fields with tokens for this write node
+                        for i, extra_info_item in enumerate(self.extra_info):
+                            extra_info_key = f"ExtraInfo{i}"
+                            if extra_info_key in node_job_info and any(token in extra_info_item for token in ["{", "}"]):
+                                node_job_info[extra_info_key] = self._replace_extrainfo_tokens(extra_info_item, write_node)
+                        
+                        # Add output filename for this write node
+                        nuke = nuke_utils.nuke_module()
+                        node_obj = nuke.toNode(write_node)
+                        if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
+                            output_path = self._get_node_pretty_path(node_obj)
+                            if output_path:
+                                node_job_info["OutputFilename0"] = output_path
+                        
+                        # Specify which write node to render
+                        node_plugin_info["WriteNodes"] = write_node
+                        
+                        # Override frame range if use_nodes_frame_list is enabled and frame range is available
+                        if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
+                            start_frame, end_frame = write_node_frames[write_node]
+                            node_job_info["Frames"] = f"{start_frame}-{end_frame}"
+                        
+                        # Set dependencies if we have previous jobs and using render_order_dependencies
+                        if previous_job_ids and self.render_order_dependencies:
+                            # Set dependencies as individual entries, with index continuing from user dependencies
+                            for i, dep_id in enumerate(previous_job_ids):
+                                node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
+                            
+                        # Submit to Deadline
+                        job_id = deadline.submit_job(node_job_info, node_plugin_info)
+                        
+                        # Update previous_job_ids for dependencies if using render_order_dependencies
                         if self.render_order_dependencies:
-                            previous_job_ids = current_job_ids
+                            previous_job_ids = [job_id]
                     
                     logger.info(f"Jobs submitted as separate jobs. Last Job ID: {job_id}")
                     return job_id
@@ -1278,10 +1328,12 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
           - use_proxy: Whether to use proxy mode for rendering
           - write_nodes: List of write nodes to render
           - render_mode: Render mode (full, proxy)
-          - render_order_dependencies: Whether to set job dependencies based on render order
-          - job_dependencies: Comma or space separated list of job IDs
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
+          - submit_alphabetically: Whether to sort write nodes alphabetically by name
+          - submit_in_render_order: Whether to sort write nodes by render order
+          - render_order_dependencies: Whether to set job dependencies based on render order
+          - job_dependencies: Comma or space separated list of job IDs
           - use_nodes_frame_list: Whether to use node-specific frame lists
           - script_is_open: Whether the script is already open in the current Nuke session
           - extra_info: List of extra info fields

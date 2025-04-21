@@ -7,11 +7,24 @@ This document outlines the design approach for both the Command Line Interface (
 
 ### Core Commands
 ```bash
+# Config
+nk2dl config --list
+
 # Basic submission
 nk2dl submit <script_path> [options]
 ```
+Config options:
+--list
+   Lists the active key value pairs for the current configuration. Key value pairs are created from various sources
+   Configuration is loaded in the following order (later sources override earlier ones):
+   1. Default configuration
+   2. Project configuration file (from NK2DL_CONFIG or .nk2dl.yaml in project root)
+   3. User configuration file (~/.nk2dl/config.yaml)
+   4. Environment variables (NK2DL_*)
 
-Options:
+Submit options:
+This may not be a full list of options. The options here should correspond to what is available in nk2dl.nuke.submission. If they are missing from this list we should include them and create them in the style of the following options.
+
 --BatchName
    Optional, string
    Default value: "<nukescript_filename>"
@@ -143,10 +156,11 @@ Options:
    Optional, string
    Uses the same syntax as nuke for frameranges.
    Special cases:
-      f=root.first_frame
-      l=root.last_frame
-      m=(root.first_frame+root.last_frame)/2
-      hero=hero frames
+      f,first=root.first_frame
+      l,last=root.last_frame
+      m,middle=(root.first_frame+root.last_frame)/2
+      h,hero=hero frames, defaults to f,m,l if no hero frames set
+      i,input=write node input range
    Default value: f-l
    Usage:
    --Frames=1001-1100x10
@@ -180,7 +194,7 @@ Options:
    --RenderThreads=4
    --RenderThreads 4
 
---UseGPU
+--Gpu --UseGPU
    Optional, bool
    Default value: False
    Usage:
