@@ -47,9 +47,10 @@ class NukeSubmission:
                 use_proxy: bool = False,
                 write_nodes: Optional[List[str]] = None,
                 render_mode: str = "full",
+                write_nodes_as_tasks: bool = False,
+                write_nodes_as_separate_jobs: bool = False,
                 render_order_dependencies: bool = False,
                 job_dependencies: Optional[str] = None,
-                write_nodes_as_tasks: bool = False,
                 use_nodes_frame_list: bool = False,
                 script_is_open: bool = False,
                 extra_info: Optional[List[str]] = None,
@@ -85,9 +86,10 @@ class NukeSubmission:
             use_proxy: Whether to use proxy mode for rendering
             write_nodes: List of write nodes to render
             render_mode: Render mode (full, proxy)
+            write_nodes_as_tasks: Whether to submit write nodes as separate tasks
+            write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
             render_order_dependencies: Whether to set job dependencies based on render order
             job_dependencies: Comma or space separated list of job IDs
-            write_nodes_as_tasks: Whether to submit write nodes as separate tasks
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
             script_is_open: Whether the script is already open in the current Nuke session
             extra_info: List of extra info fields with optional tokens for customization
@@ -111,9 +113,13 @@ class NukeSubmission:
                                   If no values are provided for a key (e.g., "key:" or just "key"), 
                                   all available values for that key will be used.
         """
-        # Check if render_order_dependencies and write_nodes_as_tasks are not both True
-        if render_order_dependencies and write_nodes_as_tasks:
-            raise SubmissionError("Cannot use both dependencies and write nodes as tasks features simultaneously")
+        # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
+        if render_order_dependencies:
+            write_nodes_as_separate_jobs = True
+            
+        # Check if write_nodes_as_tasks and write_nodes_as_separate_jobs are not both True
+        if write_nodes_as_tasks and write_nodes_as_separate_jobs:
+            raise SubmissionError("Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs or render_order_dependencies simultaneously")
         
         # Check if write_nodes_as_tasks is enabled with a custom frame range but use_nodes_frame_list is disabled
         if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not frame_range.lower() in ['f-l', 'first-last', 'f', 'l', 'first', 'last', 'i', 'input', 'h', 'hero']:
@@ -175,6 +181,7 @@ class NukeSubmission:
         self.render_order_dependencies = render_order_dependencies if isinstance(render_order_dependencies, bool) else config.get('submission.render_order_dependencies', False)
         self.job_dependencies = job_dependencies
         self.write_nodes_as_tasks = write_nodes_as_tasks if isinstance(write_nodes_as_tasks, bool) else config.get('submission.write_nodes_as_tasks', False)
+        self.write_nodes_as_separate_jobs = write_nodes_as_separate_jobs if isinstance(write_nodes_as_separate_jobs, bool) else config.get('submission.write_nodes_as_separate_jobs', False)
         self.use_nodes_frame_list = use_nodes_frame_list if isinstance(use_nodes_frame_list, bool) else config.get('submission.use_nodes_frame_list', False)
         self.script_is_open = script_is_open
         
@@ -387,9 +394,6 @@ class NukeSubmission:
                     else:
                         # Skip write node tokens if no valid write node
                         continue
-                else:
-                    # Skip tokens that need a write node if none specified
-                    continue
                 
                 # Replace the token with its value
                 result = result.replace(token, value)
@@ -1062,8 +1066,8 @@ class NukeSubmission:
                         submitted_job_ids.append(job_id)
                         logger.info(f"GSV job submitted with write nodes as tasks. Job ID: {job_id}")
                     
-                    # If using dependencies with GSVs
-                    elif self.render_order_dependencies and self.write_nodes and len(self.write_nodes) > 1:
+                    # If using separate jobs or dependencies with GSVs
+                    elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                         # Parse the Nuke script for write nodes and their render orders
                         write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
                         
@@ -1121,8 +1125,8 @@ class NukeSubmission:
                                     start_frame, end_frame = write_node_frames[write_node]
                                     node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                                 
-                                # Set dependencies if we have previous jobs
-                                if previous_job_ids:
+                                # Set dependencies if we have previous jobs and using render_order_dependencies
+                                if previous_job_ids and self.render_order_dependencies:
                                     # Set dependencies as individual entries, with index continuing from user dependencies
                                     for i, dep_id in enumerate(previous_job_ids):
                                         node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
@@ -1132,11 +1136,12 @@ class NukeSubmission:
                                 current_job_ids.append(job_id)
                                 submitted_job_ids.append(job_id)
                             
-                            # Update previous_job_ids for next render order group
-                            previous_job_ids = current_job_ids
+                            # Update previous_job_ids for next render order group if using render_order_dependencies
+                            if self.render_order_dependencies:
+                                previous_job_ids = current_job_ids
                     
                     else:
-                        # Regular submission without dependencies or write nodes as tasks
+                        # Regular submission without separate jobs/tasks
                         job_id = deadline.submit_job(job_info, plugin_info)
                         submitted_job_ids.append(job_id)
                 
@@ -1157,8 +1162,8 @@ class NukeSubmission:
                     logger.info(f"Job submitted with write nodes as tasks. Job ID: {job_id}")
                     return job_id
                 
-                # If using dependencies and we need to handle write nodes with different render orders
-                elif self.render_order_dependencies and self.write_nodes and len(self.write_nodes) > 1:
+                # If using separate jobs or dependencies
+                elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                     # Parse the Nuke script for write nodes and their render orders
                     write_nodes_by_order = self._get_write_nodes_by_render_order()
                     
@@ -1216,8 +1221,8 @@ class NukeSubmission:
                                 start_frame, end_frame = write_node_frames[write_node]
                                 node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                             
-                            # Set dependencies if we have previous jobs
-                            if previous_job_ids:
+                            # Set dependencies if we have previous jobs and using render_order_dependencies
+                            if previous_job_ids and self.render_order_dependencies:
                                 # Set dependencies as individual entries, with index continuing from user dependencies
                                 for i, dep_id in enumerate(previous_job_ids):
                                     node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
@@ -1226,13 +1231,14 @@ class NukeSubmission:
                             job_id = deadline.submit_job(node_job_info, node_plugin_info)
                             current_job_ids.append(job_id)
                         
-                        # Update previous_job_ids for next render order group
-                        previous_job_ids = current_job_ids
+                        # Update previous_job_ids for next render order group if using render_order_dependencies
+                        if self.render_order_dependencies:
+                            previous_job_ids = current_job_ids
                     
-                    logger.info(f"Jobs submitted with dependencies. Last Job ID: {job_id}")
+                    logger.info(f"Jobs submitted as separate jobs. Last Job ID: {job_id}")
                     return job_id
                 else:
-                    # Regular submission without dependencies or write nodes as tasks
+                    # Regular submission without separate jobs/tasks
                     job_id = deadline.submit_job(job_info, plugin_info)
                     logger.info(f"Job submitted successfully. Job ID: {job_id}")
                     return job_id
@@ -1275,6 +1281,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
           - render_order_dependencies: Whether to set job dependencies based on render order
           - job_dependencies: Comma or space separated list of job IDs
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
+          - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - use_nodes_frame_list: Whether to use node-specific frame lists
           - script_is_open: Whether the script is already open in the current Nuke session
           - extra_info: List of extra info fields
