@@ -8,7 +8,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
             <dock id="" hideTitles="1" activePageId="Toolbar.1">
                 <page id="Toolbar.1"/>
             </dock>
-            <split size="1159" stretch="1"/>
+            <split size="1897" stretch="1"/>
             <splitter orientation="2">
                 <split size="779"/>
                 <dock id="" activePageId="Viewer.1">
@@ -21,12 +21,11 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="DopeSheet.1"/>
                 </dock>
             </splitter>
-            <split size="1353"/>
+            <split size="615"/>
             <dock id="" activePageId="Properties.1">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
-                <page id="uk.co.thefoundry.scripteditor.1"/>
             </dock>
         </splitter>
     </window>
@@ -166,6 +165,8 @@ Write {
  compression DWAA
  first_part rgba
  render_order 10
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -219,65 +220,14 @@ Write {
  compression DWAA
  first_part rgba
  render_order 20
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
  name Write4
  xpos -310
  ypos 162
-}
-CheckerBoard2 {
- inputs 0
- name CheckerBoard4
- xpos -147
- ypos -147
-}
-CameraShake3 {
- name CameraShake3_4
- label "\[value amplitude] px at \[value frequency]"
- xpos -147
- ypos -44
- amplitude 100
- rotation 50
- cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
-}
-NoOp {
- name DeadlineSettings5
- xpos -147
- ypos 30
- addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
-}
-FrameRange {
- first_frame 1001
- last_frame 1200
- time ""
- name FrameRange5
- xpos -144
- ypos 64
-}
-Crop {
- box {0 0 1920 1080}
- name Crop5
- xpos -147
- ypos 98
-}
-Write {
- channels rgba
- file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames05_v001_%\{res\}.####.exr"
- file_type exr
- compression DWAA
- first_part rgba
- render_order 40
- ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write5
- xpos -147
- ypos 157
 }
 Read {
  inputs 0
@@ -334,6 +284,8 @@ Write {
  first {{first_frame}}
  last {{last_frame}}
  use_limit true
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
  display ACES
  view Rec.709
@@ -401,4 +353,91 @@ Viewer {
  name Viewer1
  xpos -492
  ypos 319
+}
+CheckerBoard2 {
+ inputs 0
+ name CheckerBoard4
+ xpos -147
+ ypos -147
+}
+CameraShake3 {
+ name CameraShake3_4
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -147
+ ypos -44
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings5
+ xpos -147
+ ypos 30
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+FrameRange {
+ first_frame 1001
+ last_frame 1200
+ time ""
+ name FrameRange5
+ xpos -144
+ ypos 64
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop5
+ xpos -147
+ ypos 98
+}
+set Nfed76500 [stack 0]
+Write {
+ channels rgba
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames05_v001_%\{res\}.####.exr"
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 40
+ in_colorspace scene_linear
+ out_colorspace scene_linear
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write5
+ xpos -147
+ ypos 157
+}
+push $Nfed76500
+Write {
+ channels rgba
+ file "C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames05_v001_%\{res\}.mov"
+ file_type mov
+ mov64_format "mov (QuickTime / MOV)"
+ mov64_codec appr
+ mov_h264_codec_profile "High 4:2:0 8-bit"
+ mov64_pixel_format {
+  {0}
+ }
+ mov64_quality High
+ mov64_fast_start true
+ mov64_write_timecode true
+ mov64_gop_size 12
+ mov64_b_frames 0
+ mov64_bitrate 20000
+ mov64_bitrate_tolerance 4000000
+ mov64_quality_min 1
+ mov64_quality_max 3
+ colorspace Gamma2.2
+ render_order 40
+ checkHashOnRead false
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write6
+ selected true
+ xpos 106
+ ypos 153
 }

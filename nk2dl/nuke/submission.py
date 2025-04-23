@@ -32,6 +32,7 @@ class NukeSubmission:
                 chunk_size: Optional[int] = None,
                 department: Optional[str] = None,
                 comment: Optional[str] = None,
+                concurrent_tasks: Optional[int] = None,
                 use_nuke_x: bool = False,
                 use_batch_mode: bool = True,
                 render_threads: Optional[int] = None,
@@ -73,6 +74,7 @@ class NukeSubmission:
             department: Department (defaults to config value)
             comment: Job comment (defaults to config value)
                      Can include tokens like {script}, {ss}, {write}, {file}, etc.
+            concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
             use_nuke_x: Whether to use NukeX for rendering
             use_batch_mode: Whether to use batch mode
             render_threads: Number of render threads
@@ -142,6 +144,7 @@ class NukeSubmission:
         self.pool = pool if pool is not None else config.get('submission.pool', 'nuke')
         self.group = group if group is not None else config.get('submission.group', 'none')
         self.chunk_size = chunk_size if chunk_size is not None else config.get('submission.chunk_size', 10)
+        self.concurrent_tasks = concurrent_tasks if concurrent_tasks is not None else config.get('submission.concurrent_tasks', 1)
         
         # Optional job properties
         # Store the script filename (with extension) for token replacement
@@ -198,6 +201,21 @@ class NukeSubmission:
         self.graph_scope_variables = graph_scope_variables
         self.gsv_combinations = []
         
+        # If GSV is provided, check Nuke version compatibility
+        if self.graph_scope_variables:
+            # Check Nuke version for GSV support (requires 15.2+)
+            nuke_version_str = nuke_utils.nuke_version(self.nuke_version) if self.nuke_version else nuke_utils.nuke_version()
+            try:
+                major, minor = map(int, nuke_version_str.split('.')[:2])
+                supports_gsv = (major > 15) or (major == 15 and minor >= 2)
+            except ValueError:
+                supports_gsv = False
+                
+            if not supports_gsv:
+                logger.warning(f"Graph Scope Variables (GSV) were specified but are not supported in Nuke {nuke_version_str}. "
+                              f"GSV requires Nuke 15.2 or higher. GSV will be ignored.")
+                self.graph_scope_variables = None
+        
         # Initialize frame range
         if frame_range:
             self.fr = FrameRange(frame_range)
@@ -237,6 +255,8 @@ class NukeSubmission:
     def _ensure_script_can_be_queried(self):
         """Ensure the script is open in Nuke before trying to access nodes or GSVs.
         
+        Loading the nuke module is a time-consuming operation, so we only do it only if necessary.
+
         Returns:
             The nuke module
         """
@@ -291,21 +311,33 @@ class NukeSubmission:
         Returns:
             String with tokens replaced
         """
-
+        
         # Apply GSV values if provided
         if gsv_combination:
             # Ensure the script is open
             nuke = self._ensure_script_can_be_queried()
 
-            root_node = nuke.root()
-            if 'gsv' in root_node.knobs():
-                gsv_knob = root_node['gsv']
-                # Apply each GSV value
-                for key, value in gsv_combination:
-                    try:
-                        gsv_knob.setGsvValue(f'__default__.{key}', value)
-                    except Exception as e:
-                        logger.warning(f"Failed to set GSV value {key}={value}: {e}")
+            # Check Nuke version before attempting to use GSV
+            nuke_version_str = nuke_utils.nuke_version(self.nuke_version) if self.nuke_version else nuke_utils.nuke_version()
+            try:
+                major, minor = map(int, nuke_version_str.split('.')[:2])
+                supports_gsv = (major > 15) or (major == 15 and minor >= 2)
+            except ValueError:
+                supports_gsv = False
+            
+            if supports_gsv:
+                # Ensure the script is open
+                nuke = self._ensure_script_can_be_queried()
+
+                root_node = nuke.root()
+                if 'gsv' in root_node.knobs():
+                    gsv_knob = root_node['gsv']
+                    # Apply each GSV value
+                    for key, value in gsv_combination:
+                        try:
+                            gsv_knob.setGsvValue(f'__default__.{key}', value)
+                        except Exception as e:
+                            logger.warning(f"Failed to set GSV value {key}={value}: {e}")
         
         # Start with the template
         result = template
@@ -341,6 +373,9 @@ class NukeSubmission:
                 if token not in result:
                     continue
                 
+                # Initialize value to empty string as a fallback
+                value = ""
+                
                 # Get the value for each token type
                 if token in script_stem_tokens:
                     value = self.script_stem
@@ -371,12 +406,19 @@ class NukeSubmission:
                 elif token in frame_range_tokens:
                     value = self.frame_range
                 elif token in gsv_tokens:
-                    # Handle GSV token replacement
-                    if gsv_combination:
+                    # Check Nuke version before attempting to use GSV tokens
+                    nuke_version_str = nuke_utils.nuke_version(self.nuke_version) if self.nuke_version else nuke_utils.nuke_version()
+                    try:
+                        major, minor = map(int, nuke_version_str.split('.')[:2])
+                        supports_gsv = (major > 15) or (major == 15 and minor >= 2)
+                    except ValueError:
+                        supports_gsv = False
+                    
+                    if supports_gsv and gsv_combination:
                         # Format as key1=value1,key2=value2
-                        value = ",".join([f"{key}={value}" for key, value in gsv_combination])
+                        value = ",".join([f"{key}={val}" for key, val in gsv_combination])
                     else:
-                        value = ""  # Empty string if no GSV combination provided
+                        value = ""  # Empty string if no GSV combination or not supported
                 elif write_node and token in write_node_tokens + output_tokens + render_order_tokens:
                     # Ensure the script is open
                     nuke = self._ensure_script_can_be_queried()
@@ -397,9 +439,6 @@ class NukeSubmission:
                             except:
                                 logger.warning(f"Failed to get output filename for write node {write_node}")
                                 value = ""
-                    else:
-                        # Skip write node tokens if no valid write node
-                        continue
                 
                 # Replace the token with its value
                 result = result.replace(token, value)
@@ -549,6 +588,20 @@ class NukeSubmission:
         nuke = self._ensure_script_can_be_queried()
         
         try:
+            # Check Nuke version for GSV support (requires 15.2+)
+            nuke_version_str = nuke_utils.nuke_version(self.nuke_version) if self.nuke_version else nuke_utils.nuke_version()
+            try:
+                major, minor = map(int, nuke_version_str.split('.')[:2])
+                supports_gsv = (major > 15) or (major == 15 and minor >= 2)
+            except ValueError:
+                supports_gsv = False
+                
+            if not supports_gsv:
+                logger.warning(f"Graph Scope Variables (GSV) are not supported in Nuke {nuke_version_str}. Requires Nuke 15.2 or higher.")
+                # Set an empty list for GSV combinations to avoid future processing
+                self.gsv_combinations = []
+                return
+            
             # Get the root node to access GSV knob
             root_node = nuke.root()
             if not 'gsv' in root_node.knobs():
@@ -691,6 +744,25 @@ class NukeSubmission:
         # Return just the job name without GSV info
         return job_name
 
+    def _is_movie_format(self, write_node) -> bool:
+        """Check if a write node is outputting a movie format that should be rendered on a single machine.
+        
+        Args:
+            write_node: The Nuke write node to check
+            
+        Returns:
+            True if the node is outputting a movie format, False otherwise
+        """
+        nuke = self._ensure_script_can_be_queried()
+        node = nuke.toNode(write_node)
+        
+        if node and node.Class() == "Write" and 'file_type' in node.knobs():
+            file_type = node['file_type'].value()
+            movie_formats = ['mov', 'mxf']
+            return file_type.lower() in movie_formats
+            
+        return False
+
     def prepare_job_info(self, gsv_combination=None) -> Dict[str, Any]:
         """Prepare job information for Deadline submission.
         
@@ -706,17 +778,21 @@ class NukeSubmission:
         else:
             self.job_name = self._replace_job_name_tokens(self.job_name_template, None, gsv_combination)
         
-            
+        # Create base job info dictionary
         job_info = {
             "Name": self.job_name,
             "Plugin": "Nuke",
             "Frames": self.frame_range,
             "ChunkSize": self.chunk_size,
+            "ConcurrentTasks": self.concurrent_tasks,
             "Pool": self.pool,
             "Group": self.group,
             "Priority": self.priority
         }
         
+        # Note: check for movie format is now done in prepare_plugin_info
+        # and ChunkSize is updated in submit() when needed
+            
         # Add optional fields if specified
         if self.batch_name:
             job_info["BatchName"] = self.batch_name
@@ -832,6 +908,13 @@ class NukeSubmission:
             "RenderMode": self.render_mode.capitalize()
         }
         
+        # Add BatchModeIsMovie flag if needed - single write node that outputs a movie format
+        # Note: When this is set, we need to update ChunkSize in job_info, but that's done in submit()
+        if (self.write_nodes and len(self.write_nodes) == 1 and 
+            not self.write_nodes_as_tasks and 
+            self._is_movie_format(self.write_nodes[0])):
+            plugin_info["BatchModeIsMovie"] = "True"
+        
         # Add optional plugin settings
         if self.render_threads is not None:
             plugin_info["NukeThreadLimit"] = str(self.render_threads)
@@ -878,8 +961,10 @@ class NukeSubmission:
                 plugin_info["UseNodeFrameList"] = "1"
         elif self.write_nodes and not self.render_order_dependencies:
             # For regular submission with specific write nodes
-            plugin_info["WriteNodes"] = ",".join(self.write_nodes)
-            
+            # Use individual WriteNode0, WriteNode1, etc. entries instead of comma-separated list
+            for i, node_name in enumerate(self.write_nodes):
+                plugin_info[f"WriteNode{i}"] = node_name
+        
         if self.output_path:
             plugin_info["OutputFilePath"] = self.output_path
         
@@ -1106,6 +1191,26 @@ class NukeSubmission:
             # Get Deadline connection
             deadline = get_connection()
             
+            # If write_nodes_as_separate_jobs is True but no write nodes are provided,
+            # automatically get all enabled write nodes from the script
+            if (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and not self.write_nodes:
+                # Ensure the script is open
+                nuke = self._ensure_script_can_be_queried()
+                
+                # Get all enabled Write nodes
+                enabled_write_nodes = []
+                for node in nuke.allNodes('Write'):
+                    if not node['disable'].value():
+                        enabled_write_nodes.append(node.name())
+                
+                if enabled_write_nodes:
+                    self.write_nodes = enabled_write_nodes
+                    logger.info(f"Automatically using {len(enabled_write_nodes)} enabled Write nodes: {', '.join(enabled_write_nodes)}")
+                else:
+                    logger.warning("No enabled Write nodes found in the script. Switching to normal submission.")
+                    self.write_nodes_as_separate_jobs = False
+                    self.render_order_dependencies = False
+            
             # If using GSVs, submit multiple jobs for each combination
             if self.graph_scope_variables and self.gsv_combinations:
                 submitted_job_ids = []
@@ -1166,6 +1271,13 @@ class NukeSubmission:
                             node_job_info = job_info.copy()
                             node_plugin_info = plugin_info.copy()
                             
+                            # Check if this is a movie format and set BatchModeIsMovie if needed
+                            # Skip for write_nodes_as_tasks as mentioned in the requirements
+                            if not self.write_nodes_as_tasks and self._is_movie_format(write_node):
+                                node_plugin_info["BatchModeIsMovie"] = "True"
+                                # Set a very large chunk size to ensure entire movie renders on one machine
+                                node_job_info["ChunkSize"] = "1000000"
+                            
                             # Update job name to include write node
                             node_job_info["Name"] = self._get_gsv_job_name(gsv_combination, write_node)
                             
@@ -1187,7 +1299,7 @@ class NukeSubmission:
                                     node_job_info["OutputFilename0"] = output_path
                             
                             # Specify which write node to render
-                            node_plugin_info["WriteNodes"] = write_node
+                            node_plugin_info["WriteNode"] = write_node
                             
                             # Override frame range if use_nodes_frame_list is enabled and frame range is available
                             if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
@@ -1289,6 +1401,13 @@ class NukeSubmission:
                         node_job_info = job_info.copy()
                         node_plugin_info = plugin_info.copy()
                         
+                        # Check if this is a movie format and set BatchModeIsMovie if needed
+                        # Skip for write_nodes_as_tasks as mentioned in the requirements
+                        if not self.write_nodes_as_tasks and self._is_movie_format(write_node):
+                            node_plugin_info["BatchModeIsMovie"] = "True"
+                            # Set a very large chunk size to ensure entire movie renders on one machine
+                            node_job_info["ChunkSize"] = "1000000"
+                        
                         # Update job name to include write node
                         node_job_info["Name"] = self._replace_job_name_tokens(self.job_name_template, write_node)
                         
@@ -1310,7 +1429,7 @@ class NukeSubmission:
                                 node_job_info["OutputFilename0"] = output_path
                         
                         # Specify which write node to render
-                        node_plugin_info["WriteNodes"] = write_node
+                        node_plugin_info["WriteNode"] = write_node
                         
                         # Override frame range if use_nodes_frame_list is enabled and frame range is available
                         if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
@@ -1369,6 +1488,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
           - pool: Worker pool (defaults to config value)
           - group: Worker group (defaults to config value)
           - chunk_size: Number of frames per task (defaults to config value)
+          - concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
           - department: Department (defaults to config value)
           - comment: Job comment (defaults to config value)
           - use_nuke_x: Whether to use NukeX for rendering

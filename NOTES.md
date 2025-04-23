@@ -79,12 +79,27 @@ job_id = submit_nuke_script(
     render_threads=16,
     use_gpu=True,
     write_nodes_as_separate_jobs=True,
-    write_nodes=["Write1","Write2","Write3","Write4","Write5"],
+    render_order_dependencies=True,
+    write_nodes=["Write1","Write2","Write3","Write4","Write5","Write6"],
     use_nodes_frame_list=True,
     continue_on_error=True,
     graph_scope_variables=["shotcode:ABC_0010,ABC_0020"]
 )
 
+from nk2dl.nuke import submit_nuke_script
+job_id = submit_nuke_script(
+    "X:/RUR/prd/shots/086/086_0000/cmp/RURcomp/nuke/scenes/086_0000_cmp_SequenceOverview_v001.nk",
+    frame_range="input",
+    chunk_size=50,
+    priority=75,
+    use_nuke_x=False,
+    use_gpu=False,
+    write_nodes_as_separate_jobs=True,
+    render_order_dependencies=True,
+    use_nodes_frame_list=True,
+    continue_on_error=True,
+    nuke_version=15.1
+)
 
 
 from nk2dl.nuke import submit_nuke_script
