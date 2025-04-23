@@ -14,6 +14,28 @@ from ..common.config import config
 from ..common.errors import DeadlineError
 from ..common.logging import logger
 
+# ANSI color codes for terminal output
+class Colors:
+    RED = '\033[91m'
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    MAGENTA = '\033[95m'
+    CYAN = '\033[96m'
+    RESET = '\033[0m'
+
+def colored_text(text: str, color_code: str) -> str:
+    """Add color to text for terminal output.
+    
+    Args:
+        text: Text to colorize
+        color_code: ANSI color code
+        
+    Returns:
+        Colorized text string
+    """
+    return f"{color_code}{text}{Colors.RESET}"
+
 class DeadlineConnection:
     """Manages connection to Deadline.
     
@@ -49,7 +71,8 @@ class DeadlineConnection:
             from Deadline.DeadlineConnect import DeadlineCon as Connect
         except ImportError:
             if config.get('deadline.commandline_on_fail', True):
-                logger.warning("Failed to import Deadline Web Service API. Attempting fallback to command line.")
+                fallback_msg = "Failed to import Deadline Web Service API. Attempting fallback to command line."
+                logger.warning(colored_text(fallback_msg, Colors.RED))
                 try:
                     self._setup_command_line()
                     self.use_web_service = False
@@ -93,7 +116,8 @@ class DeadlineConnection:
                 logger.info(f"Successfully connected to Deadline Web Service at {host}:{port}")
             except Exception as e:
                 if config.get('deadline.commandline_on_fail', True):
-                    logger.warning(f"Failed to test Deadline Web Service connection at {host}:{port}: {e}. Attempting fallback to command line.")
+                    fallback_msg = f"Failed to test Deadline Web Service connection at {host}:{port}: {e}. Attempting fallback to command line."
+                    logger.warning(colored_text(fallback_msg, Colors.RED))
                     try:
                         self._setup_command_line()
                         self.use_web_service = False
@@ -111,7 +135,8 @@ class DeadlineConnection:
                     )
         except Exception as e:
             if config.get('deadline.commandline_on_fail', True):
-                logger.warning(f"Failed to connect to Deadline Web Service at {host}:{port}. Attempting fallback to command line.")
+                fallback_msg = f"Failed to connect to Deadline Web Service at {host}:{port}. Attempting fallback to command line."
+                logger.warning(colored_text(fallback_msg, Colors.RED))
                 try:
                     self._setup_command_line()
                     self.use_web_service = False
@@ -173,7 +198,8 @@ class DeadlineConnection:
                 return self._web_client.Groups.GetGroupNames()
             except Exception as e:
                 if config.get('deadline.commandline_on_fail', True):
-                    logger.warning(f"Failed to get groups via web service: {e}. Falling back to command line.")
+                    fallback_msg = f"Failed to get groups via web service: {e}. Falling back to command line."
+                    logger.warning(colored_text(fallback_msg, Colors.RED))
                     self._setup_command_line()
                     self.use_web_service = False
                     self._init_command_line()
@@ -245,7 +271,7 @@ class DeadlineConnection:
                 }
                 
                 # Log the JSON payload for debugging
-                logger.info(f"Submitting job JSON payload:\n{json.dumps(payload, indent=2)}")
+                logger.info(f"Submitting job JSON payload via deadline web service:\n{json.dumps(payload, indent=2)}")
                 
                 # Submit job with correct arguments to the API
                 job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
@@ -278,7 +304,8 @@ class DeadlineConnection:
                 
             except Exception as e:
                 if config.get('deadline.commandline_on_fail', True):
-                    logger.warning(f"Failed to submit job via web service: {e}. Falling back to command line.")
+                    fallback_msg = f"Failed to submit job via web service: {e}. Falling back to command line."
+                    logger.warning(colored_text(fallback_msg, Colors.RED))
                     self._setup_command_line()
                     self.use_web_service = False
                     self._init_command_line()
@@ -310,8 +337,8 @@ class DeadlineConnection:
                 with open(plugin_info_path, 'r') as f:
                     plugin_data = f.read()
                     
-                logger.info(f"Submitting job info:\n{job_data}")
-                logger.info(f"Submitting plugin info:\n{plugin_data}")
+                logger.info(f"Submitting job info via deadline command line:\n{job_data}")
+                logger.info(f"Submitting plugin info via deadline command line:\n{plugin_data}")
                 
                 # Submit via command line
                 if "dotnet" in self._command_path:

@@ -90,6 +90,7 @@ from nk2dl.nuke import submit_nuke_script
 job_id = submit_nuke_script(
     "X:/RUR/prd/shots/086/086_0000/cmp/RURcomp/nuke/scenes/086_0000_cmp_SequenceOverview_v001.nk",
     frame_range="input",
+    concurrent_tasks=5,
     chunk_size=50,
     priority=75,
     use_nuke_x=False,
