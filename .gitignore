@@ -35,6 +35,7 @@ venv.bak/
 *.swp
 *.swo
 *~
+.cursor/
 
 # Nuke
 *.nk~
@@ -48,6 +49,7 @@ examples/renderOutput/*
 
 
 # Project specific
+plan/
 logs/
 *.log
 .coverage
