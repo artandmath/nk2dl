@@ -349,6 +349,14 @@ class DeadlineConnection:
                 else:
                     args = [self._command_path, job_info_path, plugin_info_path]
                 
+                # Add auxiliary files if specified in job_info
+                if "AuxiliaryFiles" in job_info:
+                    aux_files = job_info["AuxiliaryFiles"]
+                    if isinstance(aux_files, list):
+                        args.extend(aux_files)
+                    else:
+                        args.append(aux_files)
+                
                 startupinfo = None
                 if os.name == 'nt':
                     startupinfo = subprocess.STARTUPINFO()

@@ -64,9 +64,17 @@ class Config:
             'priority': 50,
             'chunk_size': 1,
             'department': '',
-            'job_name_template': "{batch} / {write} / {file}",
-            'batch_name_template': "{script_stem}",
-            'comment_template': ""
+            'job_name_template': "{batch} / {write}",
+            'batch_name_template': "{scriptname}",
+            'comment_template': "",
+            
+            # Script copying and submission
+            'copy_script': False,
+            'submit_copied_script': False,
+            'submit_script_as_auxiliary_file': False,
+            'script_copy_path': './.farm/',
+            'script_copy_relative_to': 'SCRIPT',  # SCRIPT or OUTPUT
+            'script_copy_name': '$BASENAME.$EXT'
         }
     }
     

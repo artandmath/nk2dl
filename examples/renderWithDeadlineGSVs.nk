@@ -1,5 +1,5 @@
-#! C:/Program Files/Nuke15.1v1/nuke-15.1.1.dll -nx
-version 15.1 v1
+#! C:/Program Files/Nuke15.2v1/nuke-15.2.1.dll -nx
+version 15.2 v1
 define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 <layout version="1.0">
     <window x="-1" y="-7" w="2560" h="1369" maximized="1" screen="0">
@@ -8,24 +8,25 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
             <dock id="" hideTitles="1" activePageId="Toolbar.1">
                 <page id="Toolbar.1"/>
             </dock>
-            <split size="1477" stretch="1"/>
+            <split size="1393" stretch="1"/>
             <splitter orientation="2">
                 <split size="779"/>
                 <dock id="" activePageId="Viewer.1">
                     <page id="Viewer.1"/>
                 </dock>
                 <split size="548"/>
-                <dock id="" activePageId="DAG.1" focus="true">
+                <dock id="" activePageId="DAG.1">
                     <page id="DAG.1"/>
                     <page id="Curve Editor.1"/>
                     <page id="DopeSheet.1"/>
                 </dock>
             </splitter>
-            <split size="1035"/>
-            <dock id="" activePageId="Properties.1">
+            <split size="1119"/>
+            <dock id="" activePageId="Properties.1" focus="true">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
                 <page id="Scenegraph.1"/>
+                <page id="uk.co.thefoundry.scripteditor.1"/>
             </dock>
         </splitter>
     </window>
@@ -33,7 +34,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 }
 Root {
  inputs 0
- name C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
+ name C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadlineGSVs.nk
  project_directory "\[python \{nuke.script_directory()\}]"
  frame 1001
  first_frame 1001
@@ -53,6 +54,17 @@ Root {
  int16Lut texture_paint
  logLut compositing_log
  floatLut scene_linear
+ gsv  {
+  __default__ {
+   shotcode ABC0020 { { vp:type List } { vp:options { ABC_0010 ABC_0020 XYZ_0010 XYZ_0020 XYZ_0030 ABC0020 } } { vp:label "shot code" } }
+   res wh { { vp:type List } { vp:options { wh hh qh } } { vp:label resolution } }
+   variable_of_string_type "this is a string"
+  }
+  __panel__ {
+   tab {Main}
+  }
+ 
+}
  addUserKnob {20 Deadline}
  addUserKnob {1 FrameListMode l frameListMode}
  FrameListMode Global
@@ -74,7 +86,7 @@ Root {
  addUserKnob {1 MachineList l machineList}
  addUserKnob {1 LimitGroups l limitGroups}
  addUserKnob {1 SubmitSuspended l submitSuspended}
- SubmitSuspended True
+ SubmitSuspended False
  addUserKnob {1 ChunkSize l chunkSize}
  ChunkSize 100
  addUserKnob {1 ConcurrentTasks l concurrentTasks}
@@ -84,7 +96,7 @@ Root {
  addUserKnob {1 Threads l threads}
  Threads 0
  addUserKnob {1 SubmitScene l submitScene}
- SubmitScene False
+ SubmitScene True
  addUserKnob {1 BatchMode l batchMode}
  BatchMode False
  addUserKnob {1 ContinueOnError l continueOnError}
@@ -112,22 +124,22 @@ Root {
 CheckerBoard2 {
  inputs 0
  name CheckerBoard2
- xpos -1222
- ypos -265
+ xpos -700
+ ypos -153
 }
 CameraShake3 {
  name CameraShake3_2
  label "\[value amplitude] px at \[value frequency]"
- xpos -1222
- ypos -151
+ xpos -700
+ ypos -39
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
 NoOp {
  name DeadlineSettings3
- xpos -1222
- ypos -73
+ xpos -700
+ ypos 39
  addUserKnob {20 User}
  addUserKnob {7 poop}
  addUserKnob {3 JobInfoChunkSize}
@@ -139,18 +151,18 @@ FrameRange {
  last_frame 1200
  time ""
  name FrameRange3
- xpos -1222
- ypos -1
+ xpos -700
+ ypos 111
 }
 Crop {
  box {0 0 1920 1080}
  name Crop3
- xpos -1222
- ypos 47
+ xpos -700
+ ypos 159
 }
 Write {
  channels rgba
- file ./renderOutput/testFrames02_v001.####.exr
+ file "\[project root]/repo/nk2dl/examples/renderOutput/%\{shotcode\}_testFrames02_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
@@ -159,8 +171,61 @@ Write {
  display ACES
  view Rec.709
  name Write2
- xpos -1222
- ypos 155
+ xpos -700
+ ypos 267
+}
+CheckerBoard2 {
+ inputs 0
+ name CheckerBoard1
+ xpos -920
+ ypos -153
+}
+CameraShake3 {
+ name CameraShake3_1
+ label "\[value amplitude] px at \[value frequency]"
+ xpos -920
+ ypos -39
+ amplitude 100
+ rotation 50
+ cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
+}
+NoOp {
+ name DeadlineSettings1
+ xpos -920
+ ypos 39
+ addUserKnob {20 User}
+ addUserKnob {7 poop}
+ addUserKnob {3 JobInfoChunkSize}
+ JobInfoChunkSize 5
+ addUserKnob {3 PluginInfoRamUse}
+}
+FrameRange {
+ first_frame 1001
+ last_frame 1100
+ time ""
+ name FrameRange2
+ xpos -920
+ ypos 111
+}
+Crop {
+ box {0 0 1920 1080}
+ name Crop1
+ xpos -920
+ ypos 159
+}
+Write {
+ channels rgba
+ file "\[project root]/renderOutput/%\{shotcode\}_testFrames01_v001_%\{res\}.####.exr"
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 10
+ ocioColorspace scene_linear
+ display ACES
+ view Rec.709
+ name Write1
+ xpos -920
+ ypos 267
 }
 Read {
  inputs 0
@@ -173,20 +238,20 @@ Read {
  origlast 1200
  origset true
  name Read1
- xpos -1002
- ypos -277
+ xpos -480
+ ypos -165
 }
 Grade {
  white {1 0 1 1}
  white_panelDropped true
  name Grade1
- xpos -1002
- ypos -145
+ xpos -480
+ ypos -33
 }
 NoOp {
  name DeadlineSettings2
- xpos -1002
- ypos -73
+ xpos -480
+ ypos 39
  addUserKnob {20 User}
  addUserKnob {7 poop}
  addUserKnob {3 JobInfoChunkSize}
@@ -198,18 +263,18 @@ FrameRange {
  last_frame 1050
  time ""
  name FrameRange1
- xpos -1002
- ypos -1
+ xpos -480
+ ypos 111
 }
 Crop {
  box {0 0 1920 1080}
  name Crop2
- xpos -1002
- ypos 47
+ xpos -480
+ ypos 159
 }
 Write {
  channels rgba
- file ./renderOutput/testFrames03_v001.####.exr
+ file "\[project root]/renderOutput/%\{shotcode\}_testFrames03_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
@@ -221,28 +286,28 @@ Write {
  display ACES
  view Rec.709
  name Write3
- xpos -1002
- ypos 155
+ xpos -480
+ ypos 267
 }
 CheckerBoard2 {
  inputs 0
  name CheckerBoard3
- xpos -782
- ypos -265
+ xpos -260
+ ypos -153
 }
 CameraShake3 {
  name CameraShake3_3
  label "\[value amplitude] px at \[value frequency]"
- xpos -782
- ypos -151
+ xpos -260
+ ypos -39
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
 NoOp {
  name DeadlineSettings4
- xpos -782
- ypos -73
+ xpos -260
+ ypos 39
  addUserKnob {20 User}
  addUserKnob {7 poop}
  addUserKnob {3 JobInfoChunkSize}
@@ -254,19 +319,19 @@ FrameRange {
  last_frame 1200
  time ""
  name FrameRange4
- xpos -782
- ypos -1
+ xpos -260
+ ypos 111
 }
 Crop {
  box {0 0 1920 1080}
  name Crop4
- xpos -782
- ypos 47
+ xpos -260
+ ypos 159
 }
-set Naa2e3800 [stack 0]
+set N25b70f00 [stack 0]
 Write {
  channels rgba
- file ./renderOutput/testFrames04_v001.####.exr
+ file "\[project root]/renderOutput/%\{shotcode\}_testFrames04_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
@@ -275,18 +340,20 @@ Write {
  display ACES
  view Rec.709
  name Write4
- xpos -782
- ypos 155
+ xpos -260
+ ypos 267
 }
-push $Naa2e3800
+push $N25b70f00
 Write {
  channels rgba
- file ./renderOutput/testFrames04_v001.mov
+ file "\[project root]/renderOutput/%\{shotcode\}_testFrames04_v001_%\{res\}.mov"
  file_type mov
  mov64_format "mov (QuickTime / MOV)"
  mov64_codec appr
  mov_h264_codec_profile "High 4:2:0 8-bit"
- mov64_pixel_format {{0}}
+ mov64_pixel_format {
+  {0}
+ }
  mov64_quality High
  mov64_fast_start true
  mov64_write_timecode true
@@ -296,36 +363,35 @@ Write {
  mov64_bitrate_tolerance 4000000
  mov64_quality_min 1
  mov64_quality_max 3
- transformType display
- colorspace matte_paint
+ colorspace Gamma2.2
  render_order 20
  checkHashOnRead false
  ocioColorspace scene_linear
  display ACES
  view Rec.709
  name Write7
- xpos -562
- ypos 155
+ xpos -40
+ ypos 267
 }
 CheckerBoard2 {
  inputs 0
  name CheckerBoard4
- xpos -342
- ypos -265
+ xpos 180
+ ypos -153
 }
 CameraShake3 {
  name CameraShake3_4
  label "\[value amplitude] px at \[value frequency]"
- xpos -342
- ypos -151
+ xpos 180
+ ypos -39
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
 NoOp {
  name DeadlineSettings5
- xpos -342
- ypos -73
+ xpos 180
+ ypos 39
  addUserKnob {20 User}
  addUserKnob {7 poop}
  addUserKnob {3 JobInfoChunkSize}
@@ -337,39 +403,26 @@ FrameRange {
  last_frame 1200
  time ""
  name FrameRange5
- xpos -342
- ypos -1
+ xpos 180
+ ypos 111
 }
 Crop {
  box {0 0 1920 1080}
  name Crop5
- xpos -342
- ypos 47
+ xpos 180
+ ypos 159
 }
-set Naa36e000 [stack 0]
+set N257a0800 [stack 0]
 Write {
  channels rgba
- file ./renderOutput/testFrames05_v001.####.exr
- file_type exr
- compression DWAA
- first_part rgba
- render_order 40
- ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write5
- xpos -342
- ypos 153
-}
-push $Naa36e000
-Write {
- channels rgba
- file ./renderOutput/testFrames05_v001.mov
+ file "\[project root]/renderOutput/%\{shotcode\}_testFrames05_v001_%\{res\}.mov"
  file_type mov
  mov64_format "mov (QuickTime / MOV)"
  mov64_codec appr
  mov_h264_codec_profile "High 4:2:0 8-bit"
- mov64_pixel_format {{0}}
+ mov64_pixel_format {
+  {0}
+ }
  mov64_quality High
  mov64_fast_start true
  mov64_write_timecode true
@@ -379,67 +432,28 @@ Write {
  mov64_bitrate_tolerance 4000000
  mov64_quality_min 1
  mov64_quality_max 3
- transformType display
- colorspace matte_paint
+ colorspace Gamma2.2
  render_order 40
  checkHashOnRead false
  ocioColorspace scene_linear
  display ACES
  view Rec.709
  name Write6
- xpos -122
- ypos 155
+ xpos 400
+ ypos 267
 }
-CheckerBoard2 {
- inputs 0
- name CheckerBoard1
- xpos -1442
- ypos -265
-}
-CameraShake3 {
- name CameraShake3_1
- label "\[value amplitude] px at \[value frequency]"
- xpos -1442
- ypos -151
- amplitude 100
- rotation 50
- cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
-}
-NoOp {
- name DeadlineSettings1
- xpos -1442
- ypos -73
- addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
-}
-FrameRange {
- first_frame 1001
- last_frame 1100
- time ""
- name FrameRange2
- xpos -1442
- ypos -1
-}
-Crop {
- box {0 0 1920 1080}
- name Crop1
- xpos -1442
- ypos 47
-}
+push $N257a0800
 Write {
  channels rgba
- file ./renderOutput/testFrames01_v001.####.exr
+ file "\[project root]/renderOutput/%\{shotcode\}_testFrames05_v001_%\{res\}.####.exr"
  file_type exr
  compression DWAA
  first_part rgba
- render_order 10
+ render_order 40
  ocioColorspace scene_linear
  display ACES
  view Rec.709
- name Write1
- xpos -1442
- ypos 155
+ name Write5
+ xpos 180
+ ypos 267
 }

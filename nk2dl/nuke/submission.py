@@ -9,6 +9,8 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Tuple
 import re
 import itertools
+import shutil
+import datetime
 
 from ..common.config import config
 from ..common.errors import SubmissionError
@@ -26,7 +28,11 @@ class NukeSubmission:
                 script_is_open: bool = False,
                 submit_alphabetically: bool = False,
                 submit_in_render_order: bool = False,
-                graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None,
+                submit_script_as_auxiliary_file: Optional[bool] = None,
+                
+                # Script copying and submission parameters
+                copy_script: Optional[bool] = None,
+                submit_copied_script: Optional[bool] = None,
                 
                 # Job Info parameters
                 job_name: Optional[str] = None,
@@ -63,7 +69,11 @@ class NukeSubmission:
                 write_nodes_as_tasks: bool = False,
                 write_nodes_as_separate_jobs: bool = False,
                 render_order_dependencies: bool = False,
-                use_nodes_frame_list: bool = False):
+                use_nodes_frame_list: bool = False,
+                
+                # Graph Scope Variables parameters (Nuke 15.2+)
+                graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None):
+        
         """Initialize a Nuke script submission.
         
         Args:
@@ -85,6 +95,11 @@ class NukeSubmission:
                                      
                                   If no values are provided for a key (e.g., "key:" or just "key"), 
                                   all available values for that key will be used.
+            
+            # Script copying and submission parameters
+            copy_script: Whether to copy the script before submission
+            submit_copied_script: Whether to submit the copied script
+            submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
             
             # Job Info parameters
             job_name: Job name template (defaults to config value)
@@ -128,6 +143,21 @@ class NukeSubmission:
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
             render_order_dependencies: Whether to set job dependencies based on render order
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
+            
+            # Graph Scope Variables parameters (Nuke 15.2+)
+            graph_scope_variables: List of graph scope variables to use for rendering. Can be provided in two formats:
+                                  
+                                  1. Flat list format (all combinations will be generated):
+                                     ["key1:value1,value2,...", "key2:valueA,valueB,..."]
+                                  
+                                  2. Nested list format (specific combinations):
+                                     [
+                                        ["key1:value1,value2", "key2:valueA"],  # First set of combinations
+                                        ["key1:value3", "key2:valueB"]          # Second set of combinations
+                                     ]
+                                     
+                                  If no values are provided for a key (e.g., "key:" or just "key"), 
+                                  all available values for that key will be used.
         """
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
         if render_order_dependencies:
@@ -203,6 +233,12 @@ class NukeSubmission:
         self.submit_in_render_order = submit_in_render_order if isinstance(submit_in_render_order, bool) else config.get('submission.submit_in_render_order', False)
         self.use_nodes_frame_list = use_nodes_frame_list if isinstance(use_nodes_frame_list, bool) else config.get('submission.use_nodes_frame_list', False)
         self.script_is_open = script_is_open
+        
+        # Script copying options
+        self.copy_script = copy_script if copy_script is not None else config.get('submission.copy_script', False)
+        self.submit_copied_script = submit_copied_script if submit_copied_script is not None else config.get('submission.submit_copied_script', False)
+        self.submit_script_as_auxiliary_file = submit_script_as_auxiliary_file if submit_script_as_auxiliary_file is not None else config.get('submission.submit_script_as_auxiliary_file', False)
+        self.copied_script_paths = []
         
         # Store Nuke version
         self.nuke_version = nuke_version
@@ -773,7 +809,7 @@ class NukeSubmission:
             
         return False
 
-    def prepare_job_info(self, gsv_combination=None) -> Dict[str, Any]:
+    def _prepare_job_info(self, gsv_combination=None) -> Dict[str, Any]:
         """Prepare job information for Deadline submission.
         
         Args:
@@ -851,6 +887,19 @@ class NukeSubmission:
                 if dep_id:  # Skip empty strings
                     job_info[f"JobDependency{i}"] = dep_id
         
+        # Log a warning if submit_script_as_auxiliary_file is False
+        if not self.submit_script_as_auxiliary_file:
+            logger.warning("submit_script_as_auxiliary_file is False. Deadline will still copy the Nuke script to the worker as an auxiliary file if path mapping is enabled in the Nuke plugin under the Deadline repository plugin settings.")
+        
+        # Add the script as an auxiliary file if requested
+        if self.submit_script_as_auxiliary_file:
+            # Determine which script path to use
+            script_file_path = str(self.script_path.absolute())
+            if self.submit_copied_script and self.copied_script_paths:
+                script_file_path = self.copied_script_paths[0]
+            
+            job_info["AuxiliaryFiles"] = script_file_path
+        
         return job_info
         
     def _add_output_filenames_to_job_info(self, job_info: Dict[str, Any], gsv_combination=None) -> None:
@@ -899,7 +948,7 @@ class NukeSubmission:
         # If using dependencies, don't add OutputFilename entries as they'll be set per job
         # They are added in the submit method when handling each write node
         
-    def prepare_plugin_info(self, gsv_combination=None) -> Dict[str, Any]:
+    def _prepare_plugin_info(self, gsv_combination=None) -> Dict[str, Any]:
         """Prepare plugin information for Deadline submission.
         
         Args:
@@ -908,8 +957,13 @@ class NukeSubmission:
         Returns:
             Dictionary containing plugin information
         """
+        # Determine which script path to use
+        script_file_path = str(self.script_path.absolute())
+        if self.submit_copied_script and self.copied_script_paths:
+            script_file_path = self.copied_script_paths[0]
+            logger.debug(f"Using copied script path: {script_file_path}")
+        
         plugin_info = {
-            "SceneFile": str(self.script_path.absolute()),
             "Version": nuke_utils.nuke_version(self.nuke_version),
             "UseNukeX": "1" if self.use_nuke_x else "0",
             "BatchMode": "1" if self.use_batch_mode else "0",
@@ -917,6 +971,10 @@ class NukeSubmission:
             "ContinueOnError": "1" if self.continue_on_error else "0",
             "RenderMode": self.render_mode.capitalize()
         }
+        
+        # Only add SceneFile if not submitting script as auxiliary file
+        if not self.submit_script_as_auxiliary_file:
+            plugin_info["SceneFile"] = script_file_path
         
         # Add BatchModeIsMovie flag if needed - single write node that outputs a movie format
         # Note: When this is set, we need to update ChunkSize in job_info, but that's done in submit()
@@ -1188,6 +1246,178 @@ class NukeSubmission:
             
         return sorted_nodes
 
+    def _copy_script(self) -> List[str]:
+        """Copy the Nuke script to the specified location(s) based on config.
+        
+        The configuration options for script copying are:
+        - NK2DL_SCRIPT__COPY__PATH: Path template for copying the script
+        - NK2DL_SCRIPT__COPY__RELATIVE__TO: Whether the path is relative to OUTPUT or SCRIPT
+        - NK2DL_SCRIPT__COPY__NAME: Filename template for the copied script
+        
+        For multiple copies:
+        - NK2DL_SCRIPT__COPY0__PATH, NK2DL_SCRIPT__COPY1__PATH, etc.
+        - NK2DL_SCRIPT__COPY0__RELATIVE__TO, NK2DL_SCRIPT__COPY1__RELATIVE__TO, etc.
+        - NK2DL_SCRIPT__COPY0__NAME, NK2DL_SCRIPT__COPY1__NAME, etc.
+        
+        Returns:
+            List of paths where the script was copied to
+        """
+        import shutil
+        import datetime
+        import re
+        
+        if not self.copy_script:
+            logger.debug("Script copying is disabled")
+            return []
+            
+        # Ensure script is saved
+        self._ensure_script_can_be_queried()
+        
+        # Get the project directory from Nuke root node
+        nuke = nuke_utils.nuke_module()
+        root = nuke.root()
+        project_dir = None
+        try:
+            project_dir = root['project_directory'].evaluate()
+            logger.debug(f"Evaluated project directory: {project_dir}")
+        except:
+            logger.warning("Failed to evaluate project directory from Nuke root")
+
+        copied_paths = []
+        
+        # Get copy configurations from config
+        # First check for the single configuration case
+        single_config = {
+            'path': config.get('submission.script_copy_path', None),
+            'relative_to': config.get('submission.script_copy_relative_to', None),
+            'name': config.get('submission.script_copy_name', None),
+        }
+        
+        # If single config exists, use it
+        if single_config['path'] is not None:
+            copy_configs = [single_config]
+        else:
+            # Otherwise, look for indexed configurations (copy0, copy1, ...)
+            copy_configs = []
+            index = 0
+            while True:
+                path = config.get(f'submission.script_copy{index}_path', None)
+                if path is None:
+                    break
+                    
+                copy_configs.append({
+                    'path': path,
+                    'relative_to': config.get(f'submission.script_copy{index}_relative_to', None),
+                    'name': config.get(f'submission.script_copy{index}_name', None),
+                })
+                index += 1
+        
+        # If no configurations found, use default
+        if not copy_configs:
+            logger.debug("No script copy configuration found, using default")
+            copy_configs = [{
+                'path': './.farm/',
+                'relative_to': 'SCRIPT',
+                'name': '$BASENAME.$EXT',
+            }]
+        
+        # Process each copy configuration
+        for copy_config in copy_configs:
+            try:
+                # Get copy path
+                copy_path = copy_config['path']
+                relative_to = (copy_config.get('relative_to') or 'SCRIPT').upper()
+                name_template = copy_config.get('name') or '$BASENAME.$EXT'
+                
+                # Determine base directory based on relative_to setting
+                if relative_to == 'OUTPUT' and self.output_path:
+                    base_dir = Path(self.output_path)
+                elif relative_to == 'OUTPUT' and self.write_nodes and len(self.write_nodes) == 1:
+                    # Get output path from the first write node
+                    node = nuke.toNode(self.write_nodes[0])
+                    if node and node.Class() == "Write":
+                        output_file = self._get_node_pretty_path(node)
+                        base_dir = Path(os.path.dirname(output_file))
+                    else:
+                        base_dir = self.script_path.parent
+                else:
+                    # Default to SCRIPT
+                    base_dir = self.script_path.parent
+                
+                # Create target directory
+                target_dir = base_dir / copy_path
+                target_dir = target_dir.resolve()
+                target_dir.mkdir(parents=True, exist_ok=True)
+                
+                # Process filename template
+                # Replace date tokens
+                now = datetime.datetime.now()
+                name = name_template
+                name = name.replace('$BASENAME', self.script_path.stem)
+                name = name.replace('$EXT', self.script_path.suffix.lstrip('.'))
+                name = name.replace('YYYY', now.strftime('%Y'))
+                name = name.replace('YY', now.strftime('%y'))
+                name = name.replace('MM', now.strftime('%m'))
+                name = name.replace('DD', now.strftime('%d'))
+                name = name.replace('hh', now.strftime('%H'))
+                name = name.replace('mm', now.strftime('%M'))
+                name = name.replace('ss', now.strftime('%S'))
+                
+                # Construct full target path
+                target_path = target_dir / name
+                
+                # Copy the script
+                logger.info(f"Copying script from {self.script_path} to {target_path}")
+                shutil.copy2(self.script_path, target_path)
+                
+                # If we have a project directory, update it in the copied script
+                if project_dir is not None:
+                    self._update_project_directory_in_script(target_path, project_dir)
+                
+                # Add to copied paths
+                copied_paths.append(str(target_path))
+                
+            except Exception as e:
+                logger.error(f"Failed to copy script: {e}")
+        
+        # Store the copied paths
+        self.copied_script_paths = copied_paths
+        logger.debug(f"Script copied to: {copied_paths}")
+        
+        return copied_paths
+        
+    def _update_project_directory_in_script(self, script_path: Union[str, Path], project_dir: str) -> None:
+        """Update the project_directory knob in the copied script.
+        
+        This ensures that the copied script has the evaluated project directory value
+        rather than a Python expression.
+        
+        Args:
+            script_path: Path to the copied script file
+            project_dir: Evaluated project directory path
+        """
+        try:
+            with open(script_path, 'r') as f:
+                content = f.read()
+            
+            # Look for project_directory line and replace it
+            # Pattern matches:
+            # project_directory "\[python \{nuke.script_directory()\}]"
+            pattern = r'(project_directory\s+)(\".*?\")'
+            replacement = f'\\1"{project_dir}"'
+            
+            # Apply replacement
+            modified_content = re.sub(pattern, replacement, content)
+            
+            # Write back to file
+            with open(script_path, 'w') as f:
+                f.write(modified_content)
+                
+            logger.debug(f"Updated project_directory in {script_path} to {project_dir}")
+            
+        except Exception as e:
+            logger.warning(f"Failed to update project_directory in copied script: {e}")
+        
     def submit(self) -> str:
         """Submit the Nuke script to Deadline.
         
@@ -1221,14 +1451,18 @@ class NukeSubmission:
                     self.write_nodes_as_separate_jobs = False
                     self.render_order_dependencies = False
             
+            # Copy script if requested
+            if self.copy_script:
+                self._copy_script()
+            
             # If using GSVs, submit multiple jobs for each combination
             if self.graph_scope_variables and self.gsv_combinations:
                 submitted_job_ids = []
                 
                 for gsv_combination in self.gsv_combinations:
                     # Prepare job and plugin info with GSV information
-                    job_info = self.prepare_job_info(gsv_combination)
-                    plugin_info = self.prepare_plugin_info(gsv_combination)
+                    job_info = self._prepare_job_info(gsv_combination)
+                    plugin_info = self._prepare_plugin_info(gsv_combination)
                     
                     # If using write nodes as tasks with GSVs
                     if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
@@ -1356,8 +1590,8 @@ class NukeSubmission:
             # Standard submission without GSVs
             else:
                 # Prepare job and plugin information
-                job_info = self.prepare_job_info()
-                plugin_info = self.prepare_plugin_info()
+                job_info = self._prepare_job_info()
+                plugin_info = self._prepare_plugin_info()
                 
                 # If using write nodes as tasks
                 if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
@@ -1495,6 +1729,9 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
           - script_is_open: Whether the script is already open in the current Nuke session
           - submit_alphabetically: Whether to sort write nodes alphabetically by name
           - submit_in_render_order: Whether to sort write nodes by render order
+          - copy_script: Whether to make copies of the script before submission
+          - submit_copied_script: Whether to use the copied script path in the submission
+          - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
           - graph_scope_variables: List of graph scope variables in either flat format:
             ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
             Or nested format:
