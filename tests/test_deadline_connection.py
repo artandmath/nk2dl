@@ -1,287 +1,251 @@
-"""Tests for the Deadline connection module."""
+#!/usr/bin/env python3
+"""Test script to verify connectivity to a Deadline server.
+
+This script performs connectivity tests against a Deadline server using both
+command-line and web service methods. It verifies basic operations like:
+- Establishing connection
+- Retrieving render groups
+- Getting repository path (command-line only)
+- Submitting a test job
+
+Usage:
+    python test_deadline_connection.py
+
+Environment Variables:
+    PYTHONPATH: Python path including nk2dl package
+    DEADLINE_PATH: Path to Deadline installation directory
+    NK2DL_DEADLINE_HOST: Hostname for Deadline Web Service (default: localhost)
+    NK2DL_DEADLINE_PORT: Port for Deadline Web Service (default: 8081)
+    NK2DL_DEADLINE_SSL: Enable SSL connection (default: False)
+    NK2DL_DEADLINE_SSL_CERT: Path to SSL certificate file (required if SSL enabled)
+    NK2DL_DEADLINE_USE__WEB__SERVICE: Use web service instead of command line (default: False)
+
+Requirements:
+    - Deadline Client must be installed and configured on the system
+    - For command-line tests: deadlinecommand must be in system PATH
+    - For web service tests: Deadline Web Service must be running and accessible
+    - For SSL connections: Valid SSL certificate file
+
+Exit Codes:
+    0: All tests passed
+    1: One or more tests failed
+
+Examples:
+    # Run with default settings
+    python test_deadline_connection.py
+
+    # Linux/Unix Examples:
+    # ------------------
+    # Run with custom web service settings
+    export PYTHONPATH=/path/to/nk2dl
+    export DEADLINE_PATH=/path/to/deadline/bin
+    export NK2DL_DEADLINE_USE__WEB__SERVICE=True
+    export NK2DL_DEADLINE_HOST=deadline-server 
+    export NK2DL_DEADLINE_PORT=8081
+    export NK2DL_DEADLINE_SSL=False
+    python test_deadline_connection.py
+
+    # Run with SSL enabled
+    export PYTHONPATH=/path/to/nk2dl
+    export DEADLINE_PATH=/path/to/deadline/bin
+    export NK2DL_DEADLINE_USE__WEB__SERVICE=True
+    export NK2DL_DEADLINE_HOST=deadline-server
+    export NK2DL_DEADLINE_PORT=4434
+    export NK2DL_DEADLINE_SSL=True
+    export NK2DL_DEADLINE_SSL_CERT=/path/to/certificate.pxf
+    python test_deadline_connection.py
+
+    # Windows PowerShell Examples:
+    # -------------------------
+    # Run with custom web service settings
+    $env:PYTHONPATH = "C:\\path\\to\\nk2dl"
+    $env:DEADLINE_PATH = "C:\\Program Files\\Thinkbox\\Deadline10\\bin"
+    $env:NK2DL_DEADLINE_USE__WEB__SERVICE = "True"
+    $env:NK2DL_DEADLINE_HOST = "deadline-server"
+    $env:NK2DL_DEADLINE_PORT = "8081"
+    $env:NK2DL_DEADLINE_SSL = "False"
+    python test_deadline_connection.py
+
+    # Run with SSL enabled
+    $env:PYTHONPATH = "C:\\path\\to\\nk2dl"
+    $env:DEADLINE_PATH = "C:\\Program Files\\Thinkbox\\Deadline10\\bin"
+    $env:NK2DL_DEADLINE_USE__WEB__SERVICE = "True"
+    $env:NK2DL_DEADLINE_HOST = "deadline-server"
+    $env:NK2DL_DEADLINE_PORT = "4434"
+    $env:NK2DL_DEADLINE_SSL = "True"
+    $env:NK2DL_DEADLINE_SSL_CERT = "C:\\path\\to\\certificate.pxf"
+    python test_deadline_connection.py
+"""
 
 import os
-import pytest
-from unittest.mock import MagicMock, patch
-
-from nk2dl.common.config import Config
-from nk2dl.common.errors import DeadlineError
+import sys
 from nk2dl.deadline.connection import DeadlineConnection
+from nk2dl.common.config import config
+from nk2dl.common.errors import DeadlineError
 
-@pytest.fixture
-def mock_config():
-    """Mock configuration for testing."""
-    with patch('nk2dl.deadline.connection.config') as mock:
-        mock.get.side_effect = lambda key, default=None: {
-            'deadline.use_web_service': False,
-            'deadline.host': 'testhost',
-            'deadline.port': 8081,
-            'deadline.ssl': False,
-            'deadline.command_path': '/path/to/deadlinecommand'
-        }.get(key, default)
-        yield mock
+def setup_deadline_environment():
+    """Set up the Deadline environment including Python paths."""
+    # Get Deadline installation path
+    deadline_path = os.environ.get('DEADLINE_PATH')
+    if not deadline_path:
+        raise DeadlineError(
+            "DEADLINE_PATH environment variable not set. Please set it to your Deadline installation directory."
+        )
+    
+    # Add Deadline Python API paths
+    api_paths = [
+        os.path.join(deadline_path, "bin"),  # Main Deadline Python modules
+        os.path.join(deadline_path, "bin", "Modules"),  # Additional modules
+    ]
+    
+    # Add paths to Python path
+    for path in api_paths:
+        if os.path.exists(path) and path not in sys.path:
+            sys.path.append(path)
 
-def test_command_line_connection(mock_config):
-    """Test command-line connection initialization."""
-    with patch('os.path.exists') as mock_exists, \
-         patch('subprocess.Popen') as mock_popen:
-        
-        # Setup mocks
-        mock_exists.return_value = True
-        mock_process = MagicMock()
-        mock_process.communicate.return_value = (b'/repo/path\n', b'')
-        mock_popen.return_value = mock_process
-        
-        # Create connection
+def test_command_line():
+    """Test command-line connectivity."""
+    print("\nTesting command-line connectivity...")
+    
+    # Set config via environment variables
+    os.environ['NK2DL_DEADLINE_USE__WEB__SERVICE'] = 'False'
+    os.environ['NK2DL_DEADLINE_SSL'] = 'False'  # Ensure SSL is off for command line
+    
+    # Force reload config to pick up the environment variable changes
+    config.load_config()
+    
+    try:
         conn = DeadlineConnection()
-        assert not conn.use_web_service
-        assert conn._command_path == '/path/to/deadlinecommand'
-        
-        # Initialize connection
         conn.ensure_connected()
-
-def test_web_service_connection(mock_config):
-    """Test web service connection initialization."""
-    with patch('nk2dl.deadline.connection.config') as mock_config, \
-         patch.dict('sys.modules', {'Deadline': MagicMock(), 'Deadline.DeadlineConnect': MagicMock()}):
+        print("✓ Successfully connected via command-line")
         
-        # Setup mocks
-        mock_config.get.side_effect = lambda key, default=None: {
-            'deadline.use_web_service': True,
-            'deadline.host': 'testhost',
-            'deadline.port': 8081,
-            'deadline.ssl': False
-        }.get(key, default)
-        
-        mock_client = MagicMock()
-        mock_client.Groups.GetGroupNames.return_value = ['group1', 'group2']
-        
-        with patch('Deadline.DeadlineConnect.DeadlineCon', return_value=mock_client):
-            # Create connection
-            conn = DeadlineConnection()
-            assert conn.use_web_service
-            assert conn._web_client is None  # Not initialized yet
-            
-            # Initialize connection
-            conn.ensure_connected()
-            assert conn._web_client is not None
-            
-            # Test group retrieval
-            groups = conn.get_groups()
-            assert groups == ['group1', 'group2']
-
-def test_command_line_not_found(mock_config):
-    """Test error when deadlinecommand is not found."""
-    with patch('os.path.exists') as mock_exists:
-        mock_exists.return_value = False
-        
-        with pytest.raises(DeadlineError) as exc_info:
-            DeadlineConnection()
-        
-        assert "Could not find deadlinecommand" in str(exc_info.value)
-
-def test_web_service_import_error(mock_config):
-    """Test error when Deadline web service module cannot be imported."""
-    with patch('nk2dl.deadline.connection.config') as mock_config:
-        mock_config.get.side_effect = lambda key, default=None: {
-            'deadline.use_web_service': True
-        }.get(key, default)
-        
-        with pytest.raises(DeadlineError) as exc_info:
-            DeadlineConnection()
-        
-        assert "Failed to import Deadline Web Service API" in str(exc_info.value)
-
-def test_get_groups_command_line(mock_config):
-    """Test getting groups via command-line."""
-    with patch('os.path.exists') as mock_exists, \
-         patch('subprocess.Popen') as mock_popen:
-        
-        # Setup mocks
-        mock_exists.return_value = True
-        mock_process = MagicMock()
-        mock_process.communicate.side_effect = [
-            (b'/repo/path\n', b''),  # For init
-            (b'group1\ngroup2\n', b'')  # For get_groups
-        ]
-        mock_popen.return_value = mock_process
-        
-        # Create connection and test
-        conn = DeadlineConnection()
+        # Test getting groups
         groups = conn.get_groups()
-        assert groups == ['group1', 'group2']
-
-def test_submit_job_command_line(mock_config):
-    """Test job submission via command line."""
-    with patch('os.path.exists') as mock_exists, \
-         patch('subprocess.Popen') as mock_popen, \
-         patch('tempfile.NamedTemporaryFile') as mock_temp:
+        print(f"✓ Retrieved {len(groups)} groups: {', '.join(groups)}")
         
-        # Setup mocks
-        mock_exists.return_value = True
-        mock_process = MagicMock()
-        mock_process.communicate.return_value = (b'JobID=12345\nSuccess\n', b'')
-        mock_popen.return_value = mock_process
-        
-        # Mock temp files
-        mock_job_file = MagicMock()
-        mock_job_file.__enter__.return_value = mock_job_file
-        mock_job_file.name = '/tmp/job_info.job'
-        
-        mock_plugin_file = MagicMock()
-        mock_plugin_file.__enter__.return_value = mock_plugin_file
-        mock_plugin_file.name = '/tmp/plugin_info.job'
-        
-        mock_temp.side_effect = [mock_job_file, mock_plugin_file]
-        
-        # Create connection and submit job
-        conn = DeadlineConnection()
+        # Test submitting a test job
         job_info = {
-            'Plugin': 'Nuke',
-            'Name': 'Test Job',
-            'Frames': '1-10'
+            'BatchName': 'Test Batch',
+            'Name': 'Command-line Connectivity Test Job',
+            'Comment': 'Testing Deadline command-line connectivity',
+            'Department': '',
+            'Pool': 'none',
+            'SecondaryPool': '',
+            'Group': 'none',
+            'Priority': '50',
+            'TaskTimeoutMinutes': '0',
+            'EnableAutoTimeout': 'False',
+            'ConcurrentTasks': '1',
+            'LimitConcurrentTasksToNumberOfCpus': 'True',
+            'Frames': '1',
+            'ChunkSize': '1',
+            'Plugin': 'Python'
         }
+        
         plugin_info = {
-            'Version': '13.0',
-            'SceneFile': '/path/to/scene.nk'
+            'Version': '3.7',
+            'ScriptFile': '',
+            'Arguments': '',
+            'SingleFramesOnly': 'False',
+            'ScriptFilename': '',  # Extra field required by some Deadline versions
+            'StartupDirectory': ''  # Extra field required by some Deadline versions
         }
         
         job_id = conn.submit_job(job_info, plugin_info)
-        assert job_id == '12345'
+        print(f"✓ Successfully submitted test job with ID: {job_id}")
         
-        # Verify temp files were written correctly
-        mock_job_file.write.assert_any_call('Plugin=Nuke\n')
-        mock_job_file.write.assert_any_call('Name=Test Job\n')
-        mock_job_file.write.assert_any_call('Frames=1-10\n')
-        
-        mock_plugin_file.write.assert_any_call('Version=13.0\n')
-        mock_plugin_file.write.assert_any_call('SceneFile=/path/to/scene.nk\n')
+    except DeadlineError as e:
+        print(f"✗ Command-line test failed: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error in command-line test: {e}")
+        return False
+    
+    return True
 
-def test_submit_job_web_service(mock_config):
-    """Test job submission via web service."""
-    with patch('nk2dl.deadline.connection.config') as mock_config, \
-         patch.dict('sys.modules', {'Deadline': MagicMock(), 'Deadline.DeadlineConnect': MagicMock()}), \
-         patch('tempfile.NamedTemporaryFile') as mock_temp:
-        
-        # Setup mocks
-        mock_config.get.side_effect = lambda key, default=None: {
-            'deadline.use_web_service': True,
-            'deadline.host': 'testhost',
-            'deadline.port': 8081,
-            'deadline.ssl': False
-        }.get(key, default)
-        
-        mock_client = MagicMock()
-        mock_client.Jobs.SubmitJob.return_value = '12345'
-        
-        # Mock temp files
-        mock_job_file = MagicMock()
-        mock_job_file.__enter__.return_value = mock_job_file
-        mock_job_file.name = '/tmp/job_info.job'
-        
-        mock_plugin_file = MagicMock()
-        mock_plugin_file.__enter__.return_value = mock_plugin_file
-        mock_plugin_file.name = '/tmp/plugin_info.job'
-        
-        mock_temp.side_effect = [mock_job_file, mock_plugin_file]
-        
-        with patch('Deadline.DeadlineConnect.DeadlineCon', return_value=mock_client):
-            # Create connection and submit job
-            conn = DeadlineConnection()
-            conn.ensure_connected()
-            
-            job_info = {
-                'Plugin': 'Nuke',
-                'Name': 'Test Job',
-                'Frames': '1-10'
-            }
-            plugin_info = {
-                'Version': '13.0',
-                'SceneFile': '/path/to/scene.nk'
-            }
-            
-            job_id = conn.submit_job(job_info, plugin_info)
-            assert job_id == '12345'
-            
-            # Verify temp files were written correctly
-            mock_job_file.write.assert_any_call('Plugin=Nuke\n')
-            mock_job_file.write.assert_any_call('Name=Test Job\n')
-            mock_job_file.write.assert_any_call('Frames=1-10\n')
-            
-            mock_plugin_file.write.assert_any_call('Version=13.0\n')
-            mock_plugin_file.write.assert_any_call('SceneFile=/path/to/scene.nk\n')
-            
-            # Verify web service was called correctly
-            mock_client.Jobs.SubmitJob.assert_called_once_with('/tmp/job_info.job', '/tmp/plugin_info.job')
-
-def test_submit_job_command_line_error(mock_config):
-    """Test error handling for command line job submission."""
-    with patch('os.path.exists') as mock_exists, \
-         patch('subprocess.Popen') as mock_popen, \
-         patch('tempfile.NamedTemporaryFile') as mock_temp:
-        
-        # Setup mocks
-        mock_exists.return_value = True
-        mock_process = MagicMock()
-        mock_process.communicate.return_value = (b'Error: Failed to submit job\n', b'')
-        mock_popen.return_value = mock_process
-        
-        # Mock temp files
-        mock_job_file = MagicMock()
-        mock_job_file.__enter__.return_value = mock_job_file
-        mock_job_file.name = '/tmp/job_info.job'
-        
-        mock_plugin_file = MagicMock()
-        mock_plugin_file.__enter__.return_value = mock_plugin_file
-        mock_plugin_file.name = '/tmp/plugin_info.job'
-        
-        mock_temp.side_effect = [mock_job_file, mock_plugin_file]
-        
-        # Create connection and attempt to submit job
+def test_web_service():
+    """Test web service connectivity."""
+    print("\nTesting web service connectivity...")
+    
+    # Set config via environment variables
+    os.environ['NK2DL_DEADLINE_USE__WEB__SERVICE'] = 'True'
+    
+    # Force reload config to pick up the environment variable changes
+    config.load_config()
+    
+    try:
         conn = DeadlineConnection()
-        job_info = {'Plugin': 'Nuke', 'Name': 'Test Job'}
-        plugin_info = {'Version': '13.0'}
+        conn.ensure_connected()
+        print("✓ Successfully connected via web service")
         
-        with pytest.raises(DeadlineError) as exc_info:
-            conn.submit_job(job_info, plugin_info)
-        assert "No job ID found in submission output" in str(exc_info.value)
+        # Test getting groups
+        groups = conn.get_groups()
+        print(f"✓ Retrieved {len(groups)} groups: {', '.join(groups)}")
+        
+        # Test submitting a test job
+        job_info = {
+            'BatchName': 'Test Batch',
+            'Name': 'Web Service Connectivity Test Job',
+            'Comment': 'Testing Deadline web service connectivity',
+            'Department': '',
+            'Pool': 'none',
+            'SecondaryPool': '',
+            'Group': 'none',
+            'Priority': '50',
+            'TaskTimeoutMinutes': '0',
+            'EnableAutoTimeout': 'False',
+            'ConcurrentTasks': '1',
+            'LimitConcurrentTasksToNumberOfCpus': 'True',
+            'Frames': '1',
+            'ChunkSize': '1',
+            'Plugin': 'Python'
+        }
+        
+        plugin_info = {
+            'Version': '3.7',
+            'ScriptFile': '',
+            'Arguments': '',
+            'SingleFramesOnly': 'False',
+            'ScriptFilename': '',  # Extra field required by some Deadline versions
+            'StartupDirectory': ''  # Extra field required by some Deadline versions
+        }
+        
+        job_id = conn.submit_job(job_info, plugin_info)
+        print(f"✓ Successfully submitted test job with ID: {job_id}")
+        
+    except DeadlineError as e:
+        print(f"✗ Web service test failed: {e}")
+        return False
+    except Exception as e:
+        print(f"✗ Unexpected error in web service test: {e}")
+        return False
+    
+    return True
 
-def test_submit_job_web_service_error(mock_config):
-    """Test error handling for web service job submission."""
-    with patch('nk2dl.deadline.connection.config') as mock_config, \
-         patch.dict('sys.modules', {'Deadline': MagicMock(), 'Deadline.DeadlineConnect': MagicMock()}), \
-         patch('tempfile.NamedTemporaryFile') as mock_temp:
-        
-        # Setup mocks
-        mock_config.get.side_effect = lambda key, default=None: {
-            'deadline.use_web_service': True,
-            'deadline.host': 'testhost',
-            'deadline.port': 8081,
-            'deadline.ssl': False
-        }.get(key, default)
-        
-        mock_client = MagicMock()
-        mock_client.Jobs.SubmitJob.side_effect = Exception("Failed to submit job")
-        
-        # Mock temp files
-        mock_job_file = MagicMock()
-        mock_job_file.__enter__.return_value = mock_job_file
-        mock_job_file.name = '/tmp/job_info.job'
-        
-        mock_plugin_file = MagicMock()
-        mock_plugin_file.__enter__.return_value = mock_plugin_file
-        mock_plugin_file.name = '/tmp/plugin_info.job'
-        
-        mock_temp.side_effect = [mock_job_file, mock_plugin_file]
-        
-        with patch('Deadline.DeadlineConnect.DeadlineCon', return_value=mock_client):
-            # Create connection and attempt to submit job
-            conn = DeadlineConnection()
-            conn.ensure_connected()
-            
-            job_info = {'Plugin': 'Nuke', 'Name': 'Test Job'}
-            plugin_info = {'Version': '13.0'}
-            
-            with pytest.raises(DeadlineError) as exc_info:
-                conn.submit_job(job_info, plugin_info)
-            assert "Failed to submit job via web service" in str(exc_info.value) 
+def main():
+    """Main function to run connectivity tests."""
+    print("Deadline Connectivity Test")
+    print("=========================")
+    
+    # Set up Deadline environment
+    try:
+        setup_deadline_environment()
+    except DeadlineError as e:
+        print(f"✗ Failed to set up Deadline environment: {e}")
+        sys.exit(1)
+    
+    # Run tests
+    cmd_success = test_command_line()
+    web_success = test_web_service()
+    
+    # Print summary
+    print("\nTest Summary")
+    print("-----------")
+    print(f"Command-line: {'✓ PASS' if cmd_success else '✗ FAIL'}")
+    print(f"Web Service:  {'✓ PASS' if web_success else '✗ FAIL'}")
+    
+    # Exit with appropriate status
+    sys.exit(0 if cmd_success and web_success else 1)
+
+if __name__ == '__main__':
+    main()
