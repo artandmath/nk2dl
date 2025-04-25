@@ -297,7 +297,7 @@ Description=The path to the Nuke 15.0 executable file used for rendering. Enter 
 
 [RenderExecutable15_1]
 Type=multilinemultifilename
-Category=Nuke 15 Render Executables
+Category=Nuke 15.1 Render Executables
 CategoryOrder=10
 CategoryIndex=1
 Label=Nuke 15.1 Render Executable
@@ -306,12 +306,21 @@ Description=The path to the Nuke 15.1 executable file used for rendering. Enter 
 
 [RenderExecutable15_2]
 Type=multilinemultifilename
-Category=Nuke 15 Render Executables
+Category=Nuke 15.2 Render Executables
 CategoryOrder=11
 CategoryIndex=1
 Label=Nuke 15.2 Render Executable
 Default=C:\Program Files\Nuke15.2v1\Nuke15.2.exe;/usr/local/Nuke15.2v1/Nuke15.1/Applications/Nuke15.2/Nuke15.2v1.app/Contents/MacOS/Nuke15.2
 Description=The path to the Nuke 15.2 executable file used for rendering. Enter alternative paths on separate lines.
+
+[RenderExecutable16_0]
+Type=multilinemultifilename
+Category=Nuke 16 Render Executables
+CategoryOrder=11
+CategoryIndex=1
+Label=Nuke 16 Render Executable
+Default=C:\Program Files\Nuke16.0v1\Nuke16.0.exe;/usr/local/Nuke16.0v1/Nuke16.0/Applications/Nuke16.0/Nuke16.0v1.app/Contents/MacOS/Nuke16.0
+Description=The path to the Nuke 16.0 executable file used for rendering. Enter alternative paths on separate lines.
 
 [InteractiveSlaves]
 Type=slavelist
