@@ -59,6 +59,7 @@ htmlcov/
 .nk2dl.yaml
 *.pfx
 .ignore/
+thinkbox/
 
 # OS specific
 .DS_Store
