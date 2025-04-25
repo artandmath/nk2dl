@@ -21,9 +21,14 @@ class NukeSubmission:
     """Handles submission of Nuke scripts to Deadline."""
 
     def __init__(self, 
+                # nk2dl specific parameters
                 script_path: str,
-                frame_range: str = "",
-                output_path: str = "",
+                script_is_open: bool = False,
+                submit_alphabetically: bool = False,
+                submit_in_render_order: bool = False,
+                graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None,
+                
+                # Job Info parameters
                 job_name: Optional[str] = None,
                 batch_name: Optional[str] = None,
                 priority: Optional[int] = None,
@@ -33,6 +38,13 @@ class NukeSubmission:
                 department: Optional[str] = None,
                 comment: Optional[str] = None,
                 concurrent_tasks: Optional[int] = None,
+                extra_info: Optional[List[str]] = None,
+                frame_range: str = "",
+                job_dependencies: Optional[str] = None,
+                
+                # Plugin Info parameters
+                output_path: str = "",
+                nuke_version: Optional[Union[str, int, float]] = None,
                 use_nuke_x: bool = False,
                 use_batch_mode: bool = True,
                 render_threads: Optional[int] = None,
@@ -50,21 +62,31 @@ class NukeSubmission:
                 render_mode: str = "full",
                 write_nodes_as_tasks: bool = False,
                 write_nodes_as_separate_jobs: bool = False,
-                submit_alphabetically: bool = False,
-                submit_in_render_order: bool = False,
                 render_order_dependencies: bool = False,
-                job_dependencies: Optional[str] = None,
-                use_nodes_frame_list: bool = False,
-                script_is_open: bool = False,
-                extra_info: Optional[List[str]] = None,
-                nuke_version: Optional[Union[str, int, float]] = None,
-                graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None):
+                use_nodes_frame_list: bool = False):
         """Initialize a Nuke script submission.
         
         Args:
+            # nk2dl specific parameters
             script_path: Path to the Nuke script file
-            frame_range: Frame range to render (defaults to Nuke script settings)
-            output_path: Output directory for rendered files
+            script_is_open: Whether the script is already open in the current Nuke session
+            submit_alphabetically: Whether to sort write nodes alphabetically by name
+            submit_in_render_order: Whether to sort write nodes by render order
+            graph_scope_variables: List of graph scope variables to use for rendering. Can be provided in two formats:
+                                  
+                                  1. Flat list format (all combinations will be generated):
+                                     ["key1:value1,value2,...", "key2:valueA,valueB,..."]
+                                  
+                                  2. Nested list format (specific combinations):
+                                     [
+                                        ["key1:value1,value2", "key2:valueA"],  # First set of combinations
+                                        ["key1:value3", "key2:valueB"]          # Second set of combinations
+                                     ]
+                                     
+                                  If no values are provided for a key (e.g., "key:" or just "key"), 
+                                  all available values for that key will be used.
+            
+            # Job Info parameters
             job_name: Job name template (defaults to config value)
             batch_name: Batch name template (defaults to config value)
             priority: Job priority (defaults to config value)
@@ -75,6 +97,18 @@ class NukeSubmission:
             comment: Job comment (defaults to config value)
                      Can include tokens like {script}, {ss}, {write}, {file}, etc.
             concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
+            extra_info: List of extra info fields with optional tokens for customization
+                       Each item supports the same tokens as job_name
+            frame_range: Frame range to render (defaults to Nuke script settings)
+            job_dependencies: Comma or space separated list of job IDs
+            
+            # Plugin Info parameters
+            output_path: Output directory for rendered files
+            nuke_version: Version of Nuke to use for rendering. Can be:
+                          - String: "15.1"
+                          - Float: 15.1 (converts to "15.1")
+                          - Int: 15 (converts to "15.0")
+                          If None, uses config or current Nuke version
             use_nuke_x: Whether to use NukeX for rendering
             use_batch_mode: Whether to use batch mode
             render_threads: Number of render threads
@@ -92,32 +126,8 @@ class NukeSubmission:
             render_mode: Render mode (full, proxy)
             write_nodes_as_tasks: Whether to submit write nodes as separate tasks
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
-            submit_alphabetically: Whether to sort write nodes alphabetically by name
-            submit_in_render_order: Whether to sort write nodes by render order
             render_order_dependencies: Whether to set job dependencies based on render order
-            job_dependencies: Comma or space separated list of job IDs
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
-            script_is_open: Whether the script is already open in the current Nuke session
-            extra_info: List of extra info fields with optional tokens for customization
-                       Each item supports the same tokens as job_name
-            nuke_version: Version of Nuke to use for rendering. Can be:
-                          - String: "15.1"
-                          - Float: 15.1 (converts to "15.1")
-                          - Int: 15 (converts to "15.0")
-                          If None, uses config or current Nuke version
-            graph_scope_variables: List of graph scope variables to use for rendering. Can be provided in two formats:
-                                  
-                                  1. Flat list format (all combinations will be generated):
-                                     ["key1:value1,value2,...", "key2:valueA,valueB,..."]
-                                  
-                                  2. Nested list format (specific combinations):
-                                     [
-                                        ["key1:value1,value2", "key2:valueA"],  # First set of combinations
-                                        ["key1:value3", "key2:valueB"]          # Second set of combinations
-                                     ]
-                                     
-                                  If no values are provided for a key (e.g., "key:" or just "key"), 
-                                  all available values for that key will be used.
         """
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
         if render_order_dependencies:
@@ -1480,17 +1490,37 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
     Args:
         script_path: Path to the Nuke script file
         **kwargs: Additional submission parameters
-          - frame_range: Frame range to render (defaults to Nuke script settings)
-          - output_path: Output directory for rendered files
+        
+          # nk2dl specific parameters
+          - script_is_open: Whether the script is already open in the current Nuke session
+          - submit_alphabetically: Whether to sort write nodes alphabetically by name
+          - submit_in_render_order: Whether to sort write nodes by render order
+          - graph_scope_variables: List of graph scope variables in either flat format:
+            ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
+            Or nested format:
+            [["key1:value1", "key2:valueA"], ["key1:value2", "key2:valueB"]] - specific combinations
+            
+          # Job Info parameters
           - job_name: Job name template (defaults to config value)
           - batch_name: Batch name template (defaults to config value)
           - priority: Job priority (defaults to config value)
           - pool: Worker pool (defaults to config value)
           - group: Worker group (defaults to config value)
           - chunk_size: Number of frames per task (defaults to config value)
-          - concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
           - department: Department (defaults to config value)
           - comment: Job comment (defaults to config value)
+          - concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
+          - extra_info: List of extra info fields
+          - frame_range: Frame range to render (defaults to Nuke script settings)
+          - job_dependencies: Comma or space separated list of job IDs
+          
+          # Plugin Info parameters
+          - output_path: Output directory for rendered files
+          - nuke_version: Version of Nuke to use for rendering. Can be:
+                          - String: "15.1"
+                          - Float: 15.1 (converts to "15.1")
+                          - Int: 15 (converts to "15.0")
+                          If None, uses config or current Nuke version
           - use_nuke_x: Whether to use NukeX for rendering
           - use_batch_mode: Whether to use batch mode
           - render_threads: Number of render threads
@@ -1508,22 +1538,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
           - render_mode: Render mode (full, proxy)
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
-          - submit_alphabetically: Whether to sort write nodes alphabetically by name
-          - submit_in_render_order: Whether to sort write nodes by render order
           - render_order_dependencies: Whether to set job dependencies based on render order
-          - job_dependencies: Comma or space separated list of job IDs
           - use_nodes_frame_list: Whether to use node-specific frame lists
-          - script_is_open: Whether the script is already open in the current Nuke session
-          - extra_info: List of extra info fields
-          - nuke_version: Version of Nuke to use for rendering. Can be:
-                          - String: "15.1"
-                          - Float: 15.1 (converts to "15.1")
-                          - Int: 15 (converts to "15.0")
-                          If None, uses config or current Nuke version
-          - graph_scope_variables: List of graph scope variables in either flat format:
-            ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
-            Or nested format:
-            [["key1:value1", "key2:valueA"], ["key1:value2", "key2:valueB"]] - specific combinations
     
     Returns:
         Submission ID for the submitted job
