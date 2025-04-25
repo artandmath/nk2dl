@@ -6,4 +6,4 @@ There is no release on the main branch, please use the development branch.
 
 ## License
 
-[Specify your license here][./LICENSE]
+[Specify your license here](./LICENSE)
