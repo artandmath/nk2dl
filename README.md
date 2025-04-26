@@ -11,6 +11,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 ## Caveats
 
 The project is still under development
+- Consider this software to be pre-alpha. It has undergone limited testing but has started use in production as a replacement for the default submitter. We fall back to the default submitter when missing a feature or something is broken.
 - Interfaces to `nk2dl` module and command line are subject to change.
 - The `nk2dl` command line will often be out of step with the python module during development. 
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
