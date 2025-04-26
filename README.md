@@ -30,12 +30,10 @@ cd nk2dl
 python ./Scripts/setup_environment
 
 # The setup script will ask for a Nuke location
-# This is the Nuke python interpereter that will be used in
-# the virtual environment
+# This is the Nuke python interpereter that will be used in the virtual environment
 
 # The setup script will ask for the Deadline repository location
-# This environment will copy the Deadline api from the repository
-# to the virtual environemnt
+# The script will copy the Deadline api from the repository to the virtual environemnt
 
 # Set the virtual environment (only powershell tested so far)
 ./.venv/Scripts/Activate-nk2dl.ps1
