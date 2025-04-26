@@ -52,6 +52,7 @@ To use Graph Scope Variables with Nuke 15.2+, copy or diff the content of deadli
 ## Deadline Web Service
 
 ![I feel the need, the need for speed!](./docs/img/nk2dl_vs_default.gif)
+
 For best performance an instance of a Deadline Web Service is recommended.
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
