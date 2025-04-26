@@ -1,24 +1,42 @@
 # nk2dl
-Nuke to Deadline. A toolset for submitting nukescripts to Thinkbox Deadline in a "big studio" manner.
+Nuke to Deadline. A toolset for submitting nukescripts to Thinkbox Deadline.
 
 ## Overview
 
-nk2dl provides a streamlined, robust way to submit Nuke render jobs to Deadline with extensive customization options. It's built for production environments and supports:
+The Nuke to Deadline toolset consists of 3 parts:
+- `nk2dl` python module for submitting nukescripts to Deadline from the python interpreter within Nuke or from any other python interpreter.
+- `nk2dl` command line for submittings nukescripts to Deadline from the console.
+- `nk2dl panel` a panel for submitting the currently open nukescript (features still in planning phase)
+- `nk2dl nodes` functionality for storing farm settings within the node graph (features still in planning phase)
 
-- Write node management (submit all nodes or selected ones)
-- Complex frame range specifications
-- Granular control over rendering parameters
-- Template-based job naming
-- Graph scope variable support
-- Integration with Nuke's interface
+## Caveats
+
+The project is still under development
+- Interfaces to `nk2dl` module and command line may change (or more likely will change).
+- The `nk2dl` command line will often be out of step with the python module during development. 
+- The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
+- The `nk2dl` aims to maintain comparity with the default Deadline submitter. At this point in time there will be some features missing.
+- The project has no plans to implement Deadline draft.
+- Standard writes only, Deepwrites and other writes to come.
+
 
 ## Installation
 
 ```bash
 # Install from source
-git clone https://github.com/yourusername/nk2dl.git
+git clone https://github.com/artandmath/nk2dl.git
 cd nk2dl
-pip install .
+
+# Create virtual environment
+python ./Scripts/setup_environment
+
+# The setup script will ask for a Nuke location
+# This is the Nuke python interpereter that will be used in
+# the virtual environment
+
+# The setup script will ask for the Deadline repository location
+# This environment will copy the Deadline api from the repository
+# to the virtual environemnt
 
 # Or install directly with pip (when available)
 pip install nk2dl
