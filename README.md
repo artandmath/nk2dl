@@ -73,14 +73,13 @@ job_ids = submit_nuke_script("/path/to/script.nk")
 # Advanced usage with options
 job_ids = submit_nuke_script(
     "/path/to/script.nk",
-    frame_range="1-100",
-    priority=75,
-    use_nuke_x=True,
-    render_threads=16,
-    use_gpu=True,
+    frame_range="1001-1100",
+    priority=40,
+    concurrent_tasks=4,
+    render_threads=4,
     write_nodes=["Write1", "Write2"],
-    job_name="{script_stem}_{write}",
-    batch_name="Project_123"
+    batch_name="{scriptname}",
+    job_name="{batchname}_{write}"
 )
 ```
 
@@ -191,9 +190,9 @@ submit_nuke_script("path/to/script.nk", graph_scope_variables=[
 # Combined with other options
 submit_nuke_script(
     "path/to/script.nk",
-    frame_range="1-100",
+    frame_range="1001-1100",
     write_nodes=["Write1", "Write2"],
-    graph_scope_variables=["shotcode:ABC_0010"]
+    graph_scope_variables=["shotcode:ABC_0010,ABC_0020"]
 )
 ```
 
