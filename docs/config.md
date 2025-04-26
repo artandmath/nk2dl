@@ -1,4 +1,5 @@
-Documentation is auto-generated with claude-3.7 and subject to change, may not be 100% accurate or current.
+> [!NOTE]
+> Documentation is auto-generated with claude-3.7, may not be current or accurate and is subject to change.
 
 # nk2dl Configuration
 
