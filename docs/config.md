@@ -179,10 +179,11 @@ Create a `.nk2dl.yaml` file in your project directory to set project-specific de
 
 ```yaml
 submission:
-  pool: project_pool
-  priority: 60
-  department: lighting
-  batch_name_template: "ProjectName_{script_stem}"
+  pool: nuke
+  group: workstations
+  priority: 50
+  department: compositing
+  batch_name_template: "{scriptname}"
 ```
 
 ## User Configuration
