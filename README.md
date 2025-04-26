@@ -102,7 +102,7 @@ nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x -
 nk2dl uses a YAML configuration system with multiple levels:
 
 1. Default configuration
-2. Project configuration (.nk2dl.yaml)
+2. Project configuration (from NK2DL_CONFIG envvar or .nk2dl.yaml in project root))
 3. Environment variables (NK2DL_*)
 4. User configuration (~/.nk2dl/config.yaml)
 
@@ -111,7 +111,7 @@ Example configuration:
 ```yaml
 deadline:
   use_web_service: True
-  host: deadline-server
+  host: deadline-web-server
   port: 8081
   ssl: False
   commandline_on_fail: True
