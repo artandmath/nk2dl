@@ -18,7 +18,7 @@ The project is still under development
 - The project has no plans to implement Deadline draft.
 - Standard Writes only, DeepWrites and other kinds Write nodes to come.
 - connection to Deadline Web Service currently doesn't support SSL.
-- [The project is written using 10% manpower and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
+- [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
 
 ## Installation
 
@@ -47,7 +47,7 @@ For best performance an instance of a Deadline Web Service is recommended.
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
  
-After settings up an instance of Deadline Web Serivce [configure](./docs/config.md) and [test the connection.](./docs/deadline_connection.md)
+After setting up an instance of Deadline Web Serivce [configure](./docs/config.md) and [test the connection.](./docs/deadline_connection.md)
 
 To make nk2dl available to Nuke GUI, add the path to nk2dl in an init.py. Development and testing is still being done outside of the Nuke GUI, no additional information for Nuke GUI can be offered at this stage.
 
