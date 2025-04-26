@@ -27,7 +27,7 @@ git clone https://github.com/artandmath/nk2dl.git
 cd nk2dl
 
 # Create virtual environment
-python ./Scripts/setup_environment
+python ./scripts/setup_environment
 
 # The setup script will ask for a Nuke location
 # This is the Nuke python interpereter that will be used in the virtual environment
@@ -35,7 +35,7 @@ python ./Scripts/setup_environment
 # The setup script will ask for the Deadline repository location
 # The script will copy the Deadline api from the repository to the virtual environemnt
 
-# Set the virtual environment (only powershell tested so far)
+# Set the virtual environment (only powershell tested thus far)
 ./.venv/Scripts/Activate-nk2dl.ps1
 
 # Install the commandline within the virtual environment
@@ -108,8 +108,8 @@ submission:
   priority: 50
   chunk_size: 10
   department: comp
-  job_name_template: "{batch} / {write}"
   batch_name_template: "{script_stem}"
+  job_name_template: "{batch} / {write}"
 ```
 
 ## Advanced Options
