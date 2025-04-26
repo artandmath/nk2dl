@@ -20,7 +20,7 @@ The project is still under development
 - The project has no plans to implement Deadline draft.
 - Standard Writes only, DeepWrites and other kinds of write nodes to come.
 - Connection to Deadline Web Service currently doesn't support SSL.
-- [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
+- [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) YOLO!
 
 ## Installation
 
