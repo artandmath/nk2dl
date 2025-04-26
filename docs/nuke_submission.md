@@ -116,7 +116,7 @@ The `submit_script_as_auxiliary_file` option makes Deadline treat the Nuke scrip
 4. Reduces network dependencies as the script is stored within Deadline
 
 > [!WARNING]
-> If path mapping is enabled in the plugin settings on the deadline repository then scripts are automatically treated like auxilary files and a modified copy is loaded to each deadline worker regardless of whether `submit_script_as_auxiliary_file` is `True` or `False`. If path mapping is enabled and the nukescript contains a project directory that needs to evaluate the path then it is recommended to use the `copy_script` functionality.
+> If path mapping is enabled in the plugin settings on the deadline repository then scripts are automatically treated like auxilary files and a modified copy is loaded to each deadline worker regardless of whether `submit_script_as_auxiliary_file` is `True` or `False`. If path mapping is enabled and the nukescript contains a project directory that needs to evaluate the path then it is recommended to use the `copy_script` functionality. `copy_script` will evaluate the project directory on the script copies.
 
 ```python
 # Submit script as an auxiliary file
