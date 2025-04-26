@@ -103,6 +103,9 @@ python tests/test_deadline_connection.py
 
 #### Testing with SSL Enabled
 
+> [!WARNING]
+> SSL support appears to be currently broken
+
 For secure connections with SSL:
 
 ```bash
