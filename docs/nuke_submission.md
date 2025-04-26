@@ -47,42 +47,46 @@ job_ids = submit_nuke_script(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `script_path` | str | (Required) | Path to the Nuke script file |
-| `frame_range` | str | `None` | Frame range to render (e.g., "1-100", "f-l") |
-| `priority` | int | 50 | Job priority (0-100) |
-| `department` | str | "comp" | Department name |
-| `pool` | str | "none" | Deadline pool |
-| `secondary_pool` | str | `""` | Secondary Deadline pool |
-| `group` | str | "none" | Deadline group |
-| `chunk_size` | int | 10 | Frame chunk size |
-| `job_name` | str | `"{script_stem}_{write}"` | Job name template |
-| `batch_name` | str | `"{script_stem}"` | Batch name template |
+| `script_is_open` | bool | `False` | Whether the script is already open in the current Nuke session |
+| `submit_alphabetically` | bool | `False` | Whether to sort write nodes alphabetically by name |
+| `submit_in_render_order` | bool | `False` | Whether to sort write nodes by render order |
+| `submit_script_as_auxiliary_file` | bool | `None` | Whether to submit the script as an auxiliary file |
+| `copy_script` | bool | `None` | Copy the script to configured location(s) before submission |
+| `submit_copied_script` | bool | `None` | Use the copied script for rendering instead of the original |
+| `job_name` | str | `None` | Job name template |
+| `batch_name` | str | `None` | Batch name template |
+| `priority` | int | `None` | Job priority (0-100) |
+| `pool` | str | `None` | Deadline pool |
+| `group` | str | `None` | Deadline group |
+| `chunk_size` | int | `None` | Frame chunk size |
+| `department` | str | `None` | Department name |
+| `comment` | str | `None` | Comment for the job |
+| `concurrent_tasks` | int | `None` | Number of concurrent tasks |
+| `extra_info` | list | `None` | Extra information for the job |
+| `frame_range` | str | `""` | Frame range to render (e.g., "1-100", "f-l") |
+| `job_dependencies` | str | `None` | Job dependencies |
+| `output_path` | str | `""` | Output path for the rendered files |
+| `nuke_version` | str/int/float | `None` | Specific Nuke version to use |
 | `use_nuke_x` | bool | `False` | Use NukeX instead of regular Nuke |
-| `use_nuke_studio` | bool | `False` | Use Nuke Studio instead of regular Nuke |
-| `render_threads` | int | 0 | Number of render threads (0 for auto) |
+| `use_batch_mode` | bool | `True` | Use batch mode for rendering |
+| `render_threads` | int | `None` | Number of render threads (0 for auto) |
 | `use_gpu` | bool | `False` | Enable GPU rendering |
-| `enable_performance_profiler` | bool | `False` | Enable performance profiler |
-| `performance_profile_dir` | str | `""` | Directory to store performance profiles |
-| `machine_limit` | int | 0 | Limit number of machines (0 for unlimited) |
-| `concurrent_tasks` | int | 1 | Number of concurrent tasks |
-| `enable_auto_timeout` | bool | `False` | Enable auto timeout |
-| `task_timeout_minutes` | int | 0 | Task timeout in minutes (0 for none) |
-| `limit_tasks_to_cpus` | bool | `True` | Limit concurrent tasks to number of CPUs |
-| `on_job_complete` | str | "Nothing" | Action on job completion |
-| `init_script` | str | `""` | Script to run before rendering |
-| `post_job_script` | str | `""` | Script to run after job completes |
-| `environment` | dict | `{}` | Environment variables to set for the job |
+| `gpu_override` | str | `None` | Specific GPU to use for rendering |
+| `max_ram_usage` | int | `None` | Maximum RAM usage in MB |
+| `enforce_render_order` | bool | `True` | Enforce write node render order |
+| `min_stack_size` | int | `None` | Minimum stack size in MB |
+| `continue_on_error` | bool | `False` | Continue rendering if errors occur |
+| `reload_plugins` | bool | `False` | Reload plugins between tasks |
+| `use_profiler` | bool | `False` | Enable performance profiler |
+| `profile_dir` | str | `None` | Directory to store performance profiles |
+| `use_proxy` | bool | `False` | Use proxy mode for rendering |
 | `write_nodes` | list | `None` | List of write nodes to render (None for all) |
-| `write_nodes_as_separate_jobs` | bool | `False` | Submit write nodes as separate jobs |
+| `render_mode` | str | `"full"` | Render mode to use |
 | `write_nodes_as_tasks` | bool | `False` | Submit write nodes as tasks |
+| `write_nodes_as_separate_jobs` | bool | `False` | Submit write nodes as separate jobs |
 | `render_order_dependencies` | bool | `False` | Create dependencies based on render order |
+| `use_nodes_frame_list` | bool | `False` | Use frame list from write nodes |
 | `graph_scope_variables` | list | `None` | Graph scope variables specification |
-| `post_render_script` | str | `""` | Script to run after rendering |
-| `submit_suspended` | bool | `False` | Submit job in suspended state |
-| `nuke_executable` | str | `None` | Custom path to Nuke executable |
-| `nuke_version` | str | `None` | Specific Nuke version to use |
-| `progress_callback` | callable | `None` | Callback function for progress updates |
-| `custom_plugin_info` | dict | `{}` | Additional plugin info parameters |
-| `custom_job_info` | dict | `{}` | Additional job info parameters |
 
 ### Write Node Control
 
@@ -101,6 +105,42 @@ job_ids = submit_nuke_script("/path/to/script.nk", write_nodes_as_tasks=True)
 # Set dependencies based on render order
 job_ids = submit_nuke_script("/path/to/script.nk", render_order_dependencies=True)
 ```
+
+### Script Copying Options
+
+You can control whether the Nuke script is copied before submission and whether the copied script is used for rendering:
+
+```python
+# Copy script to a farm-specific location before submission
+job_ids = submit_nuke_script("/path/to/script.nk", copy_script=True)
+
+# Use the copied script for rendering instead of the original
+job_ids = submit_nuke_script("/path/to/script.nk", copy_script=True, submit_copied_script=True)
+```
+
+#### What is script copying?
+
+The `copy_script` option creates a copy of your Nuke script in a specified location before submitting it to Deadline. This can be useful to:
+
+1. Create a snapshot of the script at submission time
+2. Place the script in a location accessible to render nodes
+3. Generate archive copies of scripts for each submission
+4. Resolve project directory references to absolute paths
+
+The copy location and naming convention can be configured through:
+- Configuration option `submission.copy_script` (default: `False`)
+- Configuration option `submission.submit_copied_script` (default: `False`) 
+- Configuration options for path and naming:
+  - Single copy: `submission.script_copy_path`, `submission.script_copy_relative_to`, `submission.script_copy_name`
+  - Multiple copies: `submission.script_copy0_path`, `submission.script_copy0_relative_to`, etc.
+
+#### What is submit_copied_script?
+
+The `submit_copied_script` option makes Deadline render using the copied script instead of the original script. This is useful when:
+
+1. The original script location is not accessible to render nodes
+2. You want to ensure rendering uses the exact script state at submission time
+3. You're organizing scripts in a farm-specific structure
 
 ### Frame Range Specification
 
@@ -144,7 +184,7 @@ submit_nuke_script(
 )
 ```
 
-### Performance Profiling
+### Performance Profiling (NOT IMPLEMENTED/HALLUCINATION)
 
 Enable performance profiling for optimization:
 
@@ -156,7 +196,7 @@ submit_nuke_script(
 )
 ```
 
-### Custom Scripts and Hooks
+### Custom Scripts and Hooks (NOT IMPLEMENTED/HALLUCINATION)
 
 Add custom scripts to run at different stages of the job:
 
@@ -169,7 +209,7 @@ submit_nuke_script(
 )
 ```
 
-### Environment Variables
+### Environment Variables (NOT IMPLEMENTED/HALLUCINATION)
 
 Set environment variables for the render job:
 
@@ -184,7 +224,7 @@ submit_nuke_script(
 )
 ```
 
-### Custom Parameters
+### Custom Parameters (NOT IMPLEMENTED/HALLUCINATION)
 
 Pass custom parameters directly to Deadline:
 
@@ -203,7 +243,7 @@ submit_nuke_script(
 )
 ```
 
-### Progress Callback
+### Progress Callback (NOT IMPLEMENTED/HALLUCINATION)
 
 Register a callback function to receive progress updates:
 
@@ -219,11 +259,11 @@ submit_nuke_script(
 
 ## Return Value
 
-The `submit_nuke_script` function returns a list of Deadline job IDs that were created:
+The `submit_nuke_script` function returns a dictionary where keys are integers and values are lists of strings representing Deadline job IDs:
 
 ```python
 job_ids = submit_nuke_script("/path/to/script.nk")
-print(f"Submitted {len(job_ids)} jobs with IDs: {job_ids}")
+print(f"Submitted jobs with IDs: {job_ids}")
 ```
 
 ## Error Handling
@@ -244,7 +284,7 @@ except Exception as e:
     print(f"Unexpected error: {e}")
 ```
 
-## Using in Nuke GUI
+## Using in Nuke GUI (UNTESTED)
 
 To use `nk2dl` within the Nuke GUI:
 
@@ -276,13 +316,13 @@ job_ids = submit_nuke_script(
     "/shows/project123/shots/shot001/comp/shot001_comp_v003.nk",
     pool="nuke",
     group="renderfarm",
-    priority=60,
+    priority=50,
     department="comp",
-    batch_name="Project123_dailies",
-    job_name="{script_stem}_{write}",
+    batch_name="{scriptname}",
+    job_name="{batchname} | {write} | {output}",
     chunk_size=5,
     use_nuke_x=True,
-    render_threads=16
+    render_threads=0
 )
 ```
 
@@ -296,7 +336,8 @@ job_ids = submit_nuke_script(
     "/shows/project123/templates/shot_template.nk",
     batch_name="Project123_overnight",
     graph_scope_variables=[
-        ["shotcode:shot001,shot002,shot003", "version:v001,v002"]
+        ["shotcode:shot001,shot002,shot003", "res:full"],
+        ["shotcode:shot004,shot005,shot006", "res:half"]
     ],
     frame_range="1-100",
     priority=80,

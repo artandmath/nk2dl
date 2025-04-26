@@ -125,6 +125,24 @@ submission:
   
   # Whether to use Nuke Studio by default
   use_nuke_studio: false
+  
+  # Script copying options
+  copy_script: false
+  submit_copied_script: false
+  
+  # Script copy path (relative to script or output directory)
+  script_copy_path: ./.farm/
+  script_copy_relative_to: SCRIPT  # Can be SCRIPT or OUTPUT
+  script_copy_name: $BASENAME.$EXT  # Can use tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
+  
+  # Multiple copy locations (optional)
+  script_copy0_path: ./.farm/
+  script_copy0_relative_to: SCRIPT
+  script_copy0_name: $BASENAME.$EXT
+  
+  script_copy1_path: ./archive/
+  script_copy1_relative_to: SCRIPT
+  script_copy1_name: $BASENAME.YYYY-MM-DD_hh-mm-ss.$EXT
 ```
 
 ### Nuke Settings
