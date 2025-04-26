@@ -57,7 +57,7 @@ For best performance an instance of a Deadline Web Service is recommended.
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
  
-After setting up an instance of Deadline Web Serivce [configure](./docs/config.md) and [test the connection.](./docs/deadline_connection.md)
+After setting up an instance of Deadline Web Service, check the docs on how to [configure](./docs/config.md) and [test the connection.](./docs/deadline_connection.md)
 
 
 ## Quick Start
