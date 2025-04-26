@@ -102,8 +102,8 @@ nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x -
 nk2dl uses a YAML configuration system with multiple levels:
 
 1. Default configuration
-2. Project configuration (from NK2DL_CONFIG envvar or .nk2dl.yaml in project root))
-3. Environment variables (NK2DL_*)
+2. Project configuration (from $NK2DL_CONFIG or .nk2dl.yaml in project root)
+3. Environment variables ($NK2DL_*)
 4. User configuration (~/.nk2dl/config.yaml)
 
 Example configuration:
