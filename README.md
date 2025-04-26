@@ -156,8 +156,8 @@ submit_nuke_script("script.nk", frame_range="i")  # input range from write node
 
 ## License
 
-[Specify your license here]
+[MIT License](./LICENSE)
 
 ## Contributing
 
-[Guidelines for contributing to the project]
+[Guidelines for contributing to the project](./docs/contributing.md)
