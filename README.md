@@ -6,7 +6,7 @@ Nuke to Deadline. A toolset for submitting nukescripts to Thinkbox Deadline.
 The Nuke to Deadline toolset consists of 3 parts:
 - `nk2dl` python module for submitting nukescripts to Deadline from the python interpreter within Nuke or from any other python interpreter.
 - `nk2dl` command line for submittings nukescripts to Deadline from the console.
-- `nk2dl nuke` a panel (and likely settings nodes) for submitting the currently open nukescript (features still in planning phase)
+- `nk2dl nuke` is a panel (and likely settings nodes) for submitting the currently open nukescript (features still in planning phase)
 
 ## Caveats
 
@@ -37,8 +37,11 @@ python ./Scripts/setup_environment
 # This environment will copy the Deadline api from the repository
 # to the virtual environemnt
 
-# Or install directly with pip (when available)
-pip install nk2dl
+# Set the virtual environment (only powershell tested so far)
+./.venv/Scripts/Activate-nk2dl.ps1
+
+# Install the commandline within the virtual environment
+pip install -e .
 ```
 
 ## Quick Start
