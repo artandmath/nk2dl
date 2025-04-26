@@ -18,7 +18,7 @@ The project is still under development
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The `nk2dl` aims to maintain parity with the default Deadline submitter. At this point in time there are features missing.
 - The project has no plans to implement Deadline draft.
-- Standard Writes only, DeepWrites and other kinds Write nodes to come.
+- Standard Writes only, DeepWrites and other kinds of write nodes to come.
 - Connection to Deadline Web Service currently doesn't support SSL.
 - [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
 
