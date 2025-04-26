@@ -10,7 +10,6 @@ The Nuke to Deadline toolset consists of 3 parts:
 
 ## Caveats
 
-The project is still under development
 - The project is in alpha. We have been using it in a limited capacity in a production environment as a replacement for the default submitter. We fall back to the default submitter when missing a feature or something is broken.
 - Graph Scope Variable functionality hasn't been tested in production.
 - Interfaces to `nk2dl` module and command line are subject to change.
