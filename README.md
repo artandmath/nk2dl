@@ -11,13 +11,13 @@ The Nuke to Deadline toolset consists of 3 parts:
 ## Caveats
 
 The project is still under development
-- Interfaces to `nk2dl` module and command line may change (or more likely will change).
+- Interfaces to `nk2dl` module and command line may change (rather likely they will change).
 - The `nk2dl` command line will often be out of step with the python module during development. 
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The `nk2dl` aims to maintain comparity with the default Deadline submitter. At this point in time there will be some features missing.
 - The project has no plans to implement Deadline draft.
 - Standard writes only, Deepwrites and other writes to come.
-
+- Deadline web connect currently doesn't support SSL.
 
 ## Installation
 
@@ -42,6 +42,11 @@ python ./Scripts/setup_environment
 pip install -e .
 ```
 
+For best performance a Deadline Web Service instance is recomended.
+[Installign Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
+[Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
+ 
+
 ## Quick Start
 
 ### Python API
@@ -50,10 +55,10 @@ pip install -e .
 from nk2dl.nuke import submit_nuke_script
 
 # Basic usage
-job_id = submit_nuke_script("/path/to/script.nk")
+job_ids = submit_nuke_script("/path/to/script.nk")
 
 # Advanced usage with options
-job_id = submit_nuke_script(
+job_ids = submit_nuke_script(
     "/path/to/script.nk",
     frame_range="1-100",
     priority=75,
@@ -69,21 +74,15 @@ job_id = submit_nuke_script(
 ### Command Line Interface
 
 ```bash
+# Help docs
+nk2dl submit --help
+
 # Basic submission
 nk2dl submit /path/to/script.nk
 
 # With options
 nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x --render-threads 16 --use-gpu
 ```
-
-## Key Features
-
-- **Write Node Management**: Submit all or selected write nodes
-- **Flexible Frame Ranges**: Support for Nuke-style frame ranges with special tokens (f,l,m,i)
-- **Job Organization**: Template-based job and batch naming
-- **Advanced Rendering Options**: Control threads, memory, GPU usage
-- **Pipeline Integration**: Robust configuration system for studio environments
-- **Job Dependencies**: Set up complex job dependency chains
 
 ## Configuration
 
