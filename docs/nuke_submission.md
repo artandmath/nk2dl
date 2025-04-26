@@ -106,6 +106,40 @@ job_ids = submit_nuke_script("/path/to/script.nk", write_nodes_as_tasks=True)
 job_ids = submit_nuke_script("/path/to/script.nk", render_order_dependencies=True)
 ```
 
+### Script as Auxiliary File
+
+The `submit_script_as_auxiliary_file` option makes Deadline treat the Nuke script as an auxiliary file, which has these benefits:
+
+1. The script is automatically uploaded to Deadline's auxiliary files
+2. The script becomes part of the job and is available on all render nodes
+3. The script is preserved with the job history for future reference
+4. Reduces network dependencies as the script is stored within Deadline
+
+> [!WARNING]
+> If path mapping is enabled in the plugin settings on the deadline repository then scripts are automatically treated like auxilary files and a modified copy is loaded to each deadline worker regardless of whether `submit_script_as_auxiliary_file` is `True` or `False`. If path mapping is enabled and the nukescript contains a project directory that needs to evaluate the path then it is recommended to use the `copy_script` functionality.
+
+```python
+# Submit script as an auxiliary file
+job_ids = submit_nuke_script("/path/to/script.nk", submit_script_as_auxiliary_file=True)
+
+# Combine with script copying
+job_ids = submit_nuke_script(
+    "/path/to/script.nk",
+    copy_script=True,
+    submit_copied_script=True,
+    submit_script_as_auxiliary_file=True
+)
+```
+
+This option is particularly useful when:
+- You want to ensure the script is always available for job reruns
+- The original script location may be inaccessible to render nodes
+- You need to preserve the exact script version used for a particular render
+- You're submitting from a temporary location
+
+> [!NOTE]
+> When both `submit_copied_script` and `submit_script_as_auxiliary_file` are enabled, the copied script is submitted as the auxiliary file.
+
 ### Script Copying Options
 
 You can control whether the Nuke script is copied before submission and whether the copied script is used for rendering:
@@ -343,3 +377,4 @@ job_ids = submit_nuke_script(
     priority=80,
     write_nodes_as_separate_jobs=True
 ) 
+```
