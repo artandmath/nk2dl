@@ -1,4 +1,5 @@
-Documentation is auto-generated with claude-3.7 and subject to change.
+> [!NOTE]
+> Documentation is auto-generated with claude-3.7 and subject to change.
 
 # Nuke Submission
 
