@@ -17,7 +17,7 @@ Environment Variables:
     NK2DL_DEADLINE_HOST: Hostname for Deadline Web Service (default: localhost)
     NK2DL_DEADLINE_PORT: Port for Deadline Web Service (default: 8081)
     NK2DL_DEADLINE_SSL: Enable SSL connection (default: False)
-    NK2DL_DEADLINE_SSL_CERT: Path to SSL certificate file (required if SSL enabled)
+    NK2DL_DEADLINE_SSL__CERT: Path to SSL certificate file (required if SSL enabled)
     NK2DL_DEADLINE_USE__WEB__SERVICE: Use web service instead of command line (default: False)
 
 Requirements:
@@ -52,7 +52,7 @@ Examples:
     export NK2DL_DEADLINE_HOST=deadline-server
     export NK2DL_DEADLINE_PORT=4434
     export NK2DL_DEADLINE_SSL=True
-    export NK2DL_DEADLINE_SSL_CERT=/path/to/certificate.pxf
+    export NK2DL_DEADLINE_SSL__CERT=/path/to/certificate.pxf
     python test_deadline_connection.py
 
     # Windows PowerShell Examples:
@@ -73,7 +73,7 @@ Examples:
     $env:NK2DL_DEADLINE_HOST = "deadline-server"
     $env:NK2DL_DEADLINE_PORT = "4434"
     $env:NK2DL_DEADLINE_SSL = "True"
-    $env:NK2DL_DEADLINE_SSL_CERT = "C:\\path\\to\\certificate.pxf"
+    $env:NK2DL_DEADLINE_SSL__CERT = "C:\\path\\to\\certificate.pxf"
     python test_deadline_connection.py
 """
 

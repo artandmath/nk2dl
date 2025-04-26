@@ -97,7 +97,7 @@ class DeadlineConnection:
         try:
             if use_ssl:
                 if not ssl_cert:
-                    raise DeadlineError("SSL certificate path not provided. Please set NK2DL_DEADLINE_SSL_CERT environment variable.")
+                    raise DeadlineError("SSL certificate path not provided. Please set NK2DL_DEADLINE_SSL__CERT environment variable.")
                 if not os.path.exists(ssl_cert):
                     raise DeadlineError(f"SSL certificate not found at path: {ssl_cert}")
                 

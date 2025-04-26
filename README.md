@@ -138,30 +138,54 @@ Templates support tokens such as:
 
 ```python
 # Submit specific write nodes
-submit_nuke_script("script.nk", write_nodes=["Write1", "Write2"])
+submit_nuke_script("path/to/script.nk", write_nodes=["Write1", "Write2"])
 
 # Submit write nodes as separate jobs
-submit_nuke_script("script.nk", write_nodes_as_separate_jobs=True)
+submit_nuke_script("path/to/script.nk", write_nodes_as_separate_jobs=True)
 
 # Submit write nodes as separate tasks
-submit_nuke_script("script.nk", write_nodes_as_tasks=True)
+submit_nuke_script("path/to/script.nk", write_nodes_as_tasks=True)
 
 # Set dependencies based on render order
-submit_nuke_script("script.nk", render_order_dependencies=True)
+submit_nuke_script("path/to/script.nk", render_order_dependencies=True)
 ```
 
 ### Frame Range Specification
 
 ```python
 # Standard frame ranges
-submit_nuke_script("script.nk", frame_range="1-100")
-submit_nuke_script("script.nk", frame_range="1-100x10")
-submit_nuke_script("script.nk", frame_range="1,10,20-40")
+submit_nuke_script("path/to/script.nk", frame_range="1-100")
+submit_nuke_script("path/to/script.nk", frame_range="1-100x10")
+submit_nuke_script("path/to/script.nk", frame_range="1,10,20-40")
 
 # Special tokens
-submit_nuke_script("script.nk", frame_range="f-l")  # first to last
-submit_nuke_script("script.nk", frame_range="f,m,l")  # first, middle, last
-submit_nuke_script("script.nk", frame_range="i")  # input range from write node
+submit_nuke_script("path/to/script.nk", frame_range="f-l")  # first to last
+submit_nuke_script("path/to/script.nk", frame_range="f,m,l")  # first, middle, last
+submit_nuke_script("path/to/script.nk", frame_range="i")  # input range from write node
+```
+
+### Graph Scope Variables
+
+```python
+# Simple usage with a single variable
+submit_nuke_script("path/to/script.nk", graph_scope_variables=["shotcode:ABC_0010"])
+
+# Multiple values for a single variable
+submit_nuke_script("path/to/script.nk", graph_scope_variables=["shotcode:ABC_0010,ABC_0020"])
+
+# Sets of variables
+submit_nuke_script("path/to/script.nk", graph_scope_variables=[
+    ["shotcode:ABC_0010,ABC_0020","res:wh,hh"],
+    ["shotcode:XYZ_0010,XYZ_0020,XYZ_0030","res:wh"]
+])
+
+# Combined with other options
+submit_nuke_script(
+    "path/to/script.nk",
+    frame_range="1-100",
+    write_nodes=["Write1", "Write2"],
+    graph_scope_variables=["shotcode:ABC_0010"]
+)
 ```
 
 ## License
