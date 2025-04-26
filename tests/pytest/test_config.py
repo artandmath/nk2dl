@@ -61,7 +61,7 @@ def test_default_config():
     assert isinstance(config.get('submission.chunk_size', 10), int)
 
 def test_environment_variables():
-    """Test that environment variables override configuration."""
+    """Test that environment variables override configuration but can be overridden by user config."""
     os.environ['NK2DL_DEADLINE_HOST'] = 'testhost'
     os.environ['NK2DL_LOGGING_LEVEL'] = 'DEBUG'
     os.environ['NK2DL_DEADLINE_USE__WEB__SERVICE'] = 'true'
@@ -113,9 +113,9 @@ def test_config_order():
             user_config=str(user_config)
         )
         
-        # Check values - env vars should override user config should override project config
+        # Check values - user config should override env vars should override project config
         assert config.get('deadline.host') == 'user_host'  # From user config
-        assert config.get('deadline.port') == 3333  # From env var
+        assert config.get('deadline.port') == 2222  # From user config (overrides env var)
         
         # Clean up
         del os.environ['NK2DL_DEADLINE_PORT']

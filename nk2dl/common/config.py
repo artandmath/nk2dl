@@ -24,8 +24,8 @@ class Config:
     Configuration is loaded in the following order (later sources override earlier ones):
     1. Default configuration
     2. Project configuration file (from NK2DL_CONFIG or .nk2dl.yaml in project root)
-    3. User configuration file (~/.nk2dl/config.yaml)
-    4. Environment variables (NK2DL_*)
+    3. Environment variables (NK2DL_*)
+    4. User configuration file (~/.nk2dl/config.yaml)
     """
     
     # Default paths for configuration files
@@ -135,8 +135,12 @@ class Config:
             self._update_config(project_config)
         else:
             logger.debug(f"No project config found at {self._project_config_path}")
+        
+        # Load environment variables second
+        logger.debug("Loading configuration from environment variables")
+        self._load_env_vars()
             
-        # Load user config second
+        # Load user config last (now has highest priority)
         logger.debug(f"Attempting to load user config from {self._user_config_path}")
         user_config = self._load_yaml_file(self._user_config_path)
         if user_config:
@@ -146,10 +150,6 @@ class Config:
         else:
             logger.debug(f"No user config found at {self._user_config_path}")
             
-        # Load environment variables last
-        logger.debug("Loading configuration from environment variables")
-        self._load_env_vars()
-        
         # Log final config
         logger.debug(f"Final configuration: {self._config}")
     

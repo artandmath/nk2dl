@@ -1271,10 +1271,9 @@ class NukeSubmission:
             return []
             
         # Ensure script is saved
-        self._ensure_script_can_be_queried()
+        nuke = self._ensure_script_can_be_queried()
         
         # Get the project directory from Nuke root node
-        nuke = nuke_utils.nuke_module()
         root = nuke.root()
         project_dir = None
         try:
@@ -1418,16 +1417,20 @@ class NukeSubmission:
         except Exception as e:
             logger.warning(f"Failed to update project_directory in copied script: {e}")
         
-    def submit(self) -> str:
+    def submit(self) -> Dict[int, List[str]]:
         """Submit the Nuke script to Deadline.
         
         Returns:
-            Job ID of the submitted job
+            Dictionary where keys are render order values (int) and values are lists of job IDs (str)
+            For jobs rendering multiple write nodes with different render orders, the key is 0
             
         Raises:
             SubmissionError: If submission fails
         """
         try:
+            # Initialize dictionary to track jobs by render order
+            jobs_by_render_order = {}
+            
             # Get Deadline connection
             deadline = get_connection()
             
@@ -1457,8 +1460,6 @@ class NukeSubmission:
             
             # If using GSVs, submit multiple jobs for each combination
             if self.graph_scope_variables and self.gsv_combinations:
-                submitted_job_ids = []
-                
                 for gsv_combination in self.gsv_combinations:
                     # Prepare job and plugin info with GSV information
                     job_info = self._prepare_job_info(gsv_combination)
@@ -1466,9 +1467,14 @@ class NukeSubmission:
                     
                     # If using write nodes as tasks with GSVs
                     if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
-                        # Simply submit as a single job with all write nodes as tasks
+                        # Submit as a single job with all write nodes as tasks
                         job_id = deadline.submit_job(job_info, plugin_info)
-                        submitted_job_ids.append(job_id)
+                        
+                        # For jobs rendering multiple write nodes with different render orders, use key 0
+                        if 0 not in jobs_by_render_order:
+                            jobs_by_render_order[0] = []
+                        jobs_by_render_order[0].append(job_id)
+                        
                         logger.info(f"GSV job submitted with write nodes as tasks. Job ID: {job_id}")
                     
                     # If using separate jobs or dependencies with GSVs
@@ -1482,10 +1488,6 @@ class NukeSubmission:
                         
                         # Get sorted write nodes
                         sorted_write_nodes = self._get_sorted_write_nodes(gsv_combination)
-                        
-                        # Track job IDs by render order
-                        jobs_by_render_order = {}
-                        job_id = None
                         
                         # Count existing dependencies from the user-specified ones
                         dependency_count = 0
@@ -1506,7 +1508,6 @@ class NukeSubmission:
                         unique_render_orders = sorted(set(write_node_render_orders.values()))
                         
                         # Submit each node based on sorting options
-                        last_processed_render_order = None
                         for write_node in sorted_write_nodes:
                             # Get render order for this node
                             render_order = write_node_render_orders[write_node]
@@ -1572,21 +1573,18 @@ class NukeSubmission:
                             if render_order not in jobs_by_render_order:
                                 jobs_by_render_order[render_order] = []
                             jobs_by_render_order[render_order].append(job_id)
-                            
-                            # Track last processed render order
-                            last_processed_render_order = render_order
-                            
-                            # Add to submitted job IDs list
-                            submitted_job_ids.append(job_id)
                     
                     else:
                         # Regular submission without separate jobs/tasks
                         job_id = deadline.submit_job(job_info, plugin_info)
-                        submitted_job_ids.append(job_id)
+                        
+                        # For standard submission, use render order 0
+                        if 0 not in jobs_by_render_order:
+                            jobs_by_render_order[0] = []
+                        jobs_by_render_order[0].append(job_id)
                 
-                logger.info(f"Submitted {len(submitted_job_ids)} jobs with GSV combinations. Last Job ID: {submitted_job_ids[-1]}")
-                return submitted_job_ids[-1]  # Return the last submitted job ID
-            
+                logger.info(f"Submitted jobs with GSV combinations. Jobs by render order: {jobs_by_render_order}")
+                
             # Standard submission without GSVs
             else:
                 # Prepare job and plugin information
@@ -1598,8 +1596,13 @@ class NukeSubmission:
                     # Handle submission with write nodes as tasks
                     # Submit as a single job
                     job_id = deadline.submit_job(job_info, plugin_info)
+                    
+                    # For jobs rendering multiple write nodes with different render orders, use key 0
+                    if 0 not in jobs_by_render_order:
+                        jobs_by_render_order[0] = []
+                    jobs_by_render_order[0].append(job_id)
+                    
                     logger.info(f"Job submitted with write nodes as tasks. Job ID: {job_id}")
-                    return job_id
                 
                 # If using separate jobs or dependencies
                 elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
@@ -1612,10 +1615,6 @@ class NukeSubmission:
                     
                     # Get sorted write nodes
                     sorted_write_nodes = self._get_sorted_write_nodes()
-                    
-                    # Track job IDs by render order
-                    jobs_by_render_order = {}
-                    job_id = None
                     
                     # Count existing dependencies from the user-specified ones
                     dependency_count = 0
@@ -1636,7 +1635,6 @@ class NukeSubmission:
                     unique_render_orders = sorted(set(write_node_render_orders.values()))
                     
                     # Submit each node based on sorting options
-                    last_processed_render_order = None
                     for write_node in sorted_write_nodes:
                         # Get render order for this node
                         render_order = write_node_render_orders[write_node]
@@ -1702,23 +1700,26 @@ class NukeSubmission:
                         if render_order not in jobs_by_render_order:
                             jobs_by_render_order[render_order] = []
                         jobs_by_render_order[render_order].append(job_id)
-                        
-                        # Track last processed render order
-                        last_processed_render_order = render_order
                     
-                    logger.info(f"Jobs submitted as separate jobs. Last Job ID: {job_id}")
-                    return job_id
+                    logger.info(f"Jobs submitted as separate jobs. Jobs by render order: {jobs_by_render_order}")
                 else:
                     # Regular submission without separate jobs/tasks
                     job_id = deadline.submit_job(job_info, plugin_info)
+                    
+                    # For standard submission, use render order 0
+                    if 0 not in jobs_by_render_order:
+                        jobs_by_render_order[0] = []
+                    jobs_by_render_order[0].append(job_id)
+                    
                     logger.info(f"Job submitted successfully. Job ID: {job_id}")
-                    return job_id
+            
+            return jobs_by_render_order
                     
         except Exception as e:
             raise SubmissionError(f"Failed to submit job: {e}")
 
 
-def submit_nuke_script(script_path: str, **kwargs) -> str:
+def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
     """Submit a Nuke script to Deadline.
     
     Args:
@@ -1779,7 +1780,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> str:
           - use_nodes_frame_list: Whether to use node-specific frame lists
     
     Returns:
-        Submission ID for the submitted job
+        Dictionary where keys are render order values (int) and values are lists of job IDs (str)
     """
     submission = NukeSubmission(script_path=script_path, **kwargs)
     return submission.submit() 

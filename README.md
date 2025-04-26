@@ -18,7 +18,7 @@ The project is still under development
 - The project has no plans to implement Deadline draft.
 - Standard writes only, Deepwrites and other kinds write nodes to come.
 - Connection to Deadline Web Service currently doesn't support SSL.
-- [The project is written using 10% manpower and 90% vibes](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
+- [The project is written using 10% manpower and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
 
 ## Installation
 
@@ -94,24 +94,32 @@ nk2dl uses a YAML configuration system with multiple levels:
 
 1. Default configuration
 2. Project configuration (.nk2dl.yaml)
-3. User configuration (~/.nk2dl/config.yaml)
-4. Environment variables (NK2DL_*)
+3. Environment variables (NK2DL_*)
+4. User configuration (~/.nk2dl/config.yaml)
 
 Example configuration:
 
 ```yaml
 deadline:
+  use_web_servce: True
   host: deadline-server
   port: 8081
-  
+  ssl: False
+  commmandline_on_fail: True
+
+logging:
+  level: DEBUG
+  file: null
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
 submission:
   pool: nuke
   group: none
   priority: 50
   chunk_size: 10
   department: comp
-  batch_name_template: "{script_stem}"
-  job_name_template: "{batch} / {write}"
+  batch_name_template: "{scriptname}"
+  job_name_template: "{batch} / {write} / {file}"
 ```
 
 ## Advanced Options
