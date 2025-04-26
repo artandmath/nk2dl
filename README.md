@@ -47,7 +47,7 @@ For best performance an instance of a Deadline Web Service is recomended.
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
  
-To make nk2dl available to Nuke GUI, add the path to nk2dl in an init.py. Development and testing is still being done outside of the nuke GUI, no additional information for Nuke GUI can be offered at this stage.
+To make nk2dl available to Nuke GUI, add the path to nk2dl in an init.py. Development and testing is still being done outside of the Nuke GUI, no additional information for Nuke GUI can be offered at this stage.
 
 To use Graph Scope Variables with Nuke 15.2+, copy or diff the content of deadline/plugins/nuke to the same location on your Deadline repository. Be sure to create a backup of your exisiting Nuke plugin.
 
