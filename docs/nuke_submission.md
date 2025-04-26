@@ -38,7 +38,8 @@ job_ids = submit_nuke_script(
     enable_auto_timeout=False,   # Enable auto timeout
     task_timeout_minutes=0,      # Task timeout in minutes (0 for none)
     limit_tasks_to_cpus=True,    # Limit concurrent tasks to number of CPUs
-    on_job_complete="Nothing"    # Action on job completion)
+    on_job_complete="Nothing"   # Action on job completion
+)
 ```
 
 ### Complete Parameter List

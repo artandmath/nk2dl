@@ -14,12 +14,11 @@ The project is still under development
 - Interfaces to `nk2dl` module and command line are subject to change.
 - The `nk2dl` command line will often be out of step with the python module during development. 
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
-- The `nk2dl` aims to maintain comparity with the default Deadline submitter. At this point in time there will be some features missing.
+- The `nk2dl` aims to maintain parity with the default Deadline submitter. At this point in time there are features missing.
 - The project has no plans to implement Deadline draft.
-- Standard writes only for the moment, Deepwrites and other kinds write nodes to come.
-- tests/pytests are out of date and likely won't pass.
-- Connection to Deadline Web Service currently doesn't support SSL.
-- [The project is written using 10% manpower and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) YOLO at your own risk!
+- Standard Writes only, DeepWrites and other kinds Write nodes to come.
+- connection to Deadline Web Service currently doesn't support SSL.
+- [The project is written using 10% manpower and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8) Use at your own risk!
 
 ## Installation
 
@@ -32,10 +31,10 @@ cd nk2dl
 python ./scripts/setup_environment
 
 # The setup script will ask for a Nuke location
-# This is the Nuke python interpereter that will be used in the virtual environment
+# This is the Nuke python interpreter that will be used in the virtual environment
 
 # The setup script will ask for the Deadline repository location
-# The script will copy the Deadline api from the repository to the virtual environemnt
+# The script will copy the Deadline api from the repository to the virtual environment
 
 # Set the virtual environment (only powershell tested thus far)
 ./.venv/Scripts/Activate-nk2dl.ps1
@@ -44,15 +43,13 @@ python ./scripts/setup_environment
 pip install -e .
 ```
 
-For best performance an instance of a Deadline Web Service is recomended.
+For best performance an instance of a Deadline Web Service is recommended.
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
-
-After setting up the Deadline Web Service, check the [deadline connection](./docs/deadline_connection.md) and [config docs](./docs/config.md) to configure for nk2dl.
  
-To make nk2dl available to Nuke GUI, add the path to nk2dl in an init.py. Development and testing is still being done outside of the Nuke GUI, no additional information for Nuke GUI will be offered at this stage.
+To make nk2dl available to Nuke GUI, add the path to nk2dl in an init.py. Development and testing is still being done outside of the Nuke GUI, no additional information for Nuke GUI can be offered at this stage.
 
-To use Graph Scope Variables with Nuke 15.2+, copy or diff the content of deadline/plugins/nuke to the same location on your Deadline repository. Be sure to create a backup of your exisiting Nuke plugin.
+To use Graph Scope Variables with Nuke 15.2+, copy or diff the content of deadline/plugins/nuke to the same location on your Deadline repository. Be sure to create a backup of your existing Nuke plugin.
 
 ## Quick Start
 
@@ -104,11 +101,11 @@ Example configuration:
 
 ```yaml
 deadline:
-  use_web_servce: True
+  use_web_service: True
   host: deadline-server
   port: 8081
   ssl: False
-  commmandline_on_fail: True
+  commandline_on_fail: True
 
 logging:
   level: DEBUG
