@@ -61,7 +61,7 @@ After setting up an instance of Deadline Web Service, check the docs on how to [
 
 ## Quick Start
 
-### Python API
+### Python
 
 ```python
 from nk2dl.nuke import submit_nuke_script
