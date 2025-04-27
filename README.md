@@ -6,14 +6,14 @@ Nuke to Deadline. A toolset for submitting nukescripts to Thinkbox Deadline.
 The Nuke to Deadline toolset consists of 3 parts:
 - `nk2dl python` module for submitting nukescripts to Deadline from the python interpreter within Nuke or from any other python interpreter.
 - `nk2dl cli` for submitting nukescripts to Deadline from the console.
-- `nk2dl nuke` is a panel for submitting the currently open nukescript (features still in planning phase, likely to also include nodes to support panel features)
+- `nk2dl gui` is a panel for submitting the currently open nukescript (features still in planning phase, likely to also include nodes to support panel features)
 
 ## Caveats
 
 - The project is in alpha. We have been using it in a limited capacity in a production environment as a replacement for the default submitter. We fall back to the default submitter when missing a feature or something is broken.
 - Graph Scope Variable functionality hasn't been tested in production.
-- Interfaces to `nk2dl` module and command line are subject to change.
-- The `nk2dl` command line will often be out of step with the python module during development. It may outright not work when out of step.
+- Interfaces to `nk2dl python` module and command line are subject to change.
+- The `nk2dl cli` command line will often be out of step with the python module during development. It may outright not work when out of step.
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The project aims to have feature parity with the default Deadline submitter on top of `nk2dl`'s other features. At this point in time there are parity features missing.
 - The project has no plans to implement Deadline draft.
