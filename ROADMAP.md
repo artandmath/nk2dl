@@ -25,6 +25,7 @@ NK2DL is currently in active development with core CLI functionality established
 
 - [ ] Threaded submissions to further improve speed of large submissions
 - [ ] De-couple Deadline connection code
+- [ ] De-couple CLI code
 - [ ] Create replacement for functionality of Nuke python module to make it cheaper/faster/simpler to use anywhere in the pipeline.
 - [ ] Standalone GUI
 - [ ] Integration wih other pipeline tools
