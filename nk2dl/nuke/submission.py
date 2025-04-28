@@ -52,7 +52,7 @@ class NukeSubmission:
                 output_path: str = "",
                 nuke_version: Optional[Union[str, int, float]] = None,
                 use_nuke_x: bool = False,
-                use_batch_mode: bool = True,
+                batch_mode: bool = True,
                 render_threads: Optional[int] = None,
                 use_gpu: bool = False,
                 gpu_override: Optional[str] = None,
@@ -211,7 +211,7 @@ class NukeSubmission:
         
         # Nuke-specific options
         self.use_nuke_x = use_nuke_x if isinstance(use_nuke_x, bool) else config.get('submission.use_nuke_x', False)
-        self.use_batch_mode = use_batch_mode if isinstance(use_batch_mode, bool) else config.get('submission.use_batch_mode', True)
+        self.batch_mode = batch_mode if isinstance(batch_mode, bool) else config.get('submission.batch_mode', True)
         self.render_threads = render_threads if render_threads is not None else config.get('submission.render_threads')
         self.use_gpu = use_gpu if isinstance(use_gpu, bool) else config.get('submission.use_gpu', False)
         self.gpu_override = gpu_override if gpu_override is not None else config.get('submission.gpu_override')
@@ -966,7 +966,7 @@ class NukeSubmission:
         plugin_info = {
             "Version": nuke_utils.nuke_version(self.nuke_version),
             "UseNukeX": "1" if self.use_nuke_x else "0",
-            "BatchMode": "1" if self.use_batch_mode else "0",
+            "BatchMode": "1" if self.batch_mode else "0",
             "EnforceRenderOrder": "1" if self.enforce_render_order else "0",
             "ContinueOnError": "1" if self.continue_on_error else "0",
             "RenderMode": self.render_mode.capitalize()
@@ -1760,7 +1760,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
                           - Int: 15 (converts to "15.0")
                           If None, uses config or current Nuke version
           - use_nuke_x: Whether to use NukeX for rendering
-          - use_batch_mode: Whether to use batch mode
+          - batch_mode: Whether to use batch mode
           - render_threads: Number of render threads
           - use_gpu: Whether to use GPU for rendering
           - gpu_override: Specific GPU to use
