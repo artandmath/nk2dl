@@ -142,7 +142,7 @@ class NukeSubmission:
             use_proxy: Whether to use proxy mode for rendering
             write_nodes: List of write nodes to render
             render_mode: Render mode (full, proxy)
-            write_nodes_as_tasks: Whether to submit write nodes as separate tasks
+            write_nodes_as_tasks: Whether to submit write nodes as 1 task per write node
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
             render_order_dependencies: Whether to set job dependencies based on render order
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
@@ -171,7 +171,10 @@ class NukeSubmission:
             raise SubmissionError("Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs or render_order_dependencies simultaneously")
         
         # Check if write_nodes_as_tasks is enabled with a custom frame range but use_nodes_frame_list is disabled
-        if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not frame_range.lower() in ['f-l', 'first-last', 'f', 'm', 'l', 'first', 'middle', 'last', 'i', 'input']:
+        if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not (
+            frame_range.lower() in ['f-l', 'first-last', 'f', 'm', 'l', 'first', 'middle', 'last', 'i', 'input'] or
+            re.match(r'^\d+\-\d+$', frame_range)  # Allow numeric frame ranges like "1001-1100"
+        ):
             raise SubmissionError("Custom frame list is not supported when submitting write nodes as separate tasks. "
                                  "Please use global (f-l) or input (i) frame ranges, or enable use_nodes_frame_list.")
             
@@ -1033,21 +1036,27 @@ class NukeSubmission:
             # This is legacy debt from the Thinkbox Deadline plugin naming
             plugin_info["WriteNodesAsSeparateJobs"] = "True"
             
-            # Get write node frame ranges
-            write_node_info = self._get_write_node_frame_ranges(gsv_combination)
+            # If we have an explicit frame range with no tokens, and use_nodes_frame_list is False,
+            # we can skip checking node frame ranges and use the explicit range for all nodes
+            explicit_frame_range = (self.frame_range and 
+                                  not self.fr.has_tokens and 
+                                  not self.use_nodes_frame_list and 
+                                  re.match(r'^\d+\-\d+$', self.frame_range))
+            
+            if explicit_frame_range:
+                # Parse explicit frame range
+                start_frame, end_frame = map(int, self.frame_range.split('-'))
+                # Use the same frame range for all write nodes
+                write_node_info = [(node_name, start_frame, end_frame) for node_name in self.write_nodes]
+            else:
+                # Get write node frame ranges
+                write_node_info = self._get_write_node_frame_ranges(gsv_combination)
             
             # Add write node info to plugin info
             for i, (node_name, start_frame, end_frame) in enumerate(write_node_info):
                 plugin_info[f"WriteNode{i}"] = node_name
-                
-                # If using node's frame list, set explicit start/end frames
-                # Otherwise, use 0 for start and end frames like Thinkbox does
-                if self.use_nodes_frame_list:
-                    plugin_info[f"WriteNode{i}StartFrame"] = str(start_frame)
-                    plugin_info[f"WriteNode{i}EndFrame"] = str(end_frame)
-                else:
-                    plugin_info[f"WriteNode{i}StartFrame"] = "0"
-                    plugin_info[f"WriteNode{i}EndFrame"] = "0"
+                plugin_info[f"WriteNode{i}StartFrame"] = str(start_frame)
+                plugin_info[f"WriteNode{i}EndFrame"] = str(end_frame)
                 
             # Do not add UseNodeFrameList=1 as it's not a valid plugin info entry
         elif self.write_nodes and not self.render_order_dependencies:
@@ -1087,26 +1096,47 @@ class NukeSubmission:
         
         write_node_info = []
         
-        # Parse frame range to get default start and end frames from global frame range
-        if '-' in self.frame_range:
-            parts = self.frame_range.split('-')
-            try:
-                default_start = int(parts[0])
-                default_end = int(parts[1])
-            except (ValueError, IndexError):
-                # If parsing fails, use root frame range
-                root = nuke.root()
-                default_start = int(root['first_frame'].value())
-                default_end = int(root['last_frame'].value())
+        # Parse explicit frame range if provided
+        has_explicit_frame_range = bool(self.frame_range and self.frame_range.strip())
+        
+        # Default to root frame range
+        root = nuke.root()
+        default_start = int(root['first_frame'].value())
+        default_end = int(root['last_frame'].value())
+        
+        # Only try to parse frame range if explicitly provided
+        if has_explicit_frame_range:
+            # Check if frame range is "input"
+            if re.search(r'\b(i|input)\b', self.frame_range):
+                frame_range_type = "input"
+            # Parse standard frame range formats
+            elif '-' in self.frame_range:
+                parts = self.frame_range.split('-')
+                try:
+                    default_start = int(parts[0])
+                    default_end = int(parts[1])
+                    frame_range_type = "explicit"
+                except (ValueError, IndexError):
+                    # Special formats like "f-l", "first-last", etc.
+                    if re.match(r'^[fm]\-[lm]$', self.frame_range) or \
+                       re.match(r'^first\-last$', self.frame_range) or \
+                       re.match(r'^first\-middle$', self.frame_range) or \
+                       re.match(r'^middle\-last$', self.frame_range):
+                        frame_range_type = "special"
+                    else:
+                        # If parsing fails, assume input
+                        frame_range_type = "input"
+            else:
+                try:
+                    # Single frame case
+                    default_start = default_end = int(self.frame_range)
+                    frame_range_type = "explicit"
+                except ValueError:
+                    # If parsing fails, assume input
+                    frame_range_type = "input"
         else:
-            try:
-                # Single frame case
-                default_start = default_end = int(self.frame_range)
-            except ValueError:
-                # If parsing fails, use root frame range
-                root = nuke.root()
-                default_start = int(root['first_frame'].value())
-                default_end = int(root['last_frame'].value())
+            # No frame range specified, default to "input"
+            frame_range_type = "input"
         
         try:
             # Apply GSV values if provided
@@ -1128,20 +1158,6 @@ class NukeSubmission:
             all_write_nodes = []
             for render_order in sorted(write_nodes_by_order.keys()):
                 all_write_nodes.extend(write_nodes_by_order[render_order])
-                
-            # Check if frame range is in valid start-end format
-            has_valid_frame_range = False
-            if self.frame_range:
-                # Valid format is just start-end (no steps, commas, etc.)
-                if re.match(r'^\d+\-\d+$', self.frame_range) or \
-                   re.match(r'^[fm]\-[lm]$', self.frame_range) or \
-                   re.match(r'^first\-last$', self.frame_range) or \
-                   re.match(r'^first\-middle$', self.frame_range) or \
-                   re.match(r'^middle\-last$', self.frame_range):
-                    has_valid_frame_range = True
-            
-            # Check if we're using input frame range
-            is_input_frame_range = re.search(r'\b(i|input)\b', self.frame_range)
             
             # For each write node, extract its frame range
             for node_name in all_write_nodes:
@@ -1156,10 +1172,9 @@ class NukeSubmission:
                             write_node_info.append((node_name, node_start, node_end))
                             continue
                     
-                    # Case 2: If we're using input token or use_nodes_frame_list is true but use_limit is not enabled,
-                    # try to use the node's input frame range
-                    elif is_input_frame_range or (self.use_nodes_frame_list and not (
-                            'use_limit' in node.knobs() and node['use_limit'].value())):
+                    # Case 2: If frame_range_type is "input" or use_nodes_frame_list is true 
+                    # but use_limit is not enabled, try to use the node's input frame range
+                    elif frame_range_type == "input" or (self.use_nodes_frame_list and 'use_limit' in node.knobs() and not node['use_limit'].value()):
                         try:
                             # Get frame range from input
                             node_start = node.firstFrame()
@@ -1169,18 +1184,16 @@ class NukeSubmission:
                         except Exception as e:
                             # If we can't get input range, fall back to defaults
                             logger.warning(f"Failed to get input frame range for node {node_name}: {e}")
+                            write_node_info.append((node_name, default_start, default_end))
+                            continue
                     
-                    # Case 3: If we have a valid frame range specified by the user, use that
-                    elif has_valid_frame_range:
-                        # We'll use the default_start and default_end calculated above
+                    # Case 3: If we have an explicit frame range, use it
+                    elif frame_range_type in ["explicit", "special"]:
                         write_node_info.append((node_name, default_start, default_end))
                         continue
-                
-                # Fall back to default frame range from root
-                root = nuke.root()
-                start_frame = int(root['first_frame'].value())
-                end_frame = int(root['last_frame'].value())
-                write_node_info.append((node_name, start_frame, end_frame))
+                    
+                    # Fall back to default frame range from root
+                    write_node_info.append((node_name, default_start, default_end))
             
             return write_node_info
         except Exception as e:
