@@ -47,7 +47,8 @@ job_ids = submit_nuke_script(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `script_path` | str | (Required) | Path to the Nuke script file |
-| `script_is_open` | bool | `False` | Whether the script is already open in the current Nuke session |
+| `script_path_same_as_current_nuke_session` | bool | `False` | Whether this script path is already open in the current Nuke session |
+| `use_parser_instead_of_nuke` | bool | `False` | Whether to use a custom parser instead of Nuke for parsing script |
 | `submit_alphabetically` | bool | `False` | Whether to sort write nodes alphabetically by name |
 | `submit_in_render_order` | bool | `False` | Whether to sort write nodes by render order |
 | `submit_script_as_auxiliary_file` | bool | `None` | Whether to submit the script as an auxiliary file |
