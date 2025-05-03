@@ -316,16 +316,16 @@ class NukeSubmission:
         """
         if self.use_parser_instead_of_nuke:
             # Use our custom parser module
-            module = nuke_utils.parser_module()
+            nuke = nuke_utils.parser_module()
             
             # If the script path is different from what's currently parsed, we need to open it
             if not self.script_path_same_as_current_nuke_session:
                 # Open the script
-                module.scriptOpen(str(self.script_path.absolute()))
+                nuke.scriptOpen(str(self.script_path.absolute()))
                 # Mark as same as current session now
                 self.script_path_same_as_current_nuke_session = True
             
-            return module
+            return nuke
         else:
             # Use the actual Nuke module
             nuke = nuke_utils.nuke_module()
@@ -1083,7 +1083,7 @@ class NukeSubmission:
             List of tuples (node_name, start_frame, end_frame)
         """
         # Ensure the script is open
-        nuke = self._ensure_script_can_be_queried()
+        nuke = self._ensure_script_can_be_parsed()
         
         write_node_info = []
         
@@ -1196,7 +1196,7 @@ class NukeSubmission:
             Dictionary mapping render orders to lists of write node names
         """
         # Ensure the script is open
-        nuke = self._ensure_script_can_be_queried()
+        nuke = self._ensure_script_can_be_parsed()
         
         write_nodes_by_order = {}
         write_nodes_info = []
@@ -1318,7 +1318,7 @@ class NukeSubmission:
             return []
             
         # Ensure script is saved
-        nuke = self._ensure_script_can_be_queried()
+        nuke = self._ensure_script_can_be_parsed()
         
         # Get the project directory from Nuke root node
         root = nuke.root()
@@ -1485,7 +1485,7 @@ class NukeSubmission:
             # automatically get all enabled write nodes from the script
             if (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and not self.write_nodes:
                 # Ensure the script is open
-                nuke = self._ensure_script_can_be_queried()
+                nuke = self._ensure_script_can_be_parsed()
                 
                 # Get all enabled Write nodes
                 enabled_write_nodes = []
