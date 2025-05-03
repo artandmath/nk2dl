@@ -13,6 +13,8 @@ from ..common.logging import logger
 
 # Global variable to store nuke module when imported
 _nuke_module = None
+_parser_module = None
+
 
 def nuke_module():
     """Get the nuke module, importing it if necessary.
@@ -33,6 +35,30 @@ def nuke_module():
             raise SubmissionError("The Nuke Python API is required but not available. "
                                  "This module must be run from within Nuke or nuke should be available in the system path.")
     return _nuke_module
+
+
+def parser_module():
+    """Get the parser module, creating it if necessary.
+    
+    This module is intended to provide a lightweight alternative to the real Nuke module
+    for parsing Nuke scripts without loading Nuke itself.
+    
+    Returns:
+        A parser instance that mimics the nuke module interface.
+        
+    Raises:
+        SubmissionError: If the parser module is not available or functionality is incomplete.
+    """
+    global _parser_module
+    if _parser_module is None:
+        try:
+            logger.info("Creating parser module...")
+            from . import parser
+            _parser_module = parser.create_parser()
+        except (ImportError, ModuleNotFoundError):
+            raise SubmissionError("The Nuke Script Parser is required but not available or functionality is incomplete.")
+    return _parser_module
+
 
 def node_pretty_path(node) -> str:
     """Get a node's file path while preserving frame number placeholders.

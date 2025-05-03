@@ -27,6 +27,10 @@ class NukeError(NK2DLError):
     """Nuke script/execution related errors."""
     pass
 
+class ParserError(NK2DLError):
+    """Parser related errors when parsing Nuke scripts without using Nuke."""
+    pass
+
 def handle_error(error: Exception, logger=None) -> None:
     """Handle an error by logging it and optionally performing additional actions.
     

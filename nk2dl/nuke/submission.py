@@ -316,8 +316,16 @@ class NukeSubmission:
         """
         if self.use_parser_instead_of_nuke:
             # Use our custom parser module
-            # This will be implemented later
-            raise NotImplementedError("Parser module is not yet implemented")
+            module = nuke_utils.parser_module()
+            
+            # If the script path is different from what's currently parsed, we need to open it
+            if not self.script_path_same_as_current_nuke_session:
+                # Open the script
+                module.scriptOpen(str(self.script_path.absolute()))
+                # Mark as same as current session now
+                self.script_path_same_as_current_nuke_session = True
+            
+            return module
         else:
             # Use the actual Nuke module
             nuke = nuke_utils.nuke_module()
