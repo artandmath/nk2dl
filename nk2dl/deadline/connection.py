@@ -283,13 +283,15 @@ class DeadlineConnection:
                 if isinstance(job_response, dict) and '_id' in job_response.get('Props', {}):
                     # Extract just the ID from the response dictionary
                     job_id = job_response['Props']['_id']
+                    # Format the response in the log
+                    logger.debug(f"===== WEB SERVICE RESPONSE START =====\n{json.dumps(job_response, indent=2)}\n===== WEB SERVICE RESPONSE END =====")
                 elif isinstance(job_response, str):
                     job_id = job_response
                 else:
                     # Try to find any ID property in the response
                     if isinstance(job_response, dict):
-                        # Log the response for debugging
-                        logger.debug(f"Retrieving job ID from response: {job_response}")
+                        # Log the response for debugging with clear formatting
+                        logger.debug(f"===== WEB SERVICE RESPONSE START =====\n{json.dumps(job_response, indent=2)}\n===== WEB SERVICE RESPONSE END =====")
                         # Look for '_id' anywhere in the dictionary
                         if '_id' in job_response:
                             job_id = job_response['_id']
@@ -381,8 +383,9 @@ class DeadlineConnection:
                     if errors and "error" in errors.lower():
                         raise DeadlineError(f"Command line error: {errors}")
                     
-                    # Log the response for debugging
-                    logger.debug(f"Retrieving job ID from response: {output}")
+                    # Log the response for debugging with clear formatting
+                    logger.debug(f"===== COMMAND LINE RESPONSE START =====\n{output}\n===== COMMAND LINE RESPONSE END =====")
+                    
                     # Parse job ID from output
                     for line in output.splitlines():
                         if line.startswith("JobID="):

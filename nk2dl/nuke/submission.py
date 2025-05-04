@@ -1959,18 +1959,32 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
         logger.debug(f"Parent process name: {parent_process_name}, running in Nuke GUI: {running_in_nuke_gui}")
     except Exception as e:
         logger.warning(f"Failed to check if running in Nuke GUI: {e}")
-    
-    # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
+
+
+    launch_subprocess = False
     if requires_parsing and running_in_nuke_gui and not script_path_same_as_current_nuke_session:
-        logger.info(f"Script parsing required and running in Nuke GUI. Launching subprocess for {script_path}")
+        launch_subprocess = True
+        
+    if not running_in_nuke_gui or launch_subprocess:
+        # If parse_output_paths_to_deadline is not set, set it to True
+        # If we're not running in the Nuke GUI, we need launch nuke or nuke parser anyway to parse the script
+        # So we might as well parse the output paths to deadline as well
+        parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', True)
+        kwargs['parse_output_paths_to_deadline']=parse_output_paths_to_deadline
+        logger.debug(f"running without Nuke GUI, setting parse_output_paths_to_deadline: {parse_output_paths_to_deadline}")
+
+    # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
+    if launch_subprocess:
+        logger.info(f"Submitted script is different from currently open script. Script parsing required and running in Nuke GUI. Launching subprocess for {script_path}")
         from .subprocess import submit_script_via_subprocess
         return submit_script_via_subprocess(script_path, use_parser_instead_of_nuke, **kwargs)
     
     if not running_in_nuke_gui:
         logger.info(f"Not running in Nuke GUI. Proceeding with submission within the current process for {script_path}")
         # Set script_path_same_as_current_nuke_session to False to ensure the script is loaded if it needs to be parsed
+        # By definition, if we're not running in the Nuke GUI, there is no open script in the current session
+        # We wont deal with cases where nuke.scriptOpen() has been run in a python session, as this is an edge case
         kwargs['script_path_same_as_current_nuke_session']=False
-
 
     # Proceed with submission within the current process if submitted script is same as currently open script
     submission = NukeSubmission(script_path=script_path, **kwargs)
