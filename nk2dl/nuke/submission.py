@@ -1168,6 +1168,8 @@ class NukeSubmission:
             all_write_nodes = []
             for render_order in sorted(write_nodes_by_order.keys()):
                 all_write_nodes.extend(write_nodes_by_order[render_order])
+                
+            logger.info(f"Processing frame ranges for write nodes: {all_write_nodes}")
             
             # For each write node, extract its frame range
             for node_name in all_write_nodes:
@@ -1180,6 +1182,7 @@ class NukeSubmission:
                             node_start = int(node['first'].value())
                             node_end = int(node['last'].value())
                             write_node_info.append((node_name, node_start, node_end))
+                            logger.info(f"Using frame range {node_start}-{node_end} from write node {node_name}")
                             continue
                     
                     # Case 2: If frame_range_type is "input" or use_nodes_frame_list is true 
@@ -1190,24 +1193,37 @@ class NukeSubmission:
                             node_start = node.firstFrame()
                             node_end = node.lastFrame()
                             write_node_info.append((node_name, node_start, node_end))
+                            logger.info(f"Using input frame range {node_start}-{node_end} for write node {node_name}")
                             continue
                         except Exception as e:
                             # If we can't get input range, fall back to defaults
                             logger.warning(f"Failed to get input frame range for node {node_name}: {e}")
                             write_node_info.append((node_name, default_start, default_end))
+                            logger.info(f"Using default frame range {default_start}-{default_end} for write node {node_name}")
                             continue
                     
                     # Case 3: If we have an explicit frame range, use it
                     elif frame_range_type in ["explicit", "special"]:
                         write_node_info.append((node_name, default_start, default_end))
+                        logger.info(f"Using explicit frame range {default_start}-{default_end} for write node {node_name}")
                         continue
                     
                     # Fall back to default frame range from root
                     write_node_info.append((node_name, default_start, default_end))
+                    logger.info(f"Using fallback frame range {default_start}-{default_end} for write node {node_name}")
+                else:
+                    # Node not found or not a Write node - use default frame range
+                    logger.warning(f"Write node {node_name} not found or not a Write node. Using default frame range {default_start}-{default_end}.")
+                    write_node_info.append((node_name, default_start, default_end))
             
             return write_node_info
         except Exception as e:
-            raise SubmissionError(f"Failed to get write node frame ranges: {e}")
+            logger.error(f"Failed to get write node frame ranges: {e}")
+            # If we have write nodes specified, return defaults for them as a fallback
+            if self.write_nodes:
+                logger.info(f"Using default frame range for write nodes as fallback")
+                return [(node_name, default_start, default_end) for node_name in self.write_nodes]
+            return []
     
     def _get_write_nodes_by_render_order(self, gsv_combination=None) -> Dict[int, List[str]]:
         """Get write nodes grouped by render order using Nuke API.
@@ -1237,25 +1253,36 @@ class NukeSubmission:
                         except Exception as e:
                             logger.warning(f"Failed to set GSV value {key}={value}: {e}")
             
-            # Find all Write nodes
-            for node in nuke.allNodes('Write'):
-                node_name = node.name()
-                
-                # Get render order, default to 0
-                render_order = 0
-                if 'render_order' in node.knobs():
-                    render_order = int(node['render_order'].value())
-                
-                # Store node information for sorting
-                write_nodes_info.append((node_name, render_order))
-            
-            # If we're filtering to specific write nodes, only keep those
+            # Check if user specified write nodes
             if self.write_nodes:
-                write_nodes_set = set(self.write_nodes)
-                write_nodes_info = [
-                    (node_name, render_order) for node_name, render_order in write_nodes_info
-                    if node_name in write_nodes_set
-                ]
+                logger.info(f"Using user-specified write nodes: {self.write_nodes}")
+                # For each specified write node, get its render order
+                for node_name in self.write_nodes:
+                    node = nuke.toNode(node_name)
+                    if node:
+                        logger.info(f"Found write node {node_name} in script")
+                        # Get render order, default to 0
+                        render_order = 0
+                        if 'render_order' in node.knobs():
+                            render_order = int(node['render_order'].value())
+                        write_nodes_info.append((node_name, render_order))
+                    else:
+                        # Node not found - add it anyway with default render order (0)
+                        logger.warning(f"Write node {node_name} not found in script. Adding with default render order 0.")
+                        write_nodes_info.append((node_name, 0))
+            else:
+                # If no write nodes specified, find all Write nodes
+                logger.info("No write nodes specified, searching for all Write nodes in script")
+                for node in nuke.allNodes('Write'):
+                    node_name = node.name()
+                    
+                    # Get render order, default to 0
+                    render_order = 0
+                    if 'render_order' in node.knobs():
+                        render_order = int(node['render_order'].value())
+                    
+                    # Store node information for sorting
+                    write_nodes_info.append((node_name, render_order))
             
             # Handle sorting based on options
             if self.submit_in_render_order and self.submit_alphabetically:
@@ -1275,10 +1302,16 @@ class NukeSubmission:
                     write_nodes_by_order[render_order] = []
                 write_nodes_by_order[render_order].append(node_name)
             
+            logger.info(f"Found {len(write_nodes_info)} write nodes with render orders")
             return write_nodes_by_order
         except Exception as e:
-            raise SubmissionError(f"Failed to get write nodes by render order: {e}")
-
+            logger.error(f"Failed to get write nodes by render order: {e}")
+            # Return the original write nodes as a fallback with render order 0
+            if self.write_nodes:
+                logger.info(f"Using original write nodes as fallback: {self.write_nodes}")
+                return {0: self.write_nodes}
+            return {}
+    
     def _get_sorted_write_nodes(self, gsv_combination=None) -> List[str]:
         """Get write nodes sorted according to submission options.
         
@@ -1503,6 +1536,7 @@ class NukeSubmission:
             
             # Get Deadline connection
             deadline = get_connection()
+            logger.info(f"Connected to Deadline: {deadline}")
             
             # If write_nodes_as_separate_jobs is True but no write nodes are provided,
             # automatically get all enabled write nodes from the script
@@ -1523,6 +1557,10 @@ class NukeSubmission:
                     logger.warning("No enabled Write nodes found in the script. Switching to normal submission.")
                     self.write_nodes_as_separate_jobs = False
                     self.render_order_dependencies = False
+            
+            logger.info(f"Write nodes to submit: {self.write_nodes}")
+            logger.info(f"render_order_dependencies: {self.render_order_dependencies}")
+            logger.info(f"write_nodes_as_separate_jobs: {self.write_nodes_as_separate_jobs}")
             
             # Copy script if requested
             if self.copy_script:
@@ -1662,30 +1700,40 @@ class NukeSubmission:
                 job_info = self._prepare_job_info()
                 plugin_info = self._prepare_plugin_info()
                 
+                logger.debug(f"Job info: {job_info}")
+                logger.debug(f"Plugin info: {plugin_info}")
+                
                 # If using write nodes as tasks
                 if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
                     # Handle submission with write nodes as tasks
                     # Submit as a single job
-                    job_id = deadline.submit_job(job_info, plugin_info)
-                    
-                    # For jobs rendering multiple write nodes with different render orders, use key 0
-                    if 0 not in jobs_by_render_order:
-                        jobs_by_render_order[0] = []
-                    jobs_by_render_order[0].append(job_id)
-                    
-                    logger.info(f"Job submitted with write nodes as tasks. Job ID: {job_id}")
+                    try:
+                        job_id = deadline.submit_job(job_info, plugin_info)
+                        
+                        # For jobs rendering multiple write nodes with different render orders, use key 0
+                        if 0 not in jobs_by_render_order:
+                            jobs_by_render_order[0] = []
+                        jobs_by_render_order[0].append(job_id)
+                        
+                        logger.info(f"Job submitted with write nodes as tasks. Job ID: {job_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to submit job with write nodes as tasks: {e}")
                 
                 # If using separate jobs or dependencies
                 elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
+                    logger.info(f"Processing {len(self.write_nodes)} write nodes for separate submission")
+                    
                     # Get write node frame ranges if use_nodes_frame_list is enabled
                     write_node_frames = {}
                     if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
                         write_node_info = self._get_write_node_frame_ranges()
+                        logger.info(f"Write node frame ranges: {write_node_info}")
                         for node_name, start_frame, end_frame in write_node_info:
                             write_node_frames[node_name] = (start_frame, end_frame)
                     
                     # Get sorted write nodes
                     sorted_write_nodes = self._get_sorted_write_nodes()
+                    logger.info(f"Sorted write nodes: {sorted_write_nodes}")
                     
                     # Count existing dependencies from the user-specified ones
                     dependency_count = 0
@@ -1693,7 +1741,7 @@ class NukeSubmission:
                         dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
                     
                     # Get render orders for all write nodes
-                    nuke = nuke_utils.nuke_module()
+                    nuke = self._ensure_script_can_be_parsed()
                     write_node_render_orders = {}
                     for write_node in sorted_write_nodes:
                         node_obj = nuke.toNode(write_node)
@@ -1702,11 +1750,16 @@ class NukeSubmission:
                             render_order = int(node_obj['render_order'].value())
                         write_node_render_orders[write_node] = render_order
                     
+                    logger.info(f"Write node render orders: {write_node_render_orders}")
+                    
                     # Find all unique render orders and sort them
                     unique_render_orders = sorted(set(write_node_render_orders.values()))
+                    logger.info(f"Unique render orders: {unique_render_orders}")
                     
                     # Submit each node based on sorting options
                     for write_node in sorted_write_nodes:
+                        logger.info(f"Processing write node: {write_node}")
+                        
                         # Get render order for this node
                         render_order = write_node_render_orders[write_node]
                         
@@ -1765,25 +1818,37 @@ class NukeSubmission:
                                     for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
                                         node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
                         
-                        # Submit to Deadline
-                        job_id = deadline.submit_job(node_job_info, node_plugin_info)
+                        logger.info(f"Submitting job for write node {write_node}")
+                        logger.debug(f"Job info for {write_node}: {node_job_info}")
+                        logger.debug(f"Plugin info for {write_node}: {node_plugin_info}")
                         
-                        # Track job ID by render order
-                        if render_order not in jobs_by_render_order:
-                            jobs_by_render_order[render_order] = []
-                        jobs_by_render_order[render_order].append(job_id)
+                        # Submit to Deadline
+                        try:
+                            job_id = deadline.submit_job(node_job_info, node_plugin_info)
+                            
+                            # Track job ID by render order
+                            if render_order not in jobs_by_render_order:
+                                jobs_by_render_order[render_order] = []
+                            jobs_by_render_order[render_order].append(job_id)
+                            
+                            logger.info(f"Successfully submitted job for {write_node}. Job ID: {job_id}")
+                        except Exception as e:
+                            logger.error(f"Failed to submit job for write node {write_node}: {e}")
                     
                     logger.info(f"Jobs submitted as separate jobs. Jobs by render order: {jobs_by_render_order}")
                 else:
                     # Regular submission without separate jobs/tasks
-                    job_id = deadline.submit_job(job_info, plugin_info)
-                    
-                    # For standard submission, use render order 0
-                    if 0 not in jobs_by_render_order:
-                        jobs_by_render_order[0] = []
-                    jobs_by_render_order[0].append(job_id)
-                    
-                    logger.info(f"Job submitted successfully. Job ID: {job_id}")
+                    try:
+                        job_id = deadline.submit_job(job_info, plugin_info)
+                        
+                        # For standard submission, use render order 0
+                        if 0 not in jobs_by_render_order:
+                            jobs_by_render_order[0] = []
+                        jobs_by_render_order[0].append(job_id)
+                        
+                        logger.info(f"Job submitted successfully. Job ID: {job_id}")
+                    except Exception as e:
+                        logger.error(f"Failed to submit regular job: {e}")
             
             return jobs_by_render_order
                     

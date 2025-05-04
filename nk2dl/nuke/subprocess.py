@@ -52,7 +52,7 @@ def create_submission_script(script_path: str, kwargs: Dict[str, Any]) -> str:
     with tempfile.NamedTemporaryFile(suffix='.py', delete=False) as temp_file:
         temp_path = temp_file.name
         
-        # Write script content
+        # Write script content with a unique marker for JSON output
         script_content = f"""
 import sys
 import os
@@ -70,8 +70,10 @@ try:
     # Submit the script
     result = submit_nuke_script('{script_path}', **kwargs)
     
-    # Print the result as JSON
+    # Print the result as JSON with unique markers to separate it from log output
+    print("NK2DL_JSON_BEGIN")
     print(json.dumps(result))
+    print("NK2DL_JSON_END")
     
 except Exception as e:
     print(f"ERROR: {{str(e)}}")
@@ -95,16 +97,97 @@ def execute_submission_script(script_path: str, use_parser_instead_of_nuke: bool
         except ImportError:
             raise RuntimeError("Cannot use Nuke Python: nuke module not available")
     
-    # Run subprocess
-    logger.info(f"Launching subprocess using {executable} to parse Nuke script")
-    result = sp.run([executable, script_path], 
-                  capture_output=True, text=True, check=True)
+    # Configure environment to ensure nk2dl module is available
+    env = os.environ.copy()
     
-    # Parse output
+    # Add the current module's parent directory to PYTHONPATH
+    module_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    
+    if "PYTHONPATH" in env:
+        env["PYTHONPATH"] = f"{module_dir}{os.pathsep}{env['PYTHONPATH']}"
+    else:
+        env["PYTHONPATH"] = module_dir
+    
+    logger.info(f"Using PYTHONPATH: {env.get('PYTHONPATH')}")
+    
+    # Run subprocess with stdout and stderr set to PIPE but not capture_output
+    # This allows us to read and display output in real-time
+    logger.info(f"Launching subprocess using {executable} to parse Nuke script")
+    
+    # Use Popen instead of run to have more control over the process
+    process = sp.Popen(
+        [executable, script_path],
+        stdout=sp.PIPE,
+        stderr=sp.PIPE,
+        text=True,
+        env=env,
+        bufsize=1  # Line buffered
+    )
+    
+    # Variables to store the complete stdout and stderr
+    all_stdout = []
+    all_stderr = []
+    
+    # Read and display output in real-time
+    while True:
+        # Read from stdout
+        stdout_line = process.stdout.readline()
+        if stdout_line:
+            print(stdout_line, end='')  # Print to console in real-time
+            all_stdout.append(stdout_line)
+        
+        # Read from stderr
+        stderr_line = process.stderr.readline()
+        if stderr_line:
+            print(stderr_line, end='', file=sys.stderr)  # Print to stderr in real-time
+            all_stderr.append(stderr_line)
+        
+        # Check if process has finished
+        if process.poll() is not None:
+            # Read any remaining output
+            for line in process.stdout:
+                print(line, end='')
+                all_stdout.append(line)
+            for line in process.stderr:
+                print(line, end='', file=sys.stderr)
+                all_stderr.append(line)
+            break
+    
+    # Combine all captured output
+    stdout = ''.join(all_stdout)
+    stderr = ''.join(all_stderr)
+    
+    # Check if the process failed
+    if process.returncode != 0:
+        logger.error(f"Subprocess failed with exit code {process.returncode}")
+        logger.error(f"STDERR: {stderr}")
+        logger.error(f"STDOUT: {stdout}")
+        raise RuntimeError(f"Subprocess failed: {stderr}")
+    
+    # Extract JSON output between markers
     try:
-        return json.loads(result.stdout.strip())
-    except json.JSONDecodeError:
-        raise RuntimeError(f"Failed to parse subprocess output: {result.stdout}")
+        # Find the JSON output between markers
+        start_marker = "NK2DL_JSON_BEGIN"
+        end_marker = "NK2DL_JSON_END"
+        
+        start_idx = stdout.find(start_marker)
+        end_idx = stdout.find(end_marker)
+        
+        if start_idx == -1 or end_idx == -1:
+            logger.error(f"Could not find JSON markers in output - STDOUT: {stdout}")
+            logger.error(f"STDERR: {stderr}")
+            raise RuntimeError(f"No JSON output markers found in subprocess output")
+        
+        # Extract the JSON string between markers
+        json_str = stdout[start_idx + len(start_marker):end_idx].strip()
+        
+        # Parse JSON
+        return json.loads(json_str)
+    except Exception as e:
+        logger.error(f"Failed to parse subprocess output - STDOUT: {stdout}")
+        logger.error(f"STDERR: {stderr}")
+        logger.error(f"Exception: {str(e)}")
+        raise RuntimeError(f"Failed to parse subprocess output: {e}")
 
 def script_parsing_required(**kwargs):
     """Determine if we need to parse the Nuke script based on submission parameters.
@@ -115,18 +198,10 @@ def script_parsing_required(**kwargs):
     Returns:
         bool: True if script parsing is required, False otherwise
     """
-    # Extract relevant parameters
-    frame_range = kwargs.get('frame_range', '')
-    submit_alphabetically = kwargs.get('submit_alphabetically', False)
-    submit_in_render_order = kwargs.get('submit_in_render_order', False)
-    write_nodes = kwargs.get('write_nodes', None)
-    write_nodes_as_tasks = kwargs.get('write_nodes_as_tasks', False)
-    write_nodes_as_separate_jobs = kwargs.get('write_nodes_as_separate_jobs', False)
-    render_order_dependencies = kwargs.get('render_order_dependencies', False)
-    use_nodes_frame_list = kwargs.get('use_nodes_frame_list', False)
-    graph_scope_variables = kwargs.get('graph_scope_variables', None)
-    parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', False)
     
+    # Extract relevant parameters
+    write_nodes = kwargs.get('write_nodes', None)
+
     # Extract string fields that might contain tokens
     job_name = kwargs.get('job_name', '')
     batch_name = kwargs.get('batch_name', '')
@@ -134,12 +209,12 @@ def script_parsing_required(**kwargs):
     extra_info = kwargs.get('extra_info', '')
     
     # Define token groups that require script parsing
-    file_stem_tokens = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", 
-                        "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
-    output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
+    file_stem_tokens    = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", 
+                           "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
+    output_tokens       = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
     render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
-    gsv_tokens = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}", 
-                  "{graph_scope_vars}", "{graph_scope_variables}"]
+    gsv_tokens          = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}", 
+                           "{graph_scope_vars}", "{graph_scope_variables}"]
     
     # Write node tokens require parsing only if write_nodes not specified
     write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
@@ -156,7 +231,18 @@ def script_parsing_required(**kwargs):
     for field in fields_to_check:
         if any(token in field for token in parsing_required_tokens):
             return True
-    
+
+    # Extract rem relevant parameters
+    frame_range = kwargs.get('frame_range', '')
+    submit_alphabetically = kwargs.get('submit_alphabetically', False)
+    submit_in_render_order = kwargs.get('submit_in_render_order', False)
+    write_nodes_as_tasks = kwargs.get('write_nodes_as_tasks', False)
+    write_nodes_as_separate_jobs = kwargs.get('write_nodes_as_separate_jobs', False)
+    render_order_dependencies = kwargs.get('render_order_dependencies', False)
+    use_nodes_frame_list = kwargs.get('use_nodes_frame_list', False)
+    graph_scope_variables = kwargs.get('graph_scope_variables', None)
+    parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', False)
+
     # Check if frame range has tokens using FrameRange's has_tokens property
     fr = FrameRange(frame_range)
     
