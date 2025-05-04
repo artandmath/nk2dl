@@ -1095,6 +1095,11 @@ class NukeSubmission:
     def _get_write_node_frame_ranges(self, gsv_combination=None) -> List[Tuple[str, int, int]]:
         """Get frame ranges for each write node using Nuke API.
         
+        Behavior:
+        1. If use_nodes_frame_list is true and the node has use_limit enabled, use the node's first/last knobs
+        2. If no frame_range was specified (empty string), implicitly use "input" (node input frame range)
+        3. If an explicit frame_range was provided, use that according to the match rules
+        
         Args:
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
             
@@ -1104,126 +1109,131 @@ class NukeSubmission:
         # Ensure the script is open
         nuke = self._ensure_script_can_be_parsed()
         
+        # Debug logging
+        logger.debug(f"_get_write_node_frame_ranges called with frame_range: '{self.frame_range}'")
+        logger.debug(f"use_nodes_frame_list: {self.use_nodes_frame_list}")
+        
         write_node_info = []
         
-        # Parse explicit frame range if provided
-        has_explicit_frame_range = bool(self.frame_range and self.frame_range.strip())
+        # Apply GSV values if provided
+        if gsv_combination:
+            root_node = nuke.root()
+            if 'gsv' in root_node.knobs():
+                gsv_knob = root_node['gsv']
+                # Apply each GSV value
+                for key, value in gsv_combination:
+                    try:
+                        gsv_knob.setGsvValue(f'__default__.{key}', value)
+                    except Exception as e:
+                        logger.warning(f"Failed to set GSV value {key}={value}: {e}")
         
-        # Default to root frame range
+        # Get write nodes by render order
+        write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
+        
+        # Flatten the list of write nodes
+        all_write_nodes = []
+        for render_order in sorted(write_nodes_by_order.keys()):
+            all_write_nodes.extend(write_nodes_by_order[render_order])
+        
+        logger.debug(f"Processing frame ranges for {len(all_write_nodes)} write nodes: {all_write_nodes}")
+        
+        # Get the default frame range from Nuke root or explicit frame range
         root = nuke.root()
-        default_start = int(root['first_frame'].value())
-        default_end = int(root['last_frame'].value())
+        root_first_frame = int(root['first_frame'].value())
+        root_last_frame = int(root['last_frame'].value())
         
-        # Only try to parse frame range if explicitly provided
-        if has_explicit_frame_range:
-            # Check if frame range is "input"
+        logger.debug(f"Root frame range: {root_first_frame}-{root_last_frame}")
+        
+        # Parse explicit frame range if provided
+        default_start = root_first_frame
+        default_end = root_last_frame
+        
+        # Check if a proper frame range was provided
+        has_explicit_frame_range = False
+        is_input_frame_range = False
+        
+        if self.frame_range:
+            # Check if it's an "input" frame range
             if re.search(r'\b(i|input)\b', self.frame_range):
-                frame_range_type = "input"
-            # Parse standard frame range formats
-            elif '-' in self.frame_range:
-                parts = self.frame_range.split('-')
+                is_input_frame_range = True
+                logger.debug("Using input frame range mode")
+            # Check if it's a numeric frame range like "1001-2000"
+            elif re.match(r'^\d+\-\d+$', self.frame_range):
                 try:
+                    parts = self.frame_range.split('-')
                     default_start = int(parts[0])
                     default_end = int(parts[1])
-                    frame_range_type = "explicit"
+                    has_explicit_frame_range = True
+                    logger.debug(f"Using explicit numeric frame range: {default_start}-{default_end}")
                 except (ValueError, IndexError):
-                    # Special formats like "f-l", "first-last", etc.
-                    if re.match(r'^[fm]\-[lm]$', self.frame_range) or \
-                       re.match(r'^first\-last$', self.frame_range) or \
-                       re.match(r'^first\-middle$', self.frame_range) or \
-                       re.match(r'^middle\-last$', self.frame_range):
-                        frame_range_type = "special"
-                    else:
-                        # If parsing fails, assume input
-                        frame_range_type = "input"
-            else:
-                try:
-                    # Single frame case
-                    default_start = default_end = int(self.frame_range)
-                    frame_range_type = "explicit"
-                except ValueError:
-                    # If parsing fails, assume input
-                    frame_range_type = "input"
+                    logger.warning(f"Invalid numeric frame range: {self.frame_range}, using root frame range")
+            # Check if it's a token frame range like "f-l", "first-last", etc.
+            elif (re.match(r'^[fm]\-[lm]$', self.frame_range) or 
+                  re.match(r'^first\-last$', self.frame_range) or 
+                  re.match(r'^first\-middle$', self.frame_range) or 
+                  re.match(r'^middle\-last$', self.frame_range)):
+                has_explicit_frame_range = True
+                logger.debug(f"Using token-based frame range: {self.frame_range}")
         else:
-            # No frame range specified, default to "input"
-            frame_range_type = "input"
+            # If no frame range was specified, implicitly use "input"
+            is_input_frame_range = True
+            logger.debug("No frame range specified, implicitly using input frame range mode")
         
         try:
-            # Apply GSV values if provided
-            if gsv_combination:
-                root_node = nuke.root()
-                if 'gsv' in root_node.knobs():
-                    gsv_knob = root_node['gsv']
-                    # Apply each GSV value
-                    for key, value in gsv_combination:
-                        try:
-                            gsv_knob.setGsvValue(f'__default__.{key}', value)
-                        except Exception as e:
-                            logger.warning(f"Failed to set GSV value {key}={value}: {e}")
-            
-            # Get write nodes by render order
-            write_nodes_by_order = self._get_write_nodes_by_render_order(gsv_combination)
-            
-            # Flatten the list of write nodes
-            all_write_nodes = []
-            for render_order in sorted(write_nodes_by_order.keys()):
-                all_write_nodes.extend(write_nodes_by_order[render_order])
-                
-            logger.info(f"Processing frame ranges for write nodes: {all_write_nodes}")
-            
-            # For each write node, extract its frame range
+            # For each write node, determine its frame range
             for node_name in all_write_nodes:
                 node = nuke.toNode(node_name)
                 if node and node.Class() == "Write":
+                    frame_range_source = "unknown"
                     # Case 1: If use_nodes_frame_list is true and the node has use_limit enabled,
                     # use the node's first/last knobs
                     if self.use_nodes_frame_list and 'use_limit' in node.knobs() and node['use_limit'].value():
                         if 'first' in node.knobs() and 'last' in node.knobs():
                             node_start = int(node['first'].value())
                             node_end = int(node['last'].value())
+                            frame_range_source = "node use_limit"
                             write_node_info.append((node_name, node_start, node_end))
-                            logger.info(f"Using frame range {node_start}-{node_end} from write node {node_name}")
+                            logger.debug(f"Write node {node_name}: Using frame range from node's use_limit: {node_start}-{node_end}")
                             continue
                     
-                    # Case 2: If frame_range_type is "input" or use_nodes_frame_list is true 
-                    # but use_limit is not enabled, try to use the node's input frame range
-                    elif frame_range_type == "input" or (self.use_nodes_frame_list and 'use_limit' in node.knobs() and not node['use_limit'].value()):
+                    # Case 2: If we're using input frame range (explicit or implicit),
+                    # try to use the node's input frame range
+                    elif is_input_frame_range:
                         try:
                             # Get frame range from input
                             node_start = node.firstFrame()
                             node_end = node.lastFrame()
+                            frame_range_source = "node input"
                             write_node_info.append((node_name, node_start, node_end))
-                            logger.info(f"Using input frame range {node_start}-{node_end} for write node {node_name}")
+                            logger.debug(f"Write node {node_name}: Using frame range from node's input: {node_start}-{node_end}")
                             continue
                         except Exception as e:
-                            # If we can't get input range, fall back to defaults
                             logger.warning(f"Failed to get input frame range for node {node_name}: {e}")
-                            write_node_info.append((node_name, default_start, default_end))
-                            logger.info(f"Using default frame range {default_start}-{default_end} for write node {node_name}")
+                            # Fall back to root frame range
+                            write_node_info.append((node_name, root_first_frame, root_last_frame))
+                            logger.debug(f"Write node {node_name}: Falling back to root frame range: {root_first_frame}-{root_last_frame}")
                             continue
                     
-                    # Case 3: If we have an explicit frame range, use it
-                    elif frame_range_type in ["explicit", "special"]:
+                    # Case 3: If we have an explicit frame range from the user, use that
+                    elif has_explicit_frame_range:
+                        frame_range_source = "explicit user range"
                         write_node_info.append((node_name, default_start, default_end))
-                        logger.info(f"Using explicit frame range {default_start}-{default_end} for write node {node_name}")
+                        logger.debug(f"Write node {node_name}: Using explicit frame range: {default_start}-{default_end}")
                         continue
                     
-                    # Fall back to default frame range from root
-                    write_node_info.append((node_name, default_start, default_end))
-                    logger.info(f"Using fallback frame range {default_start}-{default_end} for write node {node_name}")
-                else:
-                    # Node not found or not a Write node - use default frame range
-                    logger.warning(f"Write node {node_name} not found or not a Write node. Using default frame range {default_start}-{default_end}.")
-                    write_node_info.append((node_name, default_start, default_end))
+                    # Case 4: Fall back to root frame range
+                    frame_range_source = "root fallback"
+                    write_node_info.append((node_name, root_first_frame, root_last_frame))
+                    logger.debug(f"Write node {node_name}: Using root frame range: {root_first_frame}-{root_last_frame}")
+            
+            # Summary debug log
+            frame_range_summary = ", ".join([f"{name}: {start}-{end}" for name, start, end in write_node_info])
+            logger.debug(f"Final write node frame ranges: {frame_range_summary}")
             
             return write_node_info
         except Exception as e:
             logger.error(f"Failed to get write node frame ranges: {e}")
-            # If we have write nodes specified, return defaults for them as a fallback
-            if self.write_nodes:
-                logger.info(f"Using default frame range for write nodes as fallback")
-                return [(node_name, default_start, default_end) for node_name in self.write_nodes]
-            return []
+            raise SubmissionError(f"Failed to get write node frame ranges: {e}")
     
     def _get_write_nodes_by_render_order(self, gsv_combination=None) -> Dict[int, List[str]]:
         """Get write nodes grouped by render order using Nuke API.
@@ -1236,6 +1246,9 @@ class NukeSubmission:
         """
         # Ensure the script is open
         nuke = self._ensure_script_can_be_parsed()
+        
+        # Debug logging
+        logger.debug(f"_get_write_nodes_by_render_order called with write_nodes: {self.write_nodes}")
         
         write_nodes_by_order = {}
         write_nodes_info = []
@@ -1253,36 +1266,42 @@ class NukeSubmission:
                         except Exception as e:
                             logger.warning(f"Failed to set GSV value {key}={value}: {e}")
             
-            # Check if user specified write nodes
+            # Find all Write nodes
+            all_write_nodes = nuke.allNodes('Write')
+            logger.debug(f"Found {len(all_write_nodes)} Write nodes in nukescript: {nuke.root().name()}")
+            
+            for node in all_write_nodes:
+                node_name = node.name()
+                logger.debug(f"Processing write node: {node_name}")
+                
+                # Get render order, default to 0
+                render_order = 0
+                if 'render_order' in node.knobs():
+                    render_order = int(node['render_order'].value())
+                
+                # Store node information for sorting
+                write_nodes_info.append((node_name, render_order))
+            
+            # If we're filtering to specific write nodes, only keep those
             if self.write_nodes:
-                logger.info(f"Using user-specified write nodes: {self.write_nodes}")
-                # For each specified write node, get its render order
-                for node_name in self.write_nodes:
-                    node = nuke.toNode(node_name)
-                    if node:
-                        logger.info(f"Found write node {node_name} in script")
-                        # Get render order, default to 0
-                        render_order = 0
-                        if 'render_order' in node.knobs():
-                            render_order = int(node['render_order'].value())
-                        write_nodes_info.append((node_name, render_order))
-                    else:
-                        # Node not found - add it anyway with default render order (0)
-                        logger.warning(f"Write node {node_name} not found in script. Adding with default render order 0.")
-                        write_nodes_info.append((node_name, 0))
-            else:
-                # If no write nodes specified, find all Write nodes
-                logger.info("No write nodes specified, searching for all Write nodes in script")
-                for node in nuke.allNodes('Write'):
-                    node_name = node.name()
-                    
-                    # Get render order, default to 0
-                    render_order = 0
-                    if 'render_order' in node.knobs():
-                        render_order = int(node['render_order'].value())
-                    
-                    # Store node information for sorting
-                    write_nodes_info.append((node_name, render_order))
+                logger.debug(f"Filtering to specific write nodes: {self.write_nodes}")
+                write_nodes_set = set(self.write_nodes)
+                original_count = len(write_nodes_info)
+                
+                filtered_nodes = [
+                    (node_name, render_order) for node_name, render_order in write_nodes_info
+                    if node_name in write_nodes_set
+                ]
+                
+                logger.debug(f"After filtering: {len(filtered_nodes)} nodes match from {original_count} total")
+                
+                if len(filtered_nodes) == 0:
+                    # If no nodes matched, log each requested node and whether it exists
+                    for requested_node in self.write_nodes:
+                        exists = requested_node in [node[0] for node in write_nodes_info]
+                        logger.debug(f"Requested node '{requested_node}' exists in script: {exists}")
+                
+                write_nodes_info = filtered_nodes
             
             # Handle sorting based on options
             if self.submit_in_render_order and self.submit_alphabetically:
@@ -1302,16 +1321,12 @@ class NukeSubmission:
                     write_nodes_by_order[render_order] = []
                 write_nodes_by_order[render_order].append(node_name)
             
-            logger.info(f"Found {len(write_nodes_info)} write nodes with render orders")
+            logger.debug(f"Final write_nodes_by_order: {write_nodes_by_order}")
             return write_nodes_by_order
         except Exception as e:
             logger.error(f"Failed to get write nodes by render order: {e}")
-            # Return the original write nodes as a fallback with render order 0
-            if self.write_nodes:
-                logger.info(f"Using original write nodes as fallback: {self.write_nodes}")
-                return {0: self.write_nodes}
-            return {}
-    
+            raise SubmissionError(f"Failed to get write nodes by render order: {e}")
+
     def _get_sorted_write_nodes(self, gsv_combination=None) -> List[str]:
         """Get write nodes sorted according to submission options.
         
@@ -1933,13 +1948,30 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
     
     requires_parsing = script_parsing_required(**kwargs)
     
-    # If script parsing is needed but script is not open in current session, use subprocess
-    # Otherwise nuke module is acting on the currently open script, not the submitted script
-    if requires_parsing and not script_path_same_as_current_nuke_session:
-        logger.info(f"Script parsing required but script not open in current session. Launching subprocess for {script_path}")
+    # Check if we're running inside the Nuke GUI
+    running_in_nuke_gui = False
+    try:
+        import psutil
+        import os
+        current_process = psutil.Process(os.getpid())
+        parent_process_name = current_process.name()
+        running_in_nuke_gui = "Nuke" in parent_process_name
+        logger.debug(f"Parent process name: {parent_process_name}, running in Nuke GUI: {running_in_nuke_gui}")
+    except Exception as e:
+        logger.warning(f"Failed to check if running in Nuke GUI: {e}")
+    
+    # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
+    if requires_parsing and running_in_nuke_gui and not script_path_same_as_current_nuke_session:
+        logger.info(f"Script parsing required and running in Nuke GUI. Launching subprocess for {script_path}")
         from .subprocess import submit_script_via_subprocess
         return submit_script_via_subprocess(script_path, use_parser_instead_of_nuke, **kwargs)
     
+    if not running_in_nuke_gui:
+        logger.info(f"Not running in Nuke GUI. Proceeding with submission within the current process for {script_path}")
+        # Set script_path_same_as_current_nuke_session to False to ensure the script is loaded if it needs to be parsed
+        kwargs['script_path_same_as_current_nuke_session']=False
+
+
     # Proceed with submission within the current process if submitted script is same as currently open script
     submission = NukeSubmission(script_path=script_path, **kwargs)
     return submission.submit() 
