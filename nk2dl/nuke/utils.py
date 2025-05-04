@@ -56,7 +56,7 @@ def parser_module():
             from . import parser
             _parser_module = parser.create_parser()
         except (ImportError, ModuleNotFoundError):
-            raise SubmissionError("The Nuke Script Parser is required but not available or functionality is incomplete.")
+            raise SubmissionError("The nukescript parser is required but is not available or implemented.")
     return _parser_module
 
 

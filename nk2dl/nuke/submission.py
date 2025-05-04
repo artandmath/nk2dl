@@ -51,6 +51,7 @@ class NukeSubmission:
                 
                 # Plugin Info parameters
                 output_path: str = "",
+                parse_output_paths_to_deadline: bool = False,
                 nuke_version: Optional[Union[str, int, float]] = None,
                 use_nuke_x: bool = False,
                 batch_mode: bool = True,
@@ -122,6 +123,8 @@ class NukeSubmission:
             
             # Plugin Info parameters
             output_path: Output directory for rendered files
+            parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
+                                           Defaults to True if script_path_same_as_current_nuke_session is True
             nuke_version: Version of Nuke to use for rendering. Can be:
                           - String: "15.1"
                           - Float: 15.1 (converts to "15.1")
@@ -304,6 +307,12 @@ class NukeSubmission:
         # If we have GSVs, parse them
         if self.graph_scope_variables:
             self._parse_graph_scope_variables()
+
+        # Set parse_output_paths_to_deadline to True if script_path_same_as_current_nuke_session is True
+        # unless explicitly set by the user
+        self.parse_output_paths_to_deadline = parse_output_paths_to_deadline
+        if script_path_same_as_current_nuke_session and parse_output_paths_to_deadline is False:
+            self.parse_output_paths_to_deadline = True
 
     def _ensure_script_can_be_parsed(self):
         """Ensure the script is open in Nuke or available for parsing.
@@ -879,8 +888,9 @@ class NukeSubmission:
             else:
                 job_info["Comment"] = self.comment
                 
-        # Add OutputFilename entries to job info
-        self._add_output_filenames_to_job_info(job_info, gsv_combination)
+        # Add OutputFilename entries to job info only if parse_output_paths_to_deadline is True
+        if self.parse_output_paths_to_deadline:
+            self._add_output_filenames_to_job_info(job_info, gsv_combination)
         
         # Process extra_info fields if any
         if self.extra_info:
@@ -1817,6 +1827,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           
           # Plugin Info parameters
           - output_path: Output directory for rendered files
+          - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
+                                           Defaults to True if script_path_same_as_current_nuke_session is True
           - nuke_version: Version of Nuke to use for rendering. Can be:
                           - String: "15.1"
                           - Float: 15.1 (converts to "15.1")
@@ -1841,9 +1853,28 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - render_order_dependencies: Whether to set job dependencies based on render order
           - use_nodes_frame_list: Whether to use node-specific frame lists
+          - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
+                                           Defaults to True if script_path_same_as_current_nuke_session is True
     
     Returns:
         Dictionary where keys are render order values (int) and values are lists of job IDs (str)
     """
+    # Extract parameters needed for determining script path
+    script_path_same_as_current_nuke_session = kwargs.get('script_path_same_as_current_nuke_session', False)
+    use_parser_instead_of_nuke = kwargs.get('use_parser_instead_of_nuke', False)
+    
+    # Check if we need to parse the script
+    from .subprocess import script_parsing_required
+    
+    requires_parsing = script_parsing_required(**kwargs)
+    
+    # If script parsing is needed but script is not open in current session, use subprocess
+    # Otherwise nuke module is acting on the currently open script, not the submitted script
+    if requires_parsing and not script_path_same_as_current_nuke_session:
+        logger.info(f"Script parsing required but script not open in current session. Launching subprocess for {script_path}")
+        from .subprocess import submit_script_via_subprocess
+        return submit_script_via_subprocess(script_path, use_parser_instead_of_nuke, **kwargs)
+    
+    # Proceed with submission within the current process if submitted script is same as currently open script
     submission = NukeSubmission(script_path=script_path, **kwargs)
     return submission.submit() 
