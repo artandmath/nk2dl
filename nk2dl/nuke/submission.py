@@ -1715,8 +1715,8 @@ class NukeSubmission:
                 job_info = self._prepare_job_info()
                 plugin_info = self._prepare_plugin_info()
                 
-                logger.debug(f"Job info: {job_info}")
-                logger.debug(f"Plugin info: {plugin_info}")
+                logger.debug(f"Job info:\n{json.dumps(job_info, indent=4)}")
+                logger.debug(f"Plugin info:\n{json.dumps(plugin_info, indent=4)}")
                 
                 # If using write nodes as tasks
                 if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
@@ -1971,7 +1971,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
         # So we might as well parse the output paths to deadline as well
         parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', True)
         kwargs['parse_output_paths_to_deadline']=parse_output_paths_to_deadline
-        logger.debug(f"running without Nuke GUI, setting parse_output_paths_to_deadline: {parse_output_paths_to_deadline}")
+        logger.debug(f"Running without Nuke GUI, setting parse_output_paths_to_deadline: {parse_output_paths_to_deadline}")
 
     # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
     if launch_subprocess:
