@@ -50,6 +50,7 @@ examples/renderOutput/*
 
 # Project specific
 plan/
+scratch/
 logs/
 *.log
 .coverage

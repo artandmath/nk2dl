@@ -165,6 +165,9 @@ class NukeSubmission:
                                   If no values are provided for a key (e.g., "key:" or just "key"), 
                                   all available values for that key will be used.
         """
+
+        self._script_will_close = False
+
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
         if render_order_dependencies:
             write_nodes_as_separate_jobs = True
@@ -181,6 +184,10 @@ class NukeSubmission:
             raise SubmissionError("Custom frame list is not supported when submitting write nodes as separate tasks. "
                                  "Please use global (f-l) or input (i) frame ranges, or enable use_nodes_frame_list.")
             
+
+        self.use_parser_instead_of_nuke = use_parser_instead_of_nuke
+        self.script_path_same_as_current_nuke_session = script_path_same_as_current_nuke_session
+
         self.script_path = Path(script_path)
         if not self.script_path.exists():
             raise SubmissionError(f"Nuke script does not exist: {script_path}")
@@ -241,7 +248,6 @@ class NukeSubmission:
         self.submit_alphabetically = submit_alphabetically if isinstance(submit_alphabetically, bool) else config.get('submission.submit_alphabetically', False)
         self.submit_in_render_order = submit_in_render_order if isinstance(submit_in_render_order, bool) else config.get('submission.submit_in_render_order', False)
         self.use_nodes_frame_list = use_nodes_frame_list if isinstance(use_nodes_frame_list, bool) else config.get('submission.use_nodes_frame_list', False)
-        self.script_path_same_as_current_nuke_session = script_path_same_as_current_nuke_session
         self.use_parser_instead_of_nuke = use_parser_instead_of_nuke
         
         # Script copying options
@@ -256,7 +262,7 @@ class NukeSubmission:
         # Store GSV settings
         self.graph_scope_variables = graph_scope_variables
         self.gsv_combinations = []
-        
+                
         # If GSV is provided, check Nuke version compatibility
         if self.graph_scope_variables:
             # Check Nuke version for GSV support (requires 15.2+)
@@ -313,6 +319,7 @@ class NukeSubmission:
         self.parse_output_paths_to_deadline = parse_output_paths_to_deadline
         if script_path_same_as_current_nuke_session and parse_output_paths_to_deadline is False:
             self.parse_output_paths_to_deadline = True
+        
 
     def _ensure_script_can_be_parsed(self):
         """Ensure the script is open in Nuke or available for parsing.
@@ -336,6 +343,8 @@ class NukeSubmission:
                 nuke.scriptOpen(str(self.script_path.absolute()))
                 # Mark as same as current session now
                 self.script_path_same_as_current_nuke_session = True
+                # Track that we opened a script
+                self._script_will_close = True
             
             return nuke
         else:
@@ -348,6 +357,8 @@ class NukeSubmission:
                 nuke.scriptOpen(str(self.script_path.absolute()))
                 # Mark as same as current session now
                 self.script_path_same_as_current_nuke_session = True
+                # Track that we opened a script
+                self._script_will_close = True
             
             return nuke
 
@@ -541,7 +552,7 @@ class NukeSubmission:
         Raises:
             ValueError: If a restricted token is used in batch_name
         """
-        nuke = nuke_utils.nuke_module()
+        nuke = self._ensure_script_can_be_parsed()
         
         # Start with the template
         result = template
@@ -946,7 +957,7 @@ class NukeSubmission:
             job_info: The job info dictionary to update
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
         """
-        nuke = nuke_utils.nuke_module()
+        nuke = self._ensure_script_can_be_parsed()
         
         # Different handling based on submission mode
         if self.write_nodes_as_tasks and self.write_nodes:
@@ -1540,7 +1551,6 @@ class NukeSubmission:
         
         Returns:
             Dictionary where keys are render order values (int) and values are lists of job IDs (str)
-            For jobs rendering multiple write nodes with different render orders, the key is 0
             
         Raises:
             SubmissionError: If submission fails
@@ -1618,7 +1628,7 @@ class NukeSubmission:
                             dependency_count = len(re.split(r'[,\s]+', self.job_dependencies.strip()))
                         
                         # Get render orders for all write nodes
-                        nuke = nuke_utils.nuke_module()
+                        nuke = self._ensure_script_can_be_parsed()
                         write_node_render_orders = {}
                         for write_node in sorted_write_nodes:
                             node_obj = nuke.toNode(write_node)
@@ -1865,9 +1875,26 @@ class NukeSubmission:
                     except Exception as e:
                         logger.error(f"Failed to submit regular job: {e}")
             
+            # Close the script if we opened it
+            if self._script_will_close:
+                nuke = self._ensure_script_can_be_parsed()
+                nuke.scriptClose()
+                nuke.scriptClear()
+                self._script_will_close = False
+                logger.info(f"Script {self.script_path} closed after submission")
+            
             return jobs_by_render_order
                     
         except Exception as e:
+            # Close the script if we opened it, even if submission failed
+            if self._script_will_close:
+                try:
+                    nuke = self._ensure_script_can_be_parsed()
+                    nuke.scriptClose()
+                    self._script_will_close = False
+                except:
+                    pass  # Don't let script closing error mask the original error
+            
             raise SubmissionError(f"Failed to submit job: {e}")
 
 
@@ -1960,20 +1987,19 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
     except Exception as e:
         logger.warning(f"Failed to check if running in Nuke GUI: {e}")
 
-
+    # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
     launch_subprocess = False
     if requires_parsing and running_in_nuke_gui and not script_path_same_as_current_nuke_session:
         launch_subprocess = True
         
     if not running_in_nuke_gui or launch_subprocess:
-        # If parse_output_paths_to_deadline is not set, set it to True
+        # If parse_output_paths_to_deadline is not set, set it to True if not explicitly set to False
         # If we're not running in the Nuke GUI, we need launch nuke or nuke parser anyway to parse the script
         # So we might as well parse the output paths to deadline as well
         parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', True)
         kwargs['parse_output_paths_to_deadline']=parse_output_paths_to_deadline
         logger.debug(f"Running without Nuke GUI, setting parse_output_paths_to_deadline: {parse_output_paths_to_deadline}")
 
-    # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
     if launch_subprocess:
         logger.info(f"Submitted script is different from currently open script. Script parsing required and running in Nuke GUI. Launching subprocess for {script_path}")
         from .subprocess import submit_script_via_subprocess

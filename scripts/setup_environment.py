@@ -138,11 +138,87 @@ def create_virtual_environment():
     
     venv_path = Path(".venv")
     if venv_path.exists():
-        print(f"Virtual environment already exists at {venv_path}")
-        return str(venv_path)
+        print(f"Removing existing virtual environment at {venv_path}")
+        shutil.rmtree(venv_path)
     
     try:
-        subprocess.check_call([sys.executable, "-m", "venv", str(venv_path)])
+        # Create virtual environment with system packages
+        subprocess.check_call([sys.executable, "-m", "venv", str(venv_path), "--system-site-packages"])
+        
+        # Ensure PowerShell activation script exists
+        if platform.system() == "Windows":
+            activate_ps1 = venv_path / "Scripts" / "Activate.ps1"
+            if not activate_ps1.exists():
+                print("Creating PowerShell activation script...")
+                with open(activate_ps1, "w") as f:
+                    f.write("""# This file must be used with "source bin/activate" *from bash*
+# you cannot run it directly
+
+deactivate () {
+    # reset old environment variables
+    if [ -n "${_OLD_VIRTUAL_PATH:-}" ] ; then
+        PATH="${_OLD_VIRTUAL_PATH:-}"
+        export PATH
+        unset _OLD_VIRTUAL_PATH
+    fi
+    if [ -n "${_OLD_VIRTUAL_PYTHONHOME:-}" ] ; then
+        PYTHONHOME="${_OLD_VIRTUAL_PYTHONHOME:-}"
+        export PYTHONHOME
+        unset _OLD_VIRTUAL_PYTHONHOME
+    fi
+
+    # This should detect bash and zsh, which have a hash command that must
+    # be called to get it to forget past commands.  Without forgetting
+    # past commands the $PATH changes we made may not be respected
+    if [ -n "${BASH:-}" -o -n "${ZSH_VERSION:-}" ] ; then
+        hash -r 2> /dev/null
+    fi
+
+    if [ -n "${_OLD_VIRTUAL_PS1:-}" ] ; then
+        PS1="${_OLD_VIRTUAL_PS1:-}"
+        export PS1
+        unset _OLD_VIRTUAL_PS1
+    fi
+
+    unset VIRTUAL_ENV
+    if [ ! "${1:-}" = "nondestructive" ] ; then
+    # Self destruct!
+        unset -f deactivate
+    fi
+}
+
+# unset irrelevant variables
+deactivate nondestructive
+
+VIRTUAL_ENV="$(cd "$(dirname "$(dirname "${BASH_SOURCE[0]}")")" && pwd)"
+export VIRTUAL_ENV
+
+_OLD_VIRTUAL_PATH="$PATH"
+PATH="$VIRTUAL_ENV/Scripts:$PATH"
+export PATH
+
+# unset PYTHONHOME if set
+# this will fail if PYTHONHOME is set to the empty string (which is bad anyway)
+# could use `if (set -u; : $PYTHONHOME) ;` in bash
+if [ -n "${PYTHONHOME:-}" ] ; then
+    _OLD_VIRTUAL_PYTHONHOME="${PYTHONHOME:-}"
+    unset PYTHONHOME
+fi
+
+if [ -z "${VIRTUAL_ENV_DISABLE_PROMPT:-}" ] ; then
+    _OLD_VIRTUAL_PS1="${PS1:-}"
+    PS1="(.venv) ${PS1:-}"
+    export PS1
+fi
+
+# This should detect bash and zsh, which have a hash command that must
+# be called to get it to forget past commands.  Without forgetting
+# past commands the $PATH changes we made may not be respected
+if [ -n "${BASH:-}" -o -n "${ZSH_VERSION:-}" ] ; then
+    hash -r 2> /dev/null
+fi
+""")
+        
         print(f"Virtual environment created at {venv_path}")
         return str(venv_path)
     except subprocess.CalledProcessError as e:
@@ -383,11 +459,18 @@ def create_powershell_wrapper(venv_path):
             f.write("# NK2DL Activation Script\n")
             f.write("# This script activates the virtual environment and sets up nk2dl environment variables in one step\n\n")
             f.write("Write-Host \"Activating NK2DL development environment...\" -ForegroundColor Cyan\n\n")
-            f.write("# Activate the virtual environment\n")
-            f.write("# Get the directory where this script is located\n")
-            f.write("$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path\n\n")
-            f.write("# Activate the venv\n")
-            f.write("& \"$scriptDir\\Activate.ps1\"\n\n")
+            
+            # Get the directory where this script is located
+            f.write("$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path\n")
+            f.write("$venvPath = Split-Path -Parent $scriptDir\n\n")
+            
+            # Set up environment variables
+            f.write("# Set up environment variables\n")
+            f.write("$env:VIRTUAL_ENV = $venvPath\n")
+            f.write("$env:PATH = \"$scriptDir;$env:PATH\"\n")
+            f.write("$env:PYTHONPATH = \"$venvPath\\Lib\\site-packages;$env:PYTHONPATH\"\n\n")
+            
+            # Source the nk2dl setup script
             f.write("# Source the nk2dl setup script\n")
             f.write("if (Test-Path \"$scriptDir\\nk2dl_setup.ps1\") {\n")
             f.write("    Write-Host \"Setting up NK2DL environment variables...\" -ForegroundColor Cyan\n")
