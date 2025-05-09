@@ -1031,7 +1031,7 @@ class NukeSubmission:
         
         # Add optional plugin settings
         if self.render_threads is not None:
-            plugin_info["NukeThreadLimit"] = str(self.render_threads)
+            plugin_info["Threads"] = str(self.render_threads)
         if self.use_gpu:
             plugin_info["UseGpu"] = "1"
         if self.gpu_override:
