@@ -48,7 +48,9 @@ pip install -e .
 ```
 
 ### Install from release
-- Download the source code from a release. Releases can be found in the sidebar on the github repositiory page.
+- Alternatively `nk2dl` can be installed from a release.
+- Releases can be found in the sidebar on the github repositiory page.
+- Download the source code from a release. 
 - Unzip the source code.
 
 In a Windows powershell:
