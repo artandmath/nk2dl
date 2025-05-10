@@ -198,7 +198,9 @@ cd /path/to/nk2dl-0.1.x-alpha/
 python ./examples/test_nk2dl.py
 ```
 
-## Quick Start
+## Usage
+
+More in-depth usage documentation can be found in the `docs` folder.
 
 ### Python
 
