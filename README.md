@@ -237,7 +237,7 @@ nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x -
 
 ### Job and Batch Naming
 
-Templates support tokens such as:
+Job nammes, batch names, comments and extra info fields support tokens such as:
 - `{script}` - Script name with extension
 - `{script_stem}` - Script name without extension
 - `{write}` - Write node name
