@@ -117,12 +117,12 @@ nk2dl uses a YAML configuration system with multiple levels:
 ### Configuring for single user (.nuke method)
 
 - Create a file with the name `.nk2dl.yaml` in the `.nuke` directory
-- Add configuration in yaml format.
+- Add configuration to the file in yaml syntax.
 
 ### Configuring for multiple users.
 
 - Create a `your_config_name.yaml` in a location avaialble to all users.
-- Add configuration to the file in yaml format.
+- Add configuration to the file in yaml syntax.
 - Create an environment variable `NL2DL_CONFIG` and point it to the location of `your_config_name.yaml`
 
 Example configuration:
