@@ -25,7 +25,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 ## Installation
 
 ### Install from source 
-In a windows powershell:
+In a Windows powershell:
 ```bash
 # Install from source
 git clone https://github.com/artandmath/nk2dl.git
@@ -51,7 +51,7 @@ pip install -e .
 - Download the source code from a release. Releases can be found in the sidebar on the github repositiory page.
 - Unzip the source code.
 
-In a windows powershell:
+In a Windows powershell:
 ```
 # Install from release
 cd /path/to/nk2dl-0.1.x-alpha
@@ -184,7 +184,7 @@ submission:
   script_copy1_name: $BASENAME_YYYY-MM-DD_hh-mm-ss.$EXT
 ```
 
-- Run the example
+- Run the `test_nk2dl.py` python script to submit the example nukescripts to Deadline
 
 ```bash
 cd /path/to/nk2dl-0.1.x-alpha/
