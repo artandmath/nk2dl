@@ -95,7 +95,7 @@ nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
 - Make a backup of `/path/to/deadline/repo/plugins/nuke`.
 - Replace the contents of `/path/to/deadline/repo/plugins/nuke` with the contents of `/path/to/nk2dl-repo/deadline/plugins/nuke`.
 
-### Install Deadline Web Service
+### Install Deadline Web Service (optional)
 
 ![I feel the need, the need for speed!](./docs/img/nk2dl_vs_default.gif)
 
