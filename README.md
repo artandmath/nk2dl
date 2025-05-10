@@ -20,8 +20,8 @@ The Nuke to Deadline toolset consists of 3 parts:
 - Standard Writes only, DeepWrites and other kinds of write nodes to come.
 - nk2dl pulls a Nuke interactive license if it needs to call on the Nuke python module.
 - Connection to Deadline Web Service currently doesn't support SSL.
-- [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8)
 - The [roadmap](./roadmap.md) sets out the path to overcome the caveats and implememnt planned features.
+- [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8)
 
 ## Installation
 
