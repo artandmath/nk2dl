@@ -13,7 +13,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 - The project is in alpha. We have been using it in a limited capacity in a production environment as a replacement for the default submitter. We fall back to the default submitter when missing a feature or something is broken.
 - Graph Scope Variable functionality hasn't been tested in production.
 - Interfaces to `nk2dl python` module and command line are subject to change.
-- The `nk2dl cli` command line will often be out of step with the python module during development. It may outright not work when out of step.
+- The `nk2dl cli` command line will often be out of step with the python module during development. The command line implementation may outright not work when out of step.
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The project aims to have feature parity with the default Deadline submitter on top of `nk2dl`'s other features. At this point in time there are parity features missing.
 - The project has no plans to implement Deadline draft.
