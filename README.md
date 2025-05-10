@@ -165,9 +165,9 @@ submission:
 - The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
 - `nk2dl` has a feature that will create a backup copy(s) of the submitted script. `nk2dl` will resolve the script path on the copy(s) before submission and can submit the copy.
 - The example python script includes a demonstation of how to use the script copy features. 
-- To set up script copying, use one of the following config options
+- To set up script copying, use one of the following config options:
 
-### Script copy config example - one copy of submitted nukescript
+#### Script copy config example - one copy of submitted nukescript
 ```yaml
 submission:
   # The following are the defaults if no config is provided
@@ -175,7 +175,7 @@ submission:
   script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
   script_copy_name: $BASENAME.$EXT # Avalable tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
 ```
-### Script copy config example - many copies of submitted nukescript
+#### Script copy config example - many copies of submitted nukescript
 
 ```yaml
 submission:
