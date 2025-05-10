@@ -158,8 +158,8 @@ submission:
 ## Usage example
 
 - The `examples` folder contains 2 simple nukescripts and a python script.
-  - a nukescript and for Nuke without GSVs.
-  - a nukescript for Nuke 15.2+ with a GSV multishot example.
+  - an example nukescript for Nuke without GSVs.
+  - an example nukescript for Nuke 15.2+ with a GSV multishot example.
   - a python script that can be run in the Nuke Python interpeter (or a Python interpereter that can call upon the Nuke module) or the contents of the python script can be pasted into and executed in the Nuke script editor.
 - The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing will break.
 - `nk2dl` has a feature that will create a backup copy of submitted scripts. `nk2dl` will resolve relative paths before submission.
