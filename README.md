@@ -99,7 +99,7 @@ nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
 
 ![I feel the need, the need for speed!](./docs/img/nk2dl_vs_default.gif)
 
-For best performance an instance of a Deadline Web Service is recommended. Instructions on setting up a Deadline Web Service are found via the Deadline documentation:
+For best performance, an instance of a Deadline Web Service is recommended. Instructions on setting up a Deadline Web Service are found via the Deadline documentation:
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
  
