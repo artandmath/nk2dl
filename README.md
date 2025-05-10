@@ -147,7 +147,7 @@ submission:
   chunk_size: 10
   department: comp
   batch_name_template: "{scriptname}"
-  job_name_template: "{batch} / {write} / {file)
+  job_name_template: "{batch} / {write} / {file)"
   extra_info_templates:
     - "Write: {write}"
     - "Order: {render_order}"
