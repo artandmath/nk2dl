@@ -73,7 +73,7 @@ class Config:
             'submit_copied_script': False,
             'submit_script_as_auxiliary_file': False,
             'script_copy_path': './.farm/',
-            'script_copy_relative_to': 'SCRIPT',  # SCRIPT or OUTPUT
+            'script_copy_relative_to': 'OUTPUT',  # SCRIPT or OUTPUT
             'script_copy_name': '$BASENAME.$EXT'
         }
     }

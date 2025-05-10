@@ -182,6 +182,8 @@ submission:
   script_copy1_path: ./archive/
   script_copy1_relative_to: SCRIPT
   script_copy1_name: $BASENAME_YYYY-MM-DD_hh-mm-ss.$EXT
+
+  #script_copy2_path: etc
 ```
 
 - Run the `test_nk2dl.py` python script to submit the example nukescripts to Deadline
