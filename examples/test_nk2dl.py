@@ -19,7 +19,11 @@ job_ids = submit_nuke_script(
     write_nodes=["Write1","Write2","Write3","Write4","Write5","Write6"],
     use_nodes_frame_list=True,
     continue_on_error=True,
-    nuke_version="15.1"
+    nuke_version="15.1",
+    use_current_environment=False,
+    include_environment_keys=["OCIO","PATH"],
+    environment={"TEST": "TEST", "TEST2": "TEST2", "TEST3": "TEST3"},
+    omit_environment_keys=["TEST2"]
 )
 
 # Print the job IDs.
@@ -43,7 +47,11 @@ if major >= 15 and minor >= 2:
         write_nodes=["Write1","Write2","Write3","Write4","Write5","Write6"],
         use_nodes_frame_list=True,
         continue_on_error=True, 
-        graph_scope_variables=["shotcode:ABC_0010,ABC_0020"]
+        graph_scope_variables=["shotcode:ABC_0010,ABC_0020"],
+        use_current_environment=False,
+        include_environment_keys=["OCIO","PATH"],
+        environment={"TEST": "TEST", "TEST2": "TEST2", "TEST3": "TEST3"},
+        omit_environment_keys=["TEST2"]
     )
 
     # Print the job IDs.

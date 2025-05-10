@@ -88,6 +88,10 @@ job_ids = submit_nuke_script(
 | `render_order_dependencies` | bool | `False` | Create dependencies based on render order |
 | `use_nodes_frame_list` | bool | `False` | Use frame list from write nodes |
 | `graph_scope_variables` | list | `None` | Graph scope variables specification |
+| `use_current_environment` | bool | `False` | Pass all current environment variables to Deadline jobs |
+| `include_environment_keys` | list | `[]` | List of environment variable keys to include from current environment |
+| `environment` | dict | `{}` | Dictionary of environment variables to add to Deadline jobs |
+| `omit_environment_keys` | list | `[]` | List of environment variable keys to exclude |
 
 ### Write Node Control
 
@@ -244,18 +248,24 @@ submit_nuke_script(
 )
 ```
 
-### Environment Variables (NOT IMPLEMENTED/HALLUCINATION)
+### Environment Variables
 
 Set environment variables for the render job:
 
 ```python
 submit_nuke_script(
     "/path/to/script.nk",
+    use_current_environment=True,  # Pass all current environment to Deadline
+    # OR selectively include specific variables from current environment
+    include_environment_keys=["NUKE_PATH", "PYTHONPATH", "LICENSE_SERVER"],
+    # Additional environment variables to add/override
     environment={
         "MY_PROJECT_ROOT": "/path/to/project",
         "CUSTOM_LUT_PATH": "/path/to/luts",
         "NUKE_PATH": "/path/to/nuke/plugins"
-    }
+    },
+    # Environment variables to exclude
+    omit_environment_keys=["TEMP", "TMP", "USERNAME"]
 )
 ```
 

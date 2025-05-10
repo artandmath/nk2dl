@@ -74,7 +74,13 @@ class NukeSubmission:
                 use_nodes_frame_list: bool = False,
                 
                 # Graph Scope Variables parameters (Nuke 15.2+)
-                graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None):
+                graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None,
+                
+                # Environment Variables parameters
+                use_current_environment: bool = False,
+                include_environment_keys: Optional[List[str]] = None,
+                environment: Optional[Dict[str, str]] = None,
+                omit_environment_keys: Optional[List[str]] = None):
         
         """Initialize a Nuke script submission.
         
@@ -164,6 +170,12 @@ class NukeSubmission:
                                      
                                   If no values are provided for a key (e.g., "key:" or just "key"), 
                                   all available values for that key will be used.
+            
+            # Environment Variables parameters
+            use_current_environment: Whether to use the current environment variables
+            include_environment_keys: List of environment variables to include
+            environment: Dictionary of environment variables to add
+            omit_environment_keys: List of environment variables to omit
         """
 
         self._script_will_close = False
@@ -262,7 +274,13 @@ class NukeSubmission:
         # Store GSV settings
         self.graph_scope_variables = graph_scope_variables
         self.gsv_combinations = []
-                
+        
+        # Store environment variables settings
+        self.use_current_environment = use_current_environment if isinstance(use_current_environment, bool) else config.get('submission.use_current_environment', False)
+        self.include_environment_keys = include_environment_keys if include_environment_keys is not None else config.get('submission.include_environment_keys', [])
+        self.environment = environment if environment is not None else config.get('submission.environment', {})
+        self.omit_environment_keys = omit_environment_keys if omit_environment_keys is not None else config.get('submission.omit_environment_keys', [])
+        
         # If GSV is provided, check Nuke version compatibility
         if self.graph_scope_variables:
             # Check Nuke version for GSV support (requires 15.2+)
@@ -946,8 +964,44 @@ class NukeSubmission:
             
             job_info["AuxiliaryFiles"] = script_file_path
         
-        return job_info
+        # Add environment variables to job info
+        self._add_environment_variables_to_job_info(job_info)
         
+        return job_info
+    
+    def _add_environment_variables_to_job_info(self, job_info: Dict[str, Any]) -> None:
+        """Add environment variables to job info according to specified parameters.
+        
+        Args:
+            job_info: The job info dictionary to update
+        """
+        env_vars = {}
+        
+        # If use_current_environment is True, start with all current environment variables
+        if self.use_current_environment:
+            import os
+            env_vars.update(os.environ)
+            
+        # If include_environment_keys is provided, only include those specific keys
+        elif self.include_environment_keys:
+            import os
+            for key in self.include_environment_keys:
+                if key in os.environ:
+                    env_vars[key] = os.environ[key]
+        
+        # Add/override with specific environment variables
+        if self.environment:
+            env_vars.update(self.environment)
+        
+        # Omit specific environment variables if requested
+        for key in self.omit_environment_keys:
+            if key in env_vars:
+                del env_vars[key]
+        
+        # Add environment variables to job info in Deadline format
+        for i, (key, value) in enumerate(env_vars.items()):
+            job_info[f"EnvironmentKeyValue{i}"] = f"{key}={value}"
+    
     def _add_output_filenames_to_job_info(self, job_info: Dict[str, Any], gsv_combination=None) -> None:
         """Add OutputFilename# entries to job info.
         
@@ -1700,7 +1754,10 @@ class NukeSubmission:
                                         for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
                                             node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
                             
-                            # Submit to Deadline
+                            # Add environment variables to this job's info
+                            self._add_environment_variables_to_job_info(node_job_info)
+                            
+                            # Submit the job
                             job_id = deadline.submit_job(node_job_info, node_plugin_info)
                             
                             # Track job ID by render order
@@ -1843,6 +1900,9 @@ class NukeSubmission:
                                     for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
                                         node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
                         
+                        # Add environment variables to this job's info
+                        self._add_environment_variables_to_job_info(node_job_info)
+                        
                         logger.info(f"Submitting job for write node {write_node}")
                         logger.debug(f"Job info for {write_node}: {node_job_info}")
                         logger.debug(f"Plugin info for {write_node}: {node_plugin_info}")
@@ -1962,6 +2022,12 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - use_nodes_frame_list: Whether to use node-specific frame lists
           - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
                                            Defaults to True if script_path_same_as_current_nuke_session is True
+          
+          # Environment Variables parameters
+          - use_current_environment: Whether to use the current environment variables
+          - include_environment_keys: List of environment variables to include
+          - environment: Dictionary of environment variables to add to jobs
+          - omit_environment_keys: List of environment variables to omit from jobs
     
     Returns:
         Dictionary where keys are render order values (int) and values are lists of job IDs (str)

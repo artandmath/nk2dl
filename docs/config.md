@@ -143,6 +143,18 @@ submission:
   script_copy1_path: ./archive/
   script_copy1_relative_to: SCRIPT
   script_copy1_name: $BASENAME.YYYY-MM-DD_hh-mm-ss.$EXT
+  
+  # Environment variables settings
+  use_current_environment: false        # Whether to pass current environment to Deadline jobs
+  include_environment_keys:             # List of environment variables to include (if not using all)
+    - "NUKE_PATH"
+    - "PYTHONPATH"
+  environment:                          # Dictionary of environment variables to add to jobs
+    MY_KEY: "my_value"
+    ANOTHER_KEY: "another_value" 
+  omit_environment_keys:                # List of environment variables to exclude
+    - "TEMP"
+    - "TMP"
 ```
 
 ### Nuke Settings
@@ -237,4 +249,4 @@ Example:
 submission:
   batch_name_template: "Project_{script_stem}"
   job_name_template: "{batch} / {write} / {range}"
-``` 
+```
