@@ -132,12 +132,12 @@ submission:
   
   # Script copy path (relative to script or output directory)
   script_copy_path: ./.farm/
-  script_copy_relative_to: SCRIPT  # Can be SCRIPT or OUTPUT
+  script_copy_relative_to: OUTPUT  # Can be SCRIPT or OUTPUT
   script_copy_name: $BASENAME.$EXT  # Can use tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
   
   # Multiple copy locations (optional)
   script_copy0_path: ./.farm/
-  script_copy0_relative_to: SCRIPT
+  script_copy0_relative_to: OUTPUT
   script_copy0_name: $BASENAME.$EXT
   
   script_copy1_path: ./archive/

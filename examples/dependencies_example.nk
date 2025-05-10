@@ -150,7 +150,7 @@ Crop {
 }
 Write {
  channels rgba
- file ./renderOutput/testFrames02_v001.####.exr
+ file ./render_output/testFrames02_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
@@ -165,7 +165,7 @@ Write {
 Read {
  inputs 0
  file_type exr
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/renderOutput/ABC_0010_testFrames01_v001_wh.####.exr
+ file C:/Users/Daniel/Documents/repo/nk2dl/examples/render_output/ABC_0010_testFrames01_v001_wh.####.exr
  format "1920 1080 0 0 1920 1080 1 HD_1080"
  first 1001
  last 1200
@@ -209,7 +209,7 @@ Crop {
 }
 Write {
  channels rgba
- file ./renderOutput/testFrames03_v001.####.exr
+ file ./render_output/testFrames03_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
@@ -266,7 +266,7 @@ Crop {
 set Naa2e3800 [stack 0]
 Write {
  channels rgba
- file ./renderOutput/testFrames04_v001.####.exr
+ file ./render_output/testFrames04_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
@@ -281,7 +281,7 @@ Write {
 push $Naa2e3800
 Write {
  channels rgba
- file ./renderOutput/testFrames04_v001.mov
+ file ./render_output/testFrames04_v001.mov
  file_type mov
  mov64_format "mov (QuickTime / MOV)"
  mov64_codec appr
@@ -349,7 +349,7 @@ Crop {
 set Naa36e000 [stack 0]
 Write {
  channels rgba
- file ./renderOutput/testFrames05_v001.####.exr
+ file ./render_output/testFrames05_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
@@ -364,7 +364,7 @@ Write {
 push $Naa36e000
 Write {
  channels rgba
- file ./renderOutput/testFrames05_v001.mov
+ file ./render_output/testFrames05_v001.mov
  file_type mov
  mov64_format "mov (QuickTime / MOV)"
  mov64_codec appr
@@ -431,7 +431,7 @@ Crop {
 }
 Write {
  channels rgba
- file ./renderOutput/testFrames01_v001.####.exr
+ file ./render_output/testFrames01_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba

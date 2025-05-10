@@ -4,14 +4,6 @@
 # Configuration management
 pyyaml>=6.0.1
 
-# API communication
-requests>=2.31.0
-
-# Deadline connection
-# Note: Deadline API is typically installed with Deadline
-# and not via pip. This is a placeholder for development.
-# deadline_api
-
 # Development tools
 pytest>=7.4.0
 pytest-cov>=4.1.0
@@ -21,5 +13,4 @@ isort>=5.12.0
 
 # Type checking
 mypy>=1.5.1
-types-PyYAML>=6.0.12.12
-types-requests>=2.31.0.1 
+types-PyYAML>=6.0.12.12 

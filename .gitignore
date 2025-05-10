@@ -46,6 +46,8 @@ venv.bak/
 *.nknc
 *.nkc
 examples/renderOutput/*
+examples/render_output/*
+
 
 
 # Project specific
@@ -61,6 +63,7 @@ htmlcov/
 *.pfx
 .ignore/
 thinkbox/
+.farm
 
 # OS specific
 .DS_Store

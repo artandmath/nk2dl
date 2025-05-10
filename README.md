@@ -24,6 +24,8 @@ The Nuke to Deadline toolset consists of 3 parts:
 
 ## Installation
 
+### Install from source 
+In a windows powershell:
 ```bash
 # Install from source
 git clone https://github.com/artandmath/nk2dl.git
@@ -41,24 +43,154 @@ python ./scripts/setup_environment
 # Set the virtual environment (only powershell tested thus far)
 ./.venv/Scripts/Activate-nk2dl.ps1
 
-# Install the commandline within the virtual environment
+# Install the commandline within the virtual environment (optional)
 pip install -e .
 ```
-To make nk2dl available to Nuke GUI, add the path to nk2dl in an init.py. Development and testing is still being done outside of the Nuke GUI, no additional information for Nuke GUI can be offered at this stage.
 
-To use Graph Scope Variables with Nuke 15.2+, copy or diff the content of deadline/plugins/nuke to the same location on your Deadline repository. Be sure to create a backup of your existing Nuke plugin.
+### Install from release
+- Download the source code from a release. Releases can be found in the sidebar on the github repositiory page.
+- Unzip the source code.
 
+In a windows powershell:
+```
+# Install from release
+cd /path/to/nk2dl-0.1.x-alpha
 
-## Deadline Web Service
+# Create virtual environment
+python ./scripts/setup_environment
+
+# The setup script will ask for a Nuke location
+# This is the Nuke python interpreter that will be used in the virtual environment
+
+# The setup script will ask for the Deadline repository location
+# The script will copy the Deadline api from the repository to the virtual environment
+
+# Set the virtual environment (only powershell tested thus far)
+./.venv/Scripts/Activate-nk2dl.ps1
+
+# Install the commandline within the virtual environment (optional)
+pip install -e .
+```
+
+### Install for Nuke GUI, single user (.nuke method)
+
+- Copy the folder `nkd2l` into the user's `.nuke` folder. If installed from source, the `nk2dl` folder is the one inside the parent `nk2dl` folder that contains this README.md and LICENSE.
+- Copy the folder `yaml` from `.venv/Lib/site-packages` into the user's `.nuke` folder
+
+### Install for Nuke GUI, many users (init.py method)
+
+- Copy the `nk2dl` folder to a folder available to all users.
+- If nessessary, add the following line to any of the init.py files available to nuke during the launch of your pipleine:
+```python
+nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
+```
+- The python module `yaml` must be available in nk2dl. If it is not installed in your pipeline, copy it from `.venv/Lib/site-packages` into the same parent folder that contains `nk2dl`
+
+### Install the Deadline Plugin for Nuke 15.2+ (optional)
+
+- To use Graph Scope Variables with Nuke 15.2+, a modified version of the deadline plugin is required.
+- Make a backup of `/path/to/deadline/repo/plugins/nuke`.
+- Replace the contents of `/path/to/deadline/repo/plugins/nuke` with the contents of `/path/to/nk2dl-repo/deadline/plugins/nuke`.
+
+### Install Deadline Web Service
 
 ![I feel the need, the need for speed!](./docs/img/nk2dl_vs_default.gif)
 
-For best performance an instance of a Deadline Web Service is recommended.
+For best performance an instance of a Deadline Web Service is recommended. Instructions on setting up a Deadline Web Service are found via the Deadline documentation:
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
  
-After setting up an instance of Deadline Web Service, check the docs on how to [configure](./docs/config.md) and [test the connection.](./docs/deadline_connection.md)
+After setting up an instance of Deadline Web Service, [configure](./docs/config.md) and [test the connection.](./docs/deadline_connection.md)
 
+## Configuration
+
+nk2dl uses a YAML configuration system with multiple levels:
+
+1. Default configuration
+2. Project configuration (from $NK2DL_CONFIG or .nk2dl.yaml in project root)
+3. Environment variables ($NK2DL_*)
+4. User configuration (~/.nk2dl/config.yaml)
+
+### Configuring for single user (.nuke method)
+
+- Create a file with the name `.nk2dl.yaml` in the `.nuke` directory
+- Add configuration in yaml format.
+
+### Configuring for multiple users.
+
+- Create a `your_config_name.yaml` in a location avaialble to all users.
+- Add configuration to the file in yaml format.
+- Create an environment variable `NL2DL_CONFIG` and point it to the location of `your_config_name.yaml`
+
+Example configuration:
+
+```yaml
+deadline:
+  use_web_service: True
+  host: deadline-web-server
+  port: 8081
+  ssl: False
+  commandline_on_fail: True
+
+logging:
+  level: DEBUG
+  file: null
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+submission:
+  pool: nuke
+  group: none
+  priority: 50
+  chunk_size: 10
+  department: comp
+  batch_name_template: "{scriptname}"
+  job_name_template: "{batch} / {write} / {file)
+  extra_info_templates:
+    - "Write: {write}"
+    - "Order: {render_order}"
+    - "Frames: {range}"
+    - "Output: {file}"
+    # - "GSVs: {gsvs}"
+```
+
+## Usage example
+
+- The `examples` folder contains 2 simple nukescripts and a python script.
+  - a nukescript and for Nuke without GSVs.
+  - a nukescript for Nuke 15.2+ with a GSV multishot example.
+  - a python script that can be run in the Nuke Python interpeter (or a Python interpereter that can call upon the Nuke module) or the contents of the python script can be pasted into and executed in the Nuke script editor.
+- The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing will break.
+- `nk2dl` has a feature that will create a backup copy of submitted scripts. `nk2dl` will resolve relative paths before submission.
+- To set up script copying, use one of the following config options
+
+### Script copy config - one copy
+```yaml
+submission:
+  # The following are the defaults if no config is provided
+  script_copy_path: ./.farm/  # relative to script or output directory
+  script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
+  script_copy_name: $BASENAME.$EXT # Avalable tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
+```
+### Script copy config - many copies
+
+```yaml
+submission:
+  script_copy0_path: ./.farm/
+  script_copy0_relative_to: OUTPUT
+  script_copy0_name: $BASENAME.$EXT
+  
+  script_copy1_path: ./archive/
+  script_copy1_relative_to: SCRIPT
+  script_copy1_name: $BASENAME_YYYY-MM-DD_hh-mm-ss.$EXT
+```
+
+- Run the example
+
+```bash
+cd /path/to/nk2dl-0.1.x-alpha/
+./.venv/Scripts/Activate-nk2dl.ps1
+python ./examples/test_nk2dl.py
+```
 
 ## Quick Start
 
@@ -94,40 +226,6 @@ nk2dl submit /path/to/script.nk
 
 # With options
 nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x --render-threads 16 --use-gpu
-```
-
-## Configuration
-
-nk2dl uses a YAML configuration system with multiple levels:
-
-1. Default configuration
-2. Project configuration (from $NK2DL_CONFIG or .nk2dl.yaml in project root)
-3. Environment variables ($NK2DL_*)
-4. User configuration (~/.nk2dl/config.yaml)
-
-Example configuration:
-
-```yaml
-deadline:
-  use_web_service: True
-  host: deadline-web-server
-  port: 8081
-  ssl: False
-  commandline_on_fail: True
-
-logging:
-  level: DEBUG
-  file: null
-  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-
-submission:
-  pool: nuke
-  group: none
-  priority: 50
-  chunk_size: 10
-  department: comp
-  batch_name_template: "{scriptname}"
-  job_name_template: "{batch} / {write} / {file}"
 ```
 
 ## Advanced Options
