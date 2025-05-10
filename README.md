@@ -82,7 +82,7 @@ pip install -e .
 
 ### Install for Nuke GUI, many users (init.py method)
 
-- Copy the `nk2dl` folder to a folder available to all users.
+- Copy the `nk2dl` folder to a location available to all users.
 - If nessessary, add the following line to any of the init.py files available to nuke during the launch of your pipleine:
 ```python
 nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
