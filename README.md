@@ -163,7 +163,7 @@ submission:
 - `nk2dl` has a feature that will create a backup copy of submitted scripts. `nk2dl` will resolve relative paths before submission.
 - To set up script copying, use one of the following config options
 
-### Script copy config - one copy
+### Script copy config example - one copy of submitted nukescript
 ```yaml
 submission:
   # The following are the defaults if no config is provided
@@ -171,7 +171,7 @@ submission:
   script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
   script_copy_name: $BASENAME.$EXT # Avalable tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
 ```
-### Script copy config - many copies
+### Script copy config example - many copies of submitted nukescript
 
 ```yaml
 submission:
