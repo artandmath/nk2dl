@@ -8,6 +8,8 @@
 
 ## 1. Install from source or release
 
+`nk2dl` can be installed from [source](#install-from-source) or from a [point release](#install-from-release)
+
 ### Install from source 
 In a Windows powershell:
 ```bash
@@ -31,7 +33,7 @@ python ./scripts/setup_environment
 pip install -e .
 ```
 
-## Install from release
+### Install from release
 - Alternatively `nk2dl` can be installed from a release.
 - Releases can be found in the sidebar on the github repositiory page.
 - Download the source code from a release. 
@@ -58,6 +60,9 @@ python ./scripts/setup_environment
 pip install -e .
 ```
 ## 2. Install for a single user or multiple users in Nuke
+
+If `nk2dl` will be used in Nuke then Nuke will need to find `nk2dl` during the application launch process.
+
 ### Install for Nuke GUI, single user (.nuke method)
 
 - Copy the folder `nk2dl` into the user's `.nuke` folder. If installed from source, the `nk2dl` folder is the one inside the parent `nk2dl` folder that contains this README.md and LICENSE.
