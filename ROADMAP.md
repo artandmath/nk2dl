@@ -9,7 +9,7 @@ NK2DL is currently in active development with core CLI functionality established
 ## Roadmap
 
 - [ ] Feature parity with Thinkbox submitter for the NK2DL Python module
-- [ ] Support for submitting environment variables with jobs
+- [X] Support for submitting environment variables with jobs
 - [ ] Implement pre and post submit hooks
 - [ ] Update tests for core functionality
 - [ ] Production testing of Python module
@@ -28,6 +28,7 @@ NK2DL is currently in active development with core CLI functionality established
 - [ ] De-couple CLI code
 - [ ] Create replacement for functions used of the Nuke python module to make it cheaper/faster/simpler to use nk2dl anywhere in the pipeline.
 - [ ] Standalone GUI
+- [ ] Deadline monitor lite - Nuke GUI panel indicating progress for the jobs of the currently open script.
 - [ ] Integration wih other pipeline tools
 - [ ] Refactor with future AI coding tools
 
