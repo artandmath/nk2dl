@@ -19,7 +19,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 
 ## Getting started
 
-- Follow the steps in the [installation documetation](./docs/installation.md) to get `nk2dl` up and running.
+- Follow the steps in the [Installation, Configuration, and Usage Examples](./docs/installation.md) documentaton to get `nk2dl` up and running.
 
 ## Caveats
 
