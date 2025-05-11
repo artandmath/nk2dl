@@ -6,7 +6,9 @@
 - **Deadline**: Thinkbox Deadline 10+ with Repository access
 - **Python**: Python 3.7+ 
 
-## Install from source 
+## 1. Install from source or release
+
+### Install from source 
 In a Windows powershell:
 ```bash
 # Install from source
@@ -55,13 +57,13 @@ python ./scripts/setup_environment
 # Install the commandline within the virtual environment (optional)
 pip install -e .
 ```
-
-## Install for Nuke GUI, single user (.nuke method)
+## 2. Install for a single user or multiple users in Nuke
+### Install for Nuke GUI, single user (.nuke method)
 
 - Copy the folder `nk2dl` into the user's `.nuke` folder. If installed from source, the `nk2dl` folder is the one inside the parent `nk2dl` folder that contains this README.md and LICENSE.
 - Copy the folder `yaml` from `.venv/Lib/site-packages` into the user's `.nuke` folder
 
-## Install for Nuke GUI, many users (init.py method)
+### Install for Nuke GUI, multiple users (init.py method)
 
 - Copy the `nk2dl` folder to a location available to all users.
 - If necessary, add the following line to any of the init.py files available to nuke during the launch of your pipleine:
@@ -70,13 +72,13 @@ nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
 ```
 - The python module `yaml` must be available in nk2dl. If it is not installed in your pipeline, copy it from `.venv/Lib/site-packages` into the same parent folder that contains `nk2dl`
 
-## Install the Deadline Plugin for Nuke 15.2+ (optional)
+## 3. Install the Deadline Plugin for Nuke 15.2+ (optional)
 
 - To use Graph Scope Variables with Nuke 15.2+, a modified version of the deadline plugin is required.
 - Make a backup of `/path/to/deadline/repo/plugins/nuke`.
 - Replace the contents of `/path/to/deadline/repo/plugins/nuke` with the contents of `/path/to/nk2dl-repo/deadline/plugins/nuke`.
 
-## Install Deadline Web Service (optional)
+## 4. Install Deadline Web Service (optional)
 
 ![I feel the need, the need for speed!](./img/nk2dl_vs_default.gif)
 
