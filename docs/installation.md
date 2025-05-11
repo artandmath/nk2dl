@@ -1,18 +1,7 @@
 # Installation
 
-## Table of Contents
-- [System Requirements](#system-requirements)
-- [Install from source](#install-from-source)
-- [Install from release](#install-from-release)
-- [Install for Nuke GUI, single user](#install-for-nuke-gui-single-user-nuke-method)
-- [Install for Nuke GUI, many users](#install-for-nuke-gui-many-users-initpy-method)
-- [Install the Deadline Plugin for Nuke 15.2+](#install-the-deadline-plugin-for-nuke-152-optional)
-- [Install Deadline Web Service](#install-deadline-web-service-optional)
-- [Configuration](#configuration)
-- [Usage example](#usage-example)
-
 ## System Requirements
-- **Operating System**: Windows 11 (currently tested only on Windows; Linux and MacOS support planned)
+- **Operating System**: Windows 10 (currently tested only on Windows; Linux and MacOS support planned)
 - **Nuke**: Compatible with Nuke 13+ (required for Graph Scope Variables: Nuke 15.2+)
 - **Deadline**: Thinkbox Deadline 10+ with Repository access
 - **Python**: Python 3.7+ 
