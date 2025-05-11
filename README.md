@@ -11,7 +11,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 ## Documentation
 
 - [Installation, Configuration, and Usage Examples](./docs/installation.md)
-- [Quickstart Ussage Guide](./docs/quickstart.md)
+- [Quickstart Usage Guide](./docs/quickstart.md)
 - [Configuration Details](./docs/config.md)
 - [Deadline Connection](./docs/deadline_connection.md)
 - [Nuke Submission](./docs/nuke_submission.md)
