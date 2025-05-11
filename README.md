@@ -279,7 +279,7 @@ Job names, batch names, comments and extra info fields support tokens such as:
 - `{batch}` - Batch name (for job names only)
 
 ```python
-# With additional naming options
+# Custom job and batch naming
 submit_nuke_script(
     "path/to/script.nk",
     batch_name="{script_stem}",
