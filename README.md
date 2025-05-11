@@ -23,7 +23,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 
 ## Caveats
 
-- The project is in alpha. We have been using it in a limited capacity in a production environment as a replacement for the default submitter. We fall back to the default submitter when missing a feature or something is broken.
+- The project is in alpha. We have been using it in a limited capacity in a production environment as a replacement to the Thinkbox submitter. We fall back to the Thinkbox submitter when missing a feature or something is broken.
 - Graph Scope Variable functionality hasn't been tested in production.
 - Interfaces to `nk2dl python` module and command line are subject to change.
 - The `nk2dl cli` command line will often be out of step with the python module during development. The command line implementation may outright not work when out of step.
