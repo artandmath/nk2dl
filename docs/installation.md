@@ -8,7 +8,7 @@
 
 ## 1. Install from source or release
 
-`nk2dl` can be installed from [source](#install-from-source) or from a [point release](#install-from-release)
+`nk2dl` can be installed from [source](#install-from-source) or from a [point release](#install-from-release).
 
 ### Install from source 
 In a Windows powershell:
