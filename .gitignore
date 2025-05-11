@@ -57,12 +57,11 @@ logs/
 htmlcov/
 .pytest_cache/
 .mypy_cache/
-.nk2dl.yaml
 *.pfx
 .ignore/
 thinkbox/
 .farm
-nk2dl/config.yaml
+/config.yaml
 
 # OS specific
 .DS_Store

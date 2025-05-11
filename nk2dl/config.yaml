@@ -1,0 +1,42 @@
+deadline:
+  # Web service configuration
+  use_web_service: false  # Whether to use web service or command-line
+  host: localhost
+  port: 8081
+  ssl: false
+  ssl_cert: null  # Path to SSL certificate
+  timeout: 5
+  commandline_on_fail: true  # Whether to use command-line if web service fails
+  
+  # Command-line configuration
+  command_path: null  # Will be auto-detected from DEADLINE_PATH
+  repository_path: null  # Will be auto-detected using deadlinecommand
+
+logging:
+  level: INFO
+  file: null
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+submission:
+  pool: none
+  group: none
+  priority: 50
+  chunk_size: 1
+  department: ""
+  job_name_template: "{batch} / {write}"
+  batch_name_template: "{scriptname}"
+  comment_template: ""
+  
+  # Script copying and submission
+  copy_script: false
+  submit_copied_script: false
+  submit_script_as_auxiliary_file: false
+  script_copy_path: ./.farm/
+  script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
+  script_copy_name: '{basename}.{ext}'
+  
+  # Environment variables
+  use_current_environment: false
+  include_environment_keys: []
+  environment: {}
+  omit_environment_keys: []
