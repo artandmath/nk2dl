@@ -74,7 +74,7 @@ class Config:
             'submit_script_as_auxiliary_file': False,
             'script_copy_path': './.farm/',
             'script_copy_relative_to': 'OUTPUT',  # SCRIPT or OUTPUT
-            'script_copy_name': '$BASENAME.$EXT',
+            'script_copy_name': '{basename}.{ext}',
             
             # Environment variables
             'use_current_environment': False,

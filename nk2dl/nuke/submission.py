@@ -1442,6 +1442,11 @@ class NukeSubmission:
         - NK2DL_SCRIPT__COPY0__RELATIVE__TO, NK2DL_SCRIPT__COPY1__RELATIVE__TO, etc.
         - NK2DL_SCRIPT__COPY0__NAME, NK2DL_SCRIPT__COPY1__NAME, etc.
         
+        Available tokens for the name template:
+        - {basename}: Filename without extension
+        - {ext}: File extension without the dot
+        - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+        
         Returns:
             List of paths where the script was copied to
         """
@@ -1500,7 +1505,7 @@ class NukeSubmission:
             copy_configs = [{
                 'path': './.farm/',
                 'relative_to': 'SCRIPT',
-                'name': '$BASENAME.$EXT',
+                'name': '{basename}.{ext}',
             }]
         
         # Process each copy configuration
@@ -1509,7 +1514,7 @@ class NukeSubmission:
                 # Get copy path
                 copy_path = copy_config['path']
                 relative_to = (copy_config.get('relative_to') or 'SCRIPT').upper()
-                name_template = copy_config.get('name') or '$BASENAME.$EXT'
+                name_template = copy_config.get('name') or '{basename}.{ext}'
                 
                 # Determine base directory based on relative_to setting
                 if relative_to == 'OUTPUT' and self.output_path:
@@ -1535,15 +1540,15 @@ class NukeSubmission:
                 # Replace date tokens
                 now = datetime.datetime.now()
                 name = name_template
-                name = name.replace('$BASENAME', self.script_path.stem)
-                name = name.replace('$EXT', self.script_path.suffix.lstrip('.'))
-                name = name.replace('YYYY', now.strftime('%Y'))
-                name = name.replace('YY', now.strftime('%y'))
-                name = name.replace('MM', now.strftime('%m'))
-                name = name.replace('DD', now.strftime('%d'))
-                name = name.replace('hh', now.strftime('%H'))
-                name = name.replace('mm', now.strftime('%M'))
-                name = name.replace('ss', now.strftime('%S'))
+                name = name.replace('{basename}', self.script_path.stem)
+                name = name.replace('{ext}', self.script_path.suffix.lstrip('.'))
+                name = name.replace('{YYYY}', now.strftime('%Y'))
+                name = name.replace('{YY}', now.strftime('%y'))
+                name = name.replace('{MM}', now.strftime('%m'))
+                name = name.replace('{DD}', now.strftime('%d'))
+                name = name.replace('{hh}', now.strftime('%H'))
+                name = name.replace('{mm}', now.strftime('%M'))
+                name = name.replace('{ss}', now.strftime('%S'))
                 
                 # Construct full target path
                 target_path = target_dir / name

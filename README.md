@@ -173,7 +173,7 @@ submission:
   # The following are the defaults if no config is provided
   script_copy_path: ./.farm/  # relative to script or output directory
   script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
-  script_copy_name: $BASENAME.$EXT # Avalable tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
+  script_copy_name: {basename}.{ext} # Available tokens: {basename}, {ext}, {YYYY}, {MM}, {DD}, {hh}, etc.
 ```
 #### Script copy config example - many copies of submitted nukescript
 
@@ -181,11 +181,11 @@ submission:
 submission:
   script_copy0_path: ./.farm/
   script_copy0_relative_to: OUTPUT
-  script_copy0_name: $BASENAME.$EXT
+  script_copy0_name: {basename}.{ext}
   
   script_copy1_path: ./archive/
   script_copy1_relative_to: SCRIPT
-  script_copy1_name: $BASENAME_YYYY-MM-DD_hh-mm-ss.$EXT
+  script_copy1_name: {basename}_{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}
 
   #script_copy2_path: etc
 ```

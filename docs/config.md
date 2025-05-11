@@ -133,16 +133,16 @@ submission:
   # Script copy path (relative to script or output directory)
   script_copy_path: ./.farm/
   script_copy_relative_to: OUTPUT  # Can be SCRIPT or OUTPUT
-  script_copy_name: $BASENAME.$EXT  # Can use tokens: $BASENAME, $EXT, YYYY, MM, DD, etc.
+  script_copy_name: {basename}.{ext}  # Can use tokens: {basename}, {ext}, {YYYY}, {MM}, {DD}, {hh}, etc.
   
   # Multiple copy locations (optional)
   script_copy0_path: ./.farm/
   script_copy0_relative_to: OUTPUT
-  script_copy0_name: $BASENAME.$EXT
+  script_copy0_name: {basename}.{ext}
   
   script_copy1_path: ./archive/
   script_copy1_relative_to: SCRIPT
-  script_copy1_name: $BASENAME.YYYY-MM-DD_hh-mm-ss.$EXT
+  script_copy1_name: {basename}.{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}
   
   # Environment variables settings
   use_current_environment: false        # Whether to pass current environment to Deadline jobs
