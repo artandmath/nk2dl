@@ -1,17 +1,6 @@
 # Quickstart Usage Guide 
 
-This guide provides a quick overview of how to use nk2dl to submit Nuke scripts to Deadline. For detailed installation and configuration, refer to the [Installation Guide](./installation.md).
-
-## Table of Contents
-- [Python API Usage](#python)
-- [Command Line Interface](#command-line-interface)
-- [Advanced Options](#advanced-options)
-  - [Environment Variables](#environment-variables)
-  - [Job and Batch Naming](#job-and-batch-naming)
-  - [Write Node Control](#write-node-control)
-  - [Frame Range Specification](#frame-range-specification)
-  - [Graph Scope Variables](#graph-scope-variables)
-- [Troubleshooting Tips](#troubleshooting-tips)
+This guide provides a quick overview of how to use nk2dl to submit Nuke scripts to Deadline. For installation and configuration, refer to the [Installation Guide](./installation.md).
 
 ## Python
 
@@ -174,29 +163,3 @@ In your Nuke script, you might have expressions like:
 ```
 [value this.shotcode]
 ```
-
-When using GSVs, Deadline will render multiple versions of the script, each with a different value for `shotcode`.
-
-## Troubleshooting Tips
-
-### Common Issues
-
-1. **No write nodes found**: Ensure your Nuke script contains at least one write node that's not disabled.
-
-2. **Path remapping issues**: If using relative paths in Nuke scripts with Deadline path remapping, use the script copy feature to create versions with resolved paths.
-
-3. **Permission denied**: Ensure the Deadline worker has access to all necessary file paths, including input files and output directories.
-
-4. **Missing environment variables**: Check that required environment variables are being passed to Deadline using the environment options.
-
-5. **GSV errors**: For Graph Scope Variables, ensure Nuke 15.2+ is used with the patched Deadline plugin.
-
-### Debugging Strategies
-
-1. **Check job logs**: In Deadline Monitor, view the job's detailed task logs for error messages.
-
-2. **Test locally**: Run the same render locally in Nuke to see if the issue is with the script or with Deadline.
-
-3. **Script permission issues**: Make sure your submission environment has the necessary permissions to read the script and write to output directories.
-
-4. **Deadline connection issues**: Use the [Deadline Connection](./deadline_connection.md) guide to verify connectivity to Deadline. 
