@@ -190,36 +190,6 @@ submission:
   #script_copy2_path: etc
 ```
 
-### Environment Variables
-
-When submitting to Deadline, you can control which environment variables are passed to the render jobs using these configuration options:
-
-```yaml
-submission:
-  # Pass all environment variables from the submitting environment to Deadline jobs
-  use_current_environment: false
-  
-  # Include only specific environment variables from current environment
-  include_environment_keys:
-    - "NUKE_PATH"
-    - "PYTHONPATH"
-    - "LICENSE_SERVER"
-  
-  # Specify exact environment variables to pass to Deadline jobs
-  environment:
-    NUKE_PATH: "/path/to/nuke/tools"
-    PYTHONPATH: "/path/to/python/modules"
-    LICENSE_SERVER: "license-server:port"
-  
-  # Exclude specific environment variables (useful with use_current_environment: true)
-  omit_environment_keys:
-    - "TEMP"
-    - "TMP"
-    - "USERNAME"
-```
-
-These environment variables are sent to Deadline in the jobinfo file using Deadline's `EnvironmentKeyValue` format and will be available to the render process on the worker.
-
 - Run the `test_nk2dl.py` python script to submit the example nukescripts to Deadline
 
 ```bash
@@ -267,6 +237,36 @@ nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x -
 ```
 
 ## Advanced Options
+
+### Environment Variables
+
+When submitting to Deadline, you can control which environment variables are passed to the render jobs using these configuration options:
+
+```yaml
+submission:
+  # Pass all environment variables from the submitting environment to Deadline jobs
+  use_current_environment: false
+  
+  # Include only specific environment variables from current environment
+  include_environment_keys:
+    - "NUKE_PATH"
+    - "PYTHONPATH"
+    - "LICENSE_SERVER"
+  
+  # Specify exact environment variables to pass to Deadline jobs
+  environment:
+    NUKE_PATH: "/path/to/nuke/tools"
+    PYTHONPATH: "/path/to/python/modules"
+    LICENSE_SERVER: "license-server:port"
+  
+  # Exclude specific environment variables (useful with use_current_environment: true)
+  omit_environment_keys:
+    - "TEMP"
+    - "TMP"
+    - "USERNAME"
+```
+
+These environment variables are sent to Deadline in the jobinfo file using Deadline's `EnvironmentKeyValue` format and will be available to the render process on the worker.
 
 ### Job and Batch Naming
 
