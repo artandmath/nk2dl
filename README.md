@@ -278,6 +278,17 @@ Job names, batch names, comments and extra info fields support tokens such as:
 - `{range}` - Frame range
 - `{batch}` - Batch name (for job names only)
 
+```python
+# With additional naming options
+submit_nuke_script(
+    "path/to/script.nk",
+    batch_name="{script_stem}",
+    job_name="{batch} | {write}",
+    comment="Output={file}",
+    extra_info=["Write={write}", "Output={file}"]
+)
+```
+
 ### Write Node Control
 
 ```python
