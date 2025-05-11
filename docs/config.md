@@ -10,7 +10,7 @@ The `nk2dl` package uses a multi-level configuration system that allows for flex
 Configuration values are loaded and overridden in the following order (later sources override earlier ones):
 
 1. **Default configuration** - Baseline values built into the package
-2. **Project configuration** - `.nk2dl.yaml` in the project directory
+2. **Project configuration** - `config.yaml` in the nk2dl module directory
 3. **Environment variables** - `NK2DL_*` variables
 4. **User configuration** - `~/.nk2dl/config.yaml` in the user's home directory
 
@@ -206,15 +206,19 @@ By replacing underscores in configuration keys with double underscores in enviro
 
 ## Project Configuration
 
-Create a `.nk2dl.yaml` file in your project directory to set project-specific defaults:
+The master configuration file is located at `nk2dl/config.yaml` in the module directory. This is the default configuration used for all projects.
 
-```yaml
-submission:
-  pool: nuke
-  group: workstations
-  priority: 50
-  department: compositing
-  batch_name_template: "{scriptname}"
+You can override this configuration by setting the `NK2DL_CONFIG` environment variable to point to a custom configuration file:
+
+```bash
+# Windows
+set NK2DL_CONFIG=C:\path\to\your\custom_config.yaml
+
+# PowerShell
+$env:NK2DL_CONFIG = "C:\path\to\your\custom_config.yaml"
+
+# Linux/macOS
+export NK2DL_CONFIG=/path/to/your/custom_config.yaml
 ```
 
 ## User Configuration

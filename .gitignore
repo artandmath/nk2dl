@@ -48,8 +48,6 @@ venv.bak/
 examples/renderOutput/*
 examples/render_output/*
 
-
-
 # Project specific
 plan/
 scratch/
@@ -64,6 +62,7 @@ htmlcov/
 .ignore/
 thinkbox/
 .farm
+nk2dl/config.yaml
 
 # OS specific
 .DS_Store

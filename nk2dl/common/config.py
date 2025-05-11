@@ -9,6 +9,7 @@ import yaml
 import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
+import importlib.resources
 
 # Get module-level logger
 logger = logging.getLogger(__name__)
@@ -23,14 +24,24 @@ class Config:
     Handles loading and accessing configuration from YAML files and environment variables.
     Configuration is loaded in the following order (later sources override earlier ones):
     1. Default configuration
-    2. Project configuration file (from NK2DL_CONFIG or .nk2dl.yaml in project root)
+    2. Project configuration file (from NK2DL_CONFIG or config.yaml in nk2dl module root)
     3. Environment variables (NK2DL_*)
     4. User configuration file (~/.nk2dl/config.yaml)
     """
     
     # Default paths for configuration files
     USER_CONFIG_PATH = Path.home() / '.nk2dl' / 'config.yaml'
-    GLOBAL_CONFIG_PATH = '.nk2dl.yaml'
+    
+    # Get the module directory path for finding the config
+    try:
+        import nk2dl
+        MODULE_DIR = Path(importlib.resources.files(nk2dl))
+        GLOBAL_CONFIG_PATH = MODULE_DIR / 'config.yaml'
+    except (ImportError, TypeError):
+        # Fall back to relative path if module lookup fails
+        MODULE_DIR = Path(__file__).parent.parent
+        GLOBAL_CONFIG_PATH = MODULE_DIR / 'config.yaml'
+    
     # PROJECT_CONFIG_PATH is fetched from the env var NK2DL_CONFIG if it exists,
     # otherwise defaults to GLOBAL_CONFIG_PATH
     PROJECT_CONFIG_PATH = GLOBAL_CONFIG_PATH
@@ -105,7 +116,7 @@ class Config:
         The path is determined in the following order:
         1. Explicitly provided project_config parameter
         2. NK2DL_CONFIG environment variable
-        3. Default project config path (.nk2dl.yaml)
+        3. Default project config path (config.yaml in the nk2dl module directory)
         
         Args:
             project_config: Optional explicit path to project config
@@ -124,7 +135,7 @@ class Config:
             return Path(env_config)
         
         logger.debug(f"Using default project config path: {self.PROJECT_CONFIG_PATH}")
-        return Path(self.PROJECT_CONFIG_PATH)
+        return self.PROJECT_CONFIG_PATH
     
     def load_config(self) -> None:
         """Load configuration from all sources."""

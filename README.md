@@ -110,20 +110,20 @@ After setting up an instance of Deadline Web Service, [configure](./docs/config.
 nk2dl uses a YAML configuration system with multiple levels:
 
 1. Default configuration
-2. Project configuration (from $NK2DL_CONFIG or .nk2dl.yaml in project root)
+2. Project configuration (from $NK2DL_CONFIG or config.yaml in nk2dl module)
 3. Environment variables ($NK2DL_*)
 4. User configuration (~/.nk2dl/config.yaml)
 
 ### Configuring for single user (.nuke method)
 
-- Create a file with the name `.nk2dl.yaml` in the `.nuke` directory
-- Add configuration to the file in yaml syntax.
+- Edit the `config.yaml` file in the `nk2dl` module directory
+- OR create a configuration file and set the `NK2DL_CONFIG` environment variable to point to it
 
-### Configuring for multiple users.
+### Configuring for multiple users
 
-- Create a `your_config_name.yaml` in a location avaialble to all users.
-- Add configuration to the file in yaml syntax.
-- Create an environment variable `NL2DL_CONFIG` and point it to the location of `your_config_name.yaml`
+- Create a `your_config_name.yaml` in a location available to all users
+- Add configuration to the file in yaml syntax
+- Create an environment variable `NK2DL_CONFIG` and point it to the location of `your_config_name.yaml`
 
 Example configuration:
 
