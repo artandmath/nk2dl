@@ -242,7 +242,7 @@ def install_dependencies(venv_path):
         pip_path = os.path.join(venv_path, "bin", "pip")
     
     try:
-        subprocess.check_call([pip_path, "install", "-r", str(requirements_file)])
+        subprocess.check_call([pip_path, "install", "-r", str(requirements_file), "--ignore-installed"])
         print("Dependencies installed successfully.")
     except subprocess.CalledProcessError as e:
         print(f"Error installing dependencies: {e}")

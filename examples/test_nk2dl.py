@@ -1,6 +1,13 @@
 import os
 from nk2dl.nuke import submit_nuke_script
 
+""" usage
+```bash
+cd /path/to/nk2dl-0.1.x-alpha/
+./.venv/Scripts/Activate-nk2dl.ps1
+python ./examples/test_nk2dl.py
+``` 
+"""
 # Assumes Nuke 15.1 and 15.2 are the versions installed and we are running in Nuke 15.2.
 
 # Set the root directoty to the correct path if running in the Nuke script editor.

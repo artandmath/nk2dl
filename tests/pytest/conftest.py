@@ -5,6 +5,7 @@ import pytest
 import logging
 from pathlib import Path
 
+# Import directly from your project
 from nk2dl.common.logging import setup_logging
 
 @pytest.fixture(autouse=True)

@@ -1805,6 +1805,8 @@ class NukeSubmission:
                         logger.info(f"Job submitted with write nodes as tasks. Job ID: {job_id}")
                     except Exception as e:
                         logger.error(f"Failed to submit job with write nodes as tasks: {e}")
+                        # Re-raise the exception to propagate it to the caller
+                        raise SubmissionError(f"Failed to submit job: {e}")
                 
                 # If using separate jobs or dependencies
                 elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
@@ -1939,6 +1941,8 @@ class NukeSubmission:
                         logger.info(f"Job submitted successfully. Job ID: {job_id}")
                     except Exception as e:
                         logger.error(f"Failed to submit regular job: {e}")
+                        # Re-raise the exception to propagate it to the caller
+                        raise SubmissionError(f"Failed to submit job: {e}")
             
             # Close the script if we opened it
             if self._script_will_close:
