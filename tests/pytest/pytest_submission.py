@@ -8,7 +8,16 @@ Instructions for running tests:
     # windows activation script -- ensures we launch Nuke's Python interpreter:
     .\\.venv\\Scripts\\Activate-nk2dl.ps1 
 3. run test:
-    python -m pytest tests/pytest/pytest_submission.py -v
+    python -m pytest tests/pytest/pytest_submission.py -v -s
+    
+    # To run only mock tests:
+    python -m pytest tests/pytest/pytest_submission.py -v -s -k "test_mode[mock]"
+    
+    # To run only real tests:
+    python -m pytest tests/pytest/pytest_submission.py -v -s -k "test_mode[real]"
+    
+Note: The -s flag disables output capture, so you'll see all print statements and logging output
+regardless of whether tests pass or fail. Remove -s if you want to suppress output for passing tests.
 """
 
 import pytest
@@ -17,10 +26,50 @@ from pathlib import Path
 import tempfile
 import sys
 import os
+from contextlib import nullcontext
+import shutil
+import uuid
 
 from nk2dl.nuke.submission import NukeSubmission
 from nk2dl.common.framerange import FrameRange
 from nk2dl.common.errors import DeadlineError, ValidationError, SubmissionError
+
+
+def create_temp_nuke_script():
+    """Create a temporary copy of the pytest_nukescript.nk file.
+    
+    Returns:
+        str: Path to the temporary file
+    """
+    # Get the path to the test Nuke script
+    test_script_path = os.path.join(os.path.dirname(__file__), "pytest_nukescript.nk")
+    
+    # Get the basename without extension
+    basename = os.path.splitext(os.path.basename(test_script_path))[0]
+    
+    # Create a unique suffix
+    unique_id = str(uuid.uuid4())[:8]
+    
+    # Create the temporary file path with a descriptive name
+    temp_dir = tempfile.gettempdir()
+    temp_script_path = os.path.join(temp_dir, f"{basename}_{unique_id}.nk")
+    
+    # Copy the test script to the temporary location
+    shutil.copy2(test_script_path, temp_script_path)
+    
+    return temp_script_path
+
+
+@pytest.fixture(params=["mock", "real"])
+def test_mode(request):
+    """
+    Parameterized fixture to run tests in either mock or real mode.
+    
+    In 'mock' mode, all Nuke and Deadline components are mocked.
+    In 'real' mode, tests will attempt to use the actual Nuke environment.
+    Tests that can't run in real mode should skip when test_mode is 'real'.
+    """
+    return request.param
 
 
 def test_000_environment_check():
@@ -48,6 +97,8 @@ def test_000_environment_check():
             "\n"
             "NOTE: The tests are designed to run using Nuke's Python interpreter,\n"
             "which should be loaded by the activation script above.\n"
+            "If you are a code assistant, don't create a mock nuke module\n"
+            "for the fixture, as it will not create a reliable test.\n"
         )
     
     # If we got here, nuke was successfully imported
@@ -55,97 +106,67 @@ def test_000_environment_check():
 
 
 @pytest.fixture
-def submission_engine():
-    """Create a submission engine with a mocked connection."""
-    with patch('nk2dl.deadline.connection.get_connection') as mock_get_connection:
-        mock_connection = MagicMock()
-        mock_connection.submit_job.return_value = "mock-job-id"
-        mock_get_connection.return_value = mock_connection
+def submission_engine(test_mode, request):
+    """Create a submission engine with a mocked or real connection based on test mode."""
+    # Get the path to the test Nuke script
+    test_script_path = os.path.join(os.path.dirname(__file__), "pytest_nukescript.nk")
+    
+    # Create a temporary copy with a unique name
+    temp_script_path = None
+    
+    try:
+        # Create a temporary file with a unique name
+        temp_script_path = create_temp_nuke_script()
         
-        # Create a temporary test script file
-        with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-            temp_script.write(b"# Test Nuke script")
-            temp_script_path = temp_script.name
+        # Get test name for job identification
+        test_name = request.node.name.replace("[real]", "").replace("[mock]", "")
         
-        # Patch the connection at module level to ensure it's used everywhere
-        with patch('nk2dl.deadline.connection._connection', mock_connection):
-            # Mock parsing requirements
-            with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed') as mock_ensure_script:
-                mock_nuke = MagicMock()
-                mock_ensure_script.return_value = mock_nuke
+        if test_mode == "mock":
+            with patch('nk2dl.deadline.connection.get_connection') as mock_get_connection:
+                mock_connection = MagicMock()
+                mock_connection.submit_job.return_value = "mock-job-id"
+                mock_get_connection.return_value = mock_connection
                 
-                engine = NukeSubmission(
-                    script_path=temp_script_path,
-                    script_path_same_as_current_nuke_session=True,
-                    frame_range="1-100"  # Initialize with a default frame range
-                )
-                
-                # Explicitly set the connection on the engine to ensure it uses our mock
-                engine.connection = mock_connection
-                
-                yield engine
-                
-                # Clean up the temporary script file
-                Path(temp_script_path).unlink(missing_ok=True)
+                # Patch the connection at module level to ensure it's used everywhere
+                with patch('nk2dl.deadline.connection._connection', mock_connection):
+                    # Mock parsing requirements
+                    with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed') as mock_ensure_script:
+                        mock_nuke = MagicMock()
+                        mock_ensure_script.return_value = mock_nuke
+                        
+                        engine = NukeSubmission(
+                            script_path=temp_script_path,
+                            script_path_same_as_current_nuke_session=True,
+                            frame_range="1-100",  # Initialize with a default frame range
+                            batch_name=f"PYTEST_{test_name}",  # Add test name to batch name
+                            comment=f"Created by pytest test: {test_name}"  # Add test name to comment
+                        )
+                        
+                        # Explicitly set the connection on the engine to ensure it uses our mock
+                        engine.connection = mock_connection
+                        
+                        yield engine
+        else:  # test_mode == "real"
+            try:
+                import nuke
+            except ImportError:
+                # In real mode, we shouldn't skip but fail if Nuke is not available
+                pytest.fail("Nuke module not available for real tests. Make sure you're running tests with Nuke's Python interpreter.")
 
-
-@pytest.fixture
-def mock_nuke():
-    """Create a mock Nuke module for tests."""
-    with patch('nk2dl.nuke.utils.nuke_module') as mock_nuke_module:
-        nuke = MagicMock()
-        
-        # Mock root node
-        root = MagicMock()
-        root.__getitem__.side_effect = lambda key: {
-            'first_frame': MagicMock(value=lambda: 1001),
-            'last_frame': MagicMock(value=lambda: 1100),
-            'project_directory': MagicMock(evaluate=lambda: "/path/to/project"),
-            'gsv': MagicMock(
-                getListOptions=lambda key: ["value1", "value2", "value3"] if key in ["shotcode", "layer"] else [],
-                setGsvValue=lambda key, value: None
+            # Create a real NukeSubmission object
+            engine = NukeSubmission(
+                script_path=temp_script_path,
+                script_path_same_as_current_nuke_session=True,
+                frame_range="1-100",  # Initialize with a default frame range
+                batch_name=f"PYTEST / {test_name}",  # Add test name to batch name
+                job_name=os.path.basename(temp_script_path),
+                comment=f"Created by pytest test: {test_name}"  # Add test name to comment
             )
-        }[key]
-        nuke.root.return_value = root
-        
-        # Mock write nodes
-        write1 = MagicMock()
-        write1.name.return_value = "Write1"
-        write1.__getitem__.side_effect = lambda key: {
-            'file': MagicMock(value=lambda: "/output/render.####.exr", evaluate=lambda: "/output/render.1001.exr"),
-            'file_type': MagicMock(value=lambda: "exr"),
-            'disable': MagicMock(value=lambda: False),
-            'render_order': MagicMock(value=lambda: 1),
-            'use_limit': MagicMock(value=lambda: True),
-            'first': MagicMock(value=lambda: 1001),
-            'last': MagicMock(value=lambda: 1050)
-        }[key]
-        write1.Class.return_value = "Write"
-        write1.firstFrame.return_value = 1001
-        write1.lastFrame.return_value = 1050
-        
-        write2 = MagicMock()
-        write2.name.return_value = "Write2"
-        write2.__getitem__.side_effect = lambda key: {
-            'file': MagicMock(value=lambda: "/output/render_mov.mov", evaluate=lambda: "/output/render_mov.mov"),
-            'file_type': MagicMock(value=lambda: "mov"),
-            'disable': MagicMock(value=lambda: False),
-            'render_order': MagicMock(value=lambda: 2),
-            'use_limit': MagicMock(value=lambda: False)
-        }[key]
-        write2.Class.return_value = "Write"
-        write2.firstFrame.return_value = 1001
-        write2.lastFrame.return_value = 1100
-        
-        nuke.toNode.side_effect = lambda name: {
-            "Write1": write1,
-            "Write2": write2
-        }.get(name)
-        
-        nuke.allNodes.side_effect = lambda node_type: [write1, write2] if node_type == 'Write' else []
-        
-        mock_nuke_module.return_value = nuke
-        yield nuke
+            yield engine
+    finally:
+        # Clean up the temporary script file
+        if temp_script_path and os.path.exists(temp_script_path):
+            Path(temp_script_path).unlink(missing_ok=True)
 
 
 @pytest.fixture
@@ -202,8 +223,9 @@ def mock_parser():
         yield parser
 
 
-def test_submit_job(submission_engine):
+def test_submit_job(test_mode, submission_engine):
     """Test submitting a job."""
+    
     with patch.object(submission_engine, '_ensure_script_can_be_parsed'):
         # Configure submission engine
         submission_engine.write_nodes = ["Write1"]
@@ -214,91 +236,114 @@ def test_submit_job(submission_engine):
         job_ids = submission_engine.submit()
         
         assert 0 in job_ids  # Standard jobs use key 0 for render order
-        assert job_ids[0] == ["mock-job-id"]
-        submission_engine.connection.submit_job.assert_called_once()
+        assert job_ids[0] == ["mock-job-id"] if test_mode == "mock" else job_ids[0][0] is not None
+        if test_mode == "mock":
+            submission_engine.connection.submit_job.assert_called_once()
 
 
-def test_submit_write_nodes_as_separate_jobs():
+def test_submit_write_nodes_as_separate_jobs(test_mode, request):
     """Test submitting write nodes as separate jobs."""
+    
     # Create a mock connection that returns predictable job IDs
     mock_connection = MagicMock()
     mock_connection.submit_job.side_effect = ["job-1", "job-2"]
     
-    # Patch both the get_connection function and module-level connection
-    with patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection):
-        with patch('nk2dl.deadline.connection._connection', mock_connection):
-            # Create a temporary test script file
-            with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                temp_script.write(b"# Test Nuke script")
-                temp_script_path = temp_script.name
+    # Patch both the get_connection function and module-level connection if in mock mode
+    if test_mode == "mock":
+        connection_patch = patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection)
+        module_patch = patch('nk2dl.deadline.connection._connection', mock_connection)
+    else:
+        # In real mode, we'll use the actual connection
+        from nk2dl.deadline.connection import get_connection
+        connection_patch = nullcontext()
+        module_patch = nullcontext()
+        mock_connection = get_connection()
+    
+    # Get test name for job identification
+    test_name = request.node.name
+    
+    with connection_patch:
+        with module_patch:
+            # Create a temporary copy of the test Nuke script
+            temp_script_path = create_temp_nuke_script()
             
             try:
-                with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed') as mock_ensure_script:
-                    # Mock Nuke nodes with render orders
-                    mock_nuke = MagicMock()
-                    
-                    mock_node1 = MagicMock()
-                    mock_node1.name.return_value = "Write1"
-                    mock_node1['disable'].value.return_value = False
-                    
-                    # Fix the render_order mock to match how it's actually accessed
-                    mock_node1.__getitem__.side_effect = lambda key: {
-                        'disable': MagicMock(value=lambda: False),
-                        'render_order': MagicMock(value=lambda: 1)
-                    }[key]
-                    # Add knobs method to correctly report available knobs
-                    mock_node1.knobs.return_value = {
-                        'disable': True,
-                        'render_order': True
-                    }
-                    
-                    mock_node2 = MagicMock()
-                    mock_node2.name.return_value = "Write2"
-                    mock_node2['disable'].value.return_value = False
-                    
-                    # Fix the render_order mock to match how it's actually accessed
-                    mock_node2.__getitem__.side_effect = lambda key: {
-                        'disable': MagicMock(value=lambda: False),
-                        'render_order': MagicMock(value=lambda: 2)
-                    }[key]
-                    # Add knobs method to correctly report available knobs
-                    mock_node2.knobs.return_value = {
-                        'disable': True,
-                        'render_order': True
-                    }
-                    
-                    mock_nuke.allNodes.return_value = [mock_node1, mock_node2]
-                    mock_nuke.toNode.side_effect = lambda name: {"Write1": mock_node1, "Write2": mock_node2}.get(name)
-                    mock_ensure_script.return_value = mock_nuke
-                    
-                    # Create NukeSubmission with separate jobs
-                    submission = NukeSubmission(
-                        script_path=temp_script_path,
-                        script_path_same_as_current_nuke_session=True,
-                        submit_in_render_order=True,  # Important for render order sorting
-                        write_nodes_as_separate_jobs=True,
-                        frame_range="1-100"
-                    )
-                    
-                    # Explicitly set the connection and write nodes
+                if test_mode == "mock":
+                    with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed') as mock_ensure_script:
+                        # Mock Nuke nodes with render orders
+                        mock_nuke = MagicMock()
+                        
+                        mock_node1 = MagicMock()
+                        mock_node1.name.return_value = "Write1"
+                        mock_node1['disable'].value.return_value = False
+                        
+                        # Fix the render_order mock to match how it's actually accessed
+                        mock_node1.__getitem__.side_effect = lambda key: {
+                            'disable': MagicMock(value=lambda: False),
+                            'render_order': MagicMock(value=lambda: 1)
+                        }[key]
+                        # Add knobs method to correctly report available knobs
+                        mock_node1.knobs.return_value = {
+                            'disable': True,
+                            'render_order': True
+                        }
+                        
+                        mock_node2 = MagicMock()
+                        mock_node2.name.return_value = "Write2"
+                        mock_node2['disable'].value.return_value = False
+                        
+                        # Fix the render_order mock to match how it's actually accessed
+                        mock_node2.__getitem__.side_effect = lambda key: {
+                            'disable': MagicMock(value=lambda: False),
+                            'render_order': MagicMock(value=lambda: 2)
+                        }[key]
+                        # Add knobs method to correctly report available knobs
+                        mock_node2.knobs.return_value = {
+                            'disable': True,
+                            'render_order': True
+                        }
+                        
+                        mock_nuke.allNodes.return_value = [mock_node1, mock_node2]
+                        mock_nuke.toNode.side_effect = lambda name: {"Write1": mock_node1, "Write2": mock_node2}.get(name)
+                        mock_ensure_script.return_value = mock_nuke
+                
+                # Create NukeSubmission with separate jobs
+                submission = NukeSubmission(
+                    script_path=temp_script_path,
+                    script_path_same_as_current_nuke_session=True,
+                    submit_in_render_order=True,  # Important for render order sorting
+                    write_nodes_as_separate_jobs=True,
+                    frame_range="1-100",
+                    batch_name=f"PYTEST_{test_name}",  # Add test name to batch name
+                    comment=f"Created by pytest test: {test_name}"  # Add test name to comment
+                )
+                
+                # In mock mode, explicitly set the connection and write nodes
+                if test_mode == "mock":
                     submission.connection = mock_connection
                     submission.write_nodes = ["Write1", "Write2"]
-                    
-                    # Submit jobs
-                    job_ids = submission.submit()
-                    
+                
+                # Submit jobs
+                job_ids = submission.submit()
+                
+                if test_mode == "mock":
                     # We expect job IDs to be organized by render order
                     assert sorted(job_ids.keys()) == [1, 2]  # We should have jobs with render orders 1 and 2
                     assert job_ids[1] == ["job-1"]  # Write1 has render order 1
                     assert job_ids[2] == ["job-2"]  # Write2 has render order 2
                     assert mock_connection.submit_job.call_count == 2
+                else:
+                    # For real mode, just verify we got job IDs back
+                    assert len(job_ids) > 0
+                    assert all(isinstance(ids, list) and len(ids) > 0 for ids in job_ids.values())
             finally:
                 # Clean up the temporary script file
                 Path(temp_script_path).unlink(missing_ok=True)
 
 
-def test_submit_write_nodes_as_separate_tasks(submission_engine):
+def test_submit_write_nodes_as_separate_tasks(test_mode, submission_engine):
     """Test submitting write nodes as separate tasks."""
+    
     with patch.object(submission_engine, '_ensure_script_can_be_parsed'):
         # Configure submission
         submission_engine.write_nodes = ["Write1", "Write2"]
@@ -309,8 +354,14 @@ def test_submit_write_nodes_as_separate_tasks(submission_engine):
         job_ids = submission_engine.submit()
         
         assert 0 in job_ids  # Write nodes as tasks uses key 0 for render order
-        assert job_ids[0] == ["mock-job-id"]
-        submission_engine.connection.submit_job.assert_called_once()
+        
+        if test_mode == "mock":
+            assert job_ids[0] == ["mock-job-id"]
+            submission_engine.connection.submit_job.assert_called_once()
+        else:
+            # For real submissions, just verify we got a job ID
+            assert len(job_ids[0]) > 0
+            assert job_ids[0][0] is not None
 
 
 def test_submit_job_with_invalid_frame_range(submission_engine):
@@ -359,19 +410,20 @@ def test_submit_job_with_connection_error(submission_engine):
         assert "Connection failed" in str(exc_info.value)
 
 
-def test_validation_error_for_contradictory_options():
+def test_validation_error_for_contradictory_options(request):
     """Test that contradictory options raise a ValidationError."""
     # Create a mock connection that returns predictable job IDs
     mock_connection = MagicMock()
     mock_connection.submit_job.return_value = "mock-job-id"
     
+    # Get test name for job identification
+    test_name = request.node.name
+    
     # Patch both the get_connection function and module-level connection
     with patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection):
         with patch('nk2dl.deadline.connection._connection', mock_connection):
-            # Create a temporary test script file
-            with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                temp_script.write(b"# Test Nuke script")
-                temp_script_path = temp_script.name
+            # Create a temporary copy of the test Nuke script
+            temp_script_path = create_temp_nuke_script()
             
             try:
                 # Patch _ensure_script_can_be_parsed to avoid loading real Nuke
@@ -383,7 +435,9 @@ def test_validation_error_for_contradictory_options():
                             script_path_same_as_current_nuke_session=True,
                             write_nodes_as_separate_jobs=True,
                             write_nodes_as_tasks=True,  # This contradicts write_nodes_as_separate_jobs
-                            frame_range="1-100"
+                            frame_range="1-100",
+                            batch_name=f"PYTEST_{test_name}",  # Add test name to batch name
+                            comment=f"Created by pytest test: {test_name}"  # Add test name to comment
                         )
                     
                     # Check the error message
@@ -406,10 +460,8 @@ def test_nuke_submission_with_gsv(mock_exists, mock_get_connection):
         with patch('nk2dl.deadline.connection._connection', mock_connection):
             # Mock Nuke version to support GSV
             with patch('nk2dl.nuke.utils.nuke_version', return_value="15.2"):
-                # Create a temporary test script file
-                with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                    temp_script.write(b"# Test Nuke script")
-                    temp_script_path = temp_script.name
+                # Create a temporary copy of the test Nuke script
+                temp_script_path = create_temp_nuke_script()
                 
                 try:
                     # Mock the _parse_graph_scope_variables method to avoid errors
@@ -450,10 +502,8 @@ def test_nuke_submission_environment_vars(mock_exists):
     # Patch both the get_connection function and the module-level connection
     with patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection):
         with patch('nk2dl.deadline.connection._connection', mock_connection):
-            # Create a temporary test script file
-            with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                temp_script.write(b"# Test Nuke script")
-                temp_script_path = temp_script.name
+            # Create a temporary copy of the test Nuke script
+            temp_script_path = create_temp_nuke_script()
             
             try:
                 with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed'):
@@ -567,19 +617,20 @@ def test_nuke_submission_movie_format(mock_exists):
 
 
 @patch('os.path.exists', return_value=True)
-def test_nuke_submission_render_order_dependencies(mock_exists):
+def test_nuke_submission_render_order_dependencies(mock_exists, request):
     """Test NukeSubmission with render order dependencies."""
     # Create a mock connection that returns sequential job IDs
     mock_connection = MagicMock()
     mock_connection.submit_job.side_effect = ["job-1", "job-2"]
     
+    # Get test name for job identification
+    test_name = request.node.name
+    
     # Patch both the get_connection function and the module-level connection
     with patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection):
         with patch('nk2dl.deadline.connection._connection', mock_connection):
-            # Create a temporary test script file
-            with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                temp_script.write(b"# Test Nuke script")
-                temp_script_path = temp_script.name
+            # Create a temporary copy of the test Nuke script
+            temp_script_path = create_temp_nuke_script()
             
             try:
                 with patch.object(NukeSubmission, '_ensure_script_can_be_parsed') as mock_ensure_script:
@@ -626,7 +677,9 @@ def test_nuke_submission_render_order_dependencies(mock_exists):
                         submit_in_render_order=True,
                         write_nodes_as_separate_jobs=True,
                         render_order_dependencies=True,
-                        frame_range="1-100"
+                        frame_range="1-100",
+                        batch_name=f"PYTEST_{test_name}",  # Add test name to batch name
+                        comment=f"Created by pytest test: {test_name}"  # Add test name to comment
                     )
                     
                     # Explicitly set the connection to ensure it uses our mock
@@ -656,10 +709,8 @@ def test_nuke_submission_use_nodes_frame_list(mock_exists):
     # Patch both the get_connection function and the module-level connection
     with patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection):
         with patch('nk2dl.deadline.connection._connection', mock_connection):
-            # Create a temporary test script file
-            with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                temp_script.write(b"# Test Nuke script")
-                temp_script_path = temp_script.name
+            # Create a temporary copy of the test Nuke script
+            temp_script_path = create_temp_nuke_script()
             
             try:
                 with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed'):
@@ -697,10 +748,8 @@ def test_submit_nuke_script():
             # Mock a successful submission with a single job ID
             mock_submit_nuke.return_value = {0: ["mock-job-id"]}
             
-            # Create a temporary test script file
-            with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-                temp_script.write(b"# Test Nuke script")
-                temp_script_path = temp_script.name
+            # Create a temporary copy of the test Nuke script
+            temp_script_path = create_temp_nuke_script()
             
             try:
                 # Call submit_nuke_script
@@ -721,33 +770,25 @@ def test_submit_nuke_script():
                 Path(temp_script_path).unlink(missing_ok=True)
 
 
-def test_contradictory_write_node_options():
-    """Test that contradictory write node options are handled correctly."""
-    with patch('nk2dl.deadline.connection.get_connection') as mock_get_connection:
-        mock_connection = MagicMock()
-        mock_get_connection.return_value = mock_connection
-        
-        # Create a temporary test script file
-        with tempfile.NamedTemporaryFile(suffix='.nk', delete=False) as temp_script:
-            temp_script.write(b"# Test Nuke script")
-            temp_script_path = temp_script.name
-        
-        try:
-            # Patch _ensure_script_can_be_parsed to avoid loading real Nuke
-            with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed'):
-                # Test should raise SubmissionError due to contradictory options
-                with pytest.raises(SubmissionError) as exc_info:
-                    submission = NukeSubmission(
-                        script_path=temp_script_path,
-                        script_path_same_as_current_nuke_session=True,
-                        write_nodes_as_separate_jobs=True,
-                        write_nodes_as_tasks=True,  # This contradicts write_nodes_as_separate_jobs
-                        frame_range="1-100"
-                    )
-                
-                # Check that we got the expected error message
-                assert "Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs" in str(exc_info.value)
-                
-        finally:
-            # Clean up the temporary script file
-            Path(temp_script_path).unlink(missing_ok=True) 
+def test_frame_range_creation(test_mode):
+    """Test that FrameRange objects are created correctly. This test can run in both mock and real modes."""
+    # This test doesn't interact with Nuke or Deadline, so it can run in both modes
+    
+    # Test simple frame range
+    frame_range = FrameRange("1-10")
+    assert frame_range.first_frame == 1
+    assert frame_range.last_frame == 10
+    assert frame_range.by_frame == 1
+    assert str(frame_range) == "1-10"
+    
+    # Test with by-frame
+    frame_range = FrameRange("1-10x2")
+    assert frame_range.first_frame == 1
+    assert frame_range.last_frame == 10
+    assert frame_range.by_frame == 2
+    assert str(frame_range) == "1-10x2"
+    
+    # Test with comma separated ranges
+    frame_range = FrameRange("1-5,10-15")
+    assert str(frame_range) == "1-5,10-15"
+    assert frame_range.to_frames_list() == [1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15] 
