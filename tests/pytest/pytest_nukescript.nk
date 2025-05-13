@@ -1,5 +1,4 @@
 #! C:/Program Files/Nuke15.1v1/nuke-15.1.1.dll -nx
-#write_info Write1 file:"" format:"2048 1556 1" chans:":" framerange:"1 100" fps:"0" colorspace:"default" datatype:"unknown" transfer:"unknown" views:"main" colorManagement:"Nuke"
 version 15.1 v1
 define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 <layout version="1.0">
@@ -56,6 +55,17 @@ Viewer {
  name Viewer1
  xpos -40
  ypos -9
+}
+Write {
+ inputs 0
+ channels rgba
+ render_order 2
+ ocioColorspace scene_linear
+ display default
+ view sRGB
+ name Write2
+ xpos -84
+ ypos -171
 }
 Write {
  inputs 0
