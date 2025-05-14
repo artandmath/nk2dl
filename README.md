@@ -10,7 +10,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 
 ## Documentation
 
-- [Installation, Configuration, and Usage Examples](./docs/installation.md)
+- [Installation, Configuration, and Tests](./docs/installation.md)
 - [Quickstart Usage Guide](./docs/quickstart.md)
 - [Configuration Details](./docs/config.md)
 - [Deadline Connection](./docs/deadline_connection.md)
@@ -19,7 +19,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 
 ## Getting started
 
-- Follow the steps in the [Installation, Configuration, and Usage Examples](./docs/installation.md) doc to get `nk2dl` up and running.
+- Follow the steps in the [Installation, Configuration, and Tests](./docs/installation.md) doc to get `nk2dl` up and running.
 
 ## Caveats
 

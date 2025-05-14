@@ -146,16 +146,15 @@ submission:
 
 # Usage example
 
-- The `examples` folder contains 2 simple nukescripts and a python script.
+- The `tests/nukescripts` folder contains 2 simple nukescripts.
   - an example nukescript for Nuke without GSVs.
   - an example nukescript for Nuke 15.2+ using GSVs to demo multishot output.
-  - a python script that can be run in the Nuke Python interpeter (or a Python interpereter that can call upon the Nuke module) or the contents of the python script can be pasted into and executed in the Nuke script editor.
-- Run the `test_nk2dl.py` python script to submit the example nukescripts to Deadline
+- Run the `tests/test_nk2dl.py` python script to submit the example nukescripts to Deadline
 
 ```bash
 cd /path/to/nk2dl-0.1.x-alpha/
 ./.venv/Scripts/Activate-nk2dl.ps1
-python ./examples/test_nk2dl.py
+python ./tests/test_nk2dl.py
 ``` 
 ## Script Copy functions
 - The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
