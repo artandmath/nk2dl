@@ -37,14 +37,17 @@ from nk2dl.common.framerange import FrameRange
 from nk2dl.common.errors import DeadlineError, ValidationError, SubmissionError
 
 
-def create_temp_nuke_script():
-    """Create a temporary copy of the pytest_nukescript.nk file.
+def create_temp_nuke_script(script_name="pytest_nukescript.nk"):
+    """Create a temporary copy of a Nuke script file.
+    
+    Args:
+        script_name (str): Name of the script file in the nukescripts directory (default: "pytest_nukescript.nk")
     
     Returns:
         str: Path to the temporary file
     """
     # Get the path to the test Nuke script
-    test_script_path = os.path.join(os.path.dirname(__file__), "../nukescripts/pytest_nukescript.nk")
+    test_script_path = os.path.join(os.path.dirname(__file__), "../nukescripts", script_name)
     
     # Get the basename without extension
     basename = os.path.splitext(os.path.basename(test_script_path))[0]
@@ -125,8 +128,11 @@ def create_submission(test_mode, request):
         NukeSubmission: A configured submission engine
     """
     def _create_submission(**kwargs):
+        # Extract script_name if provided, else use default
+        script_name = kwargs.pop("script_name", "pytest_nukescript.nk")
+        
         # Create a temporary copy of the test Nuke script
-        temp_script_path = create_temp_nuke_script()
+        temp_script_path = create_temp_nuke_script(script_name=script_name)
         
         # Get test name for job identification
         test_name = request.node.name
@@ -148,22 +154,26 @@ def create_submission(test_mode, request):
             mock_job_ids = kwargs.pop("mock_job_ids", ["mock-job-id"])
             mock_write_nodes_config = kwargs.pop("mock_write_nodes", None)
             
+            # Get custom connection if provided
+            custom_connection = kwargs.pop("custom_connection", None)
+            
             # Update with remaining kwargs
             submission_params.update(kwargs)
         
-            # Create a mock connection
-            mock_connection = MagicMock()
+            # Create a mock connection or use the provided one
+            mock_connection = custom_connection if custom_connection is not None else MagicMock()
             
-            # Configure the mock connection
-            if isinstance(mock_job_ids, list):
-                if len(mock_job_ids) == 1:
-                    # Single job ID
-                    mock_connection.submit_job.return_value = mock_job_ids[0]
+            # Configure the mock connection if not provided
+            if custom_connection is None:
+                if isinstance(mock_job_ids, list):
+                    if len(mock_job_ids) == 1:
+                        # Single job ID
+                        mock_connection.submit_job.return_value = mock_job_ids[0]
+                    else:
+                        # Multiple job IDs - use side_effect to return different values on each call
+                        mock_connection.submit_job.side_effect = mock_job_ids
                 else:
-                    # Multiple job IDs
-                    mock_connection.submit_job.side_effect = mock_job_ids
-            else:
-                mock_connection.submit_job.return_value = mock_job_ids
+                    mock_connection.submit_job.return_value = mock_job_ids
             
             # Create patches for connection
             get_connection_patch = patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection)
@@ -218,6 +228,23 @@ def create_submission(test_mode, request):
                 else:
                     mock_nuke = MagicMock()
                     mock_ensure_script.return_value = mock_nuke
+                
+                # Configure the root node with GSV support for GSV tests
+                if submission_params.get('graph_scope_variables'):
+                    # Create a mock root node with GSV knob
+                    mock_root = MagicMock()
+                    mock_gsv_knob = MagicMock()
+                    
+                    # Properly configure all required attributes/methods for GSV tests
+                    mock_gsv_knob.getListOptions.return_value = ['ABC_0010', 'ABC_0020']
+                    
+                    # Set up the root node knobs to include 'gsv'
+                    mock_root_knobs = {'gsv': mock_gsv_knob}
+                    mock_root.knobs.return_value = mock_root_knobs
+                    mock_root.__getitem__.side_effect = lambda key: mock_root_knobs.get(key, MagicMock())
+                    
+                    # Set the root method on the mock nuke
+                    mock_nuke.root.return_value = mock_root
                 
                 # Directly mock the _get_sorted_write_nodes and _get_write_nodes_by_render_order methods 
                 # to avoid requiring the nuke module
@@ -556,30 +583,68 @@ def test_validation_error_for_contradictory_options(create_submission):
 def test_nuke_submission_with_gsv(test_mode, create_submission):
     """Test NukeSubmission with Graph Scope Variables."""
     
-    # Create a submission engine with GSV
-    with patch('nk2dl.nuke.submission.NukeSubmission._parse_graph_scope_variables'):
-        submission_engine, temp_script_path = create_submission(
-            graph_scope_variables=["shotcode:value1,value2"],
-            write_nodes=["Write1"]
-        )
+    # Skip if we're in real mode but nuke is not available
+    if test_mode == "real":
+        try:
+            import nuke
+        except ImportError:
+            pytest.skip("Nuke module not available for real test")
+    
+    # Define mock write nodes
+    mock_write_nodes = [
+        {"name": "Write1", "render_order": 10, "disable": False},
+        {"name": "Write2", "render_order": 10, "disable": False},
+        {"name": "Write3", "render_order": 10, "disable": False}
+    ]
+    
+    # Prepare parameters based on test mode
+    submission_params = {
+        "script_name": "test_multishot.nk",  # Use the specific test script for GSV testing
+        "graph_scope_variables": ["shotcode:ABC_0010,ABC_0020"],  # Format matches real example
+        "write_nodes": ["Write1", "Write2", "Write3"],
+        "use_nodes_frame_list": True,
+        "continue_on_error": True,
+        "nuke_version": "15.2"
+    }
+    
+    # Add mock-specific parameters if in mock mode
+    if test_mode == "mock":
+        submission_params["mock_write_nodes"] = mock_write_nodes
+    
+    try:
+        # Create a submission engine with GSV
+        submission_engine, temp_script_path = create_submission(**submission_params)
         
         try:
-            # Manual override of parsed GSV combinations for testing
-            submission_engine.gsv_combinations = [(("shotcode", "value1"),)]
+            # For mock mode, force the connection to return different job IDs
+            # This is needed because the mock_job_ids parameter doesn't work correctly with multiple GSVs
+            if test_mode == "mock":
+                submission_engine.connection.submit_job.side_effect = ["job-gsv-1", "job-gsv-2"]
             
             # Submit job
             job_ids = submission_engine.submit()
             
-            assert 0 in job_ids
+            # Verify we got job IDs back
+            assert 0 in job_ids  # Jobs should be under render order 0
+            
             if test_mode == "mock":
-                assert job_ids[0] == ["mock-job-id"]
-            else:
-                assert len(job_ids[0]) > 0
-                assert job_ids[0][0] is not None
+                # For mock mode, check that we got two different job IDs with the expected values
+                assert len(job_ids[0]) == 2
+                assert job_ids[0][0] == "job-gsv-1", f"First job ID should be 'job-gsv-1', got {job_ids[0][0]}"
+                assert job_ids[0][1] == "job-gsv-2", f"Second job ID should be 'job-gsv-2', got {job_ids[0][1]}"
+            elif test_mode == "real":
+                # For real mode, just check we got two jobs back
+                assert len(job_ids[0]) == 2
+                # And verify they're all valid strings (real job IDs)
+                assert all(isinstance(job_id, str) for job_id in job_ids[0])
+                # And verify they're all different (different jobs for different GSV values)
+                assert len(set(job_ids[0])) == 2
         finally:
             # Clean up the temporary script file
             if temp_script_path and os.path.exists(temp_script_path):
                 Path(temp_script_path).unlink(missing_ok=True)
+    finally:
+        pass  # No patches to clean up
 
 
 def test_nuke_submission_environment_vars(test_mode, create_submission):
@@ -770,7 +835,7 @@ def test_submit_nuke_script(create_submission):
     """Test submitting a Nuke script."""
     
     # Create a temporary copy of the test Nuke script
-    temp_script_path = create_temp_nuke_script()
+    temp_script_path = create_temp_nuke_script(script_name="pytest_nukescript.nk")
     
     try:
         with patch('nk2dl.nuke.submission.submit_nuke_script') as mock_submit_nuke:
