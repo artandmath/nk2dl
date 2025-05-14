@@ -13,14 +13,18 @@ job_ids = submit_nuke_script("/path/to/script.nk")
 # Advanced usage with options
 job_ids = submit_nuke_script(
     "/path/to/script.nk",
-    frame_range="1001-1100",
-    priority=40,
-    concurrent_tasks=4,
-    render_threads=4,
+    frames="1001-1100",
+    job_name="My Nuke Job",
+    batch_name="My Batch",
     write_nodes=["Write1", "Write2"],
-    batch_name="{script_stem}",
-    job_name="{batch}_{write}"
+    threads=16,
+    ram_use=16384,
+    use_node_frame_list=True,
+    environment_keys=["NUKE_PATH", "OCIO"],
+    environment={"PROJECT_ROOT": "/path/to/project"},
 )
+
+print(f"Job IDs: {job_ids}")
 ```
 
 ## Command Line Interface
@@ -163,3 +167,38 @@ In your Nuke script, you might have expressions like:
 ```
 [value this.shotcode]
 ```
+
+from nk2dl import submit_nuke_script
+
+# Basic usage with frame range patterns
+submit_nuke_script("path/to/script.nk", frames="1-100")  # Explicit frame range
+submit_nuke_script("path/to/script.nk", frames="1-100x10")  # Every 10th frame
+submit_nuke_script("path/to/script.nk", frames="1,10,20-40")  # Mixed specification
+submit_nuke_script("path/to/script.nk", frames="f-l")  # First to last frame in script
+submit_nuke_script("path/to/script.nk", frames="f,m,l")  # First, middle, and last frame
+submit_nuke_script("path/to/script.nk", frames="i")  # Input range from write node
+```
+
+# Full example with multiple options
+job_ids = submit_nuke_script(
+    "path/to/script.nk",
+    frames="1001-1100",
+    job_name="{batch} / {write} / {range}",
+    batch_name="Project_ABC",
+    write_nodes=["Write1", "Write2", "Write3"],
+    priority=75,
+    pool="nuke",
+    threads=16,
+    ram_use=16384,
+    stack_size=32768,
+    use_node_frame_list=True,
+    chunk_size=10,
+    concurrent_tasks=5,
+    render_order_dependencies=True,
+    use_gpu=True,
+    copy_script=True,
+    environment_keys=["NUKE_PATH", "PATH"],
+    environment={"PROJECT_ROOT": "/path/to/project"},
+    performance_profiler=True,
+    performance_profiler_dir="/path/to/profiles"
+)

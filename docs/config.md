@@ -144,17 +144,11 @@ submission:
   script_copy1_relative_to: SCRIPT
   script_copy1_name: {basename}.{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}
   
-  # Environment variables settings
-  use_current_environment: false        # Whether to pass current environment to Deadline jobs
-  include_environment_keys:             # List of environment variables to include (if not using all)
-    - "NUKE_PATH"
-    - "PYTHONPATH"
-  environment:                          # Dictionary of environment variables to add to jobs
-    MY_KEY: "my_value"
-    ANOTHER_KEY: "another_value" 
-  omit_environment_keys:                # List of environment variables to exclude
-    - "TEMP"
-    - "TMP"
+  # Environment variables
+  use_current_environment: false     # Use current environment variables
+  environment_keys: []              # List of environment variables to include (if not using all)
+  environment: {}                    # Add or override environment variables
+  omit_environment_keys: []          # Environment variables to omit
 ```
 
 ### Nuke Settings

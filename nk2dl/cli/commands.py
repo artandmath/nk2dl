@@ -149,7 +149,7 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
     if hasattr(args, "WritesAsSeparateTasks") and args.WritesAsSeparateTasks:
         kwargs["write_nodes_as_tasks"] = True
     if hasattr(args, "NodeFrameRange") and args.NodeFrameRange:
-        kwargs["use_nodes_frame_list"] = True
+        kwargs["use_node_frame_list"] = True
     if hasattr(args, "RenderOrderDependencies") and args.RenderOrderDependencies:
         kwargs["render_order_dependencies"] = True
         

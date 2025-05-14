@@ -137,192 +137,21 @@ def create_submission(test_mode, request):
         # Get test name for job identification
         test_name = request.node.name
         
-        # Set default parameters if not provided
+        # Setup test parameters
         default_params = {
             "script_path": temp_script_path,
-            "script_path_same_as_current_nuke_session": True,
-            "frame_range": "1-100",
+            "script_is_open": True,
+            "frames": "1-100",
             "batch_name": f"PYTEST / {test_name}",
-            "comment": f"PYTEST: {test_name}"
+            "job_name": "Test Job"
         }
+        default_params.update(kwargs)
         
-        # Make a clean copy of kwargs for submission parameters
-        submission_params = {**default_params}
+        # Create submission object
+        submission = NukeSubmission(**default_params)
         
-        if test_mode == "mock":
-            # Extract mock-specific parameters that shouldn't be passed to NukeSubmission
-            mock_job_ids = kwargs.pop("mock_job_ids", ["mock-job-id"])
-            mock_write_nodes_config = kwargs.pop("mock_write_nodes", None)
-            
-            # Get custom connection if provided
-            custom_connection = kwargs.pop("custom_connection", None)
-            
-            # Update with remaining kwargs
-            submission_params.update(kwargs)
-        
-            # Create a mock connection or use the provided one
-            mock_connection = custom_connection if custom_connection is not None else MagicMock()
-            
-            # Configure the mock connection if not provided
-            if custom_connection is None:
-                if isinstance(mock_job_ids, list):
-                    if len(mock_job_ids) == 1:
-                        # Single job ID
-                        mock_connection.submit_job.return_value = mock_job_ids[0]
-                    else:
-                        # Multiple job IDs - use side_effect to return different values on each call
-                        mock_connection.submit_job.side_effect = mock_job_ids
-                else:
-                    mock_connection.submit_job.return_value = mock_job_ids
-            
-            # Create patches for connection
-            get_connection_patch = patch('nk2dl.deadline.connection.get_connection', return_value=mock_connection)
-            connection_patch = patch('nk2dl.deadline.connection._connection', mock_connection)
-            
-            # Patch nuke_module to prevent it from trying to import nuke
-            mock_nuke_module = MagicMock()
-            nuke_module_patch = patch('nk2dl.nuke.utils.nuke_module', return_value=mock_nuke_module)
-            nuke_module_patch.start()
-            request.addfinalizer(nuke_module_patch.stop)
-            
-            # Apply patches
-            get_connection_patch.start()
-            connection_patch.start()
-            
-            # Add cleanup to ensure patches are stopped
-            request.addfinalizer(get_connection_patch.stop)
-            request.addfinalizer(connection_patch.stop)
-            
-            # Mock parsing requirements
-            with patch('nk2dl.nuke.submission.NukeSubmission._ensure_script_can_be_parsed') as mock_ensure_script:
-                # Create mock Nuke nodes if specified
-                if mock_write_nodes_config:
-                    mock_nuke = MagicMock()
-                    write_nodes = []
-                    
-                    for node_config in mock_write_nodes_config:
-                        mock_node = MagicMock()
-                        mock_node.name.return_value = node_config["name"]
-                        
-                        # Configure the node's properties
-                        properties = {
-                            'disable': MagicMock(value=lambda: node_config.get("disable", False)),
-                            'render_order': MagicMock(value=lambda: node_config.get("render_order", 1))
-                        }
-                        
-                        # Add any additional properties
-                        for key, value in node_config.get("properties", {}).items():
-                            properties[key] = MagicMock(value=lambda v=value: v)
-                        
-                        mock_node.__getitem__.side_effect = lambda key: properties.get(key, MagicMock())
-                        mock_node.knobs.return_value = {key: True for key in properties.keys()}
-                        mock_node.Class.return_value = "Write"
-                        write_nodes.append(mock_node)
-                    
-                    # Configure mock Nuke
-                    mock_nuke.allNodes.return_value = write_nodes
-                    mock_nuke.toNode.side_effect = lambda name: next(
-                        (node for node in write_nodes if node.name() == name), None
-                    )
-                    mock_ensure_script.return_value = mock_nuke
-                else:
-                    mock_nuke = MagicMock()
-                    mock_ensure_script.return_value = mock_nuke
-                
-                # Configure the root node with GSV support for GSV tests
-                if submission_params.get('graph_scope_variables'):
-                    # Create a mock root node with GSV knob
-                    mock_root = MagicMock()
-                    mock_gsv_knob = MagicMock()
-                    
-                    # Properly configure all required attributes/methods for GSV tests
-                    mock_gsv_knob.getListOptions.return_value = ['ABC_0010', 'ABC_0020']
-                    
-                    # Set up the root node knobs to include 'gsv'
-                    mock_root_knobs = {'gsv': mock_gsv_knob}
-                    mock_root.knobs.return_value = mock_root_knobs
-                    mock_root.__getitem__.side_effect = lambda key: mock_root_knobs.get(key, MagicMock())
-                    
-                    # Set the root method on the mock nuke
-                    mock_nuke.root.return_value = mock_root
-                
-                # Directly mock the _get_sorted_write_nodes and _get_write_nodes_by_render_order methods 
-                # to avoid requiring the nuke module
-                with patch.object(NukeSubmission, '_get_sorted_write_nodes') as mock_get_sorted_write_nodes:
-                    with patch.object(NukeSubmission, '_get_write_nodes_by_render_order') as mock_get_write_nodes_by_render_order:
-                        
-                        # Set up the mock to return the write nodes in order based on mock_write_nodes_config
-                        if mock_write_nodes_config:
-                            sorted_names = [node["name"] for node in sorted(mock_write_nodes_config, key=lambda x: x["render_order"])]
-                            mock_get_sorted_write_nodes.return_value = sorted_names
-                            
-                            # Set up nodes by render order dictionary
-                            nodes_by_order = {}
-                            for node in mock_write_nodes_config:
-                                render_order = node["render_order"]
-                                if render_order not in nodes_by_order:
-                                    nodes_by_order[render_order] = []
-                                nodes_by_order[render_order].append(node["name"])
-                                
-                            mock_get_write_nodes_by_render_order.return_value = nodes_by_order
-                        else:
-                            # Even without specific mock_write_nodes, provide default values for write_nodes specified in kwargs
-                            if "write_nodes" in kwargs:
-                                # Use the write_nodes list to generate default sorted names and render orders
-                                sorted_names = kwargs["write_nodes"]
-                                mock_get_sorted_write_nodes.return_value = sorted_names
-                                
-                                # For default case, all write nodes get render order 10
-                                nodes_by_order = {10: kwargs["write_nodes"]}
-                                mock_get_write_nodes_by_render_order.return_value = nodes_by_order
-                            else:
-                                # Default empty returns
-                                mock_get_sorted_write_nodes.return_value = []
-                                mock_get_write_nodes_by_render_order.return_value = {}
-                
-                        # Create the submission engine
-                        engine = NukeSubmission(**submission_params)
-                
-                        # Explicitly set the connection on the engine to ensure it uses our mock
-                        engine.connection = mock_connection
-                
-                        # If write_nodes was specified, set it directly
-                        if "write_nodes" in kwargs:
-                            engine.write_nodes = kwargs["write_nodes"]
-                
-                        return engine, temp_script_path
-        else:  # test_mode == "real"
-            # Update with remaining kwargs for real mode
-            submission_params.update(kwargs)
-            
-            # Filter out mock-specific parameters that shouldn't be passed to real NukeSubmission
-            submission_params.pop("mock_job_ids", None)
-            submission_params.pop("mock_write_nodes", None)
-            
-            try:
-                import nuke
-            except ImportError:
-                # In real mode, we shouldn't skip but fail if Nuke is not available
-                pytest.fail("Nuke module not available for real tests. Make sure you're running tests with Nuke's Python interpreter.")
-            
-            # Create a real NukeSubmission object
-            if "job_name" not in submission_params:
-                submission_params["job_name"] = os.path.basename(temp_script_path)
-                
-            # For real mode, use "PYTEST / test_name" format for batch name
-            submission_params["batch_name"] = f"PYTEST / {test_name}"
-            
-            # Print the parameters for debugging
-            print(f"Real test parameters: {submission_params}")
-            
-            engine = NukeSubmission(**submission_params)
-            
-            # Force reset the write nodes list with the requested write nodes
-            if "write_nodes" in submission_params:
-                print(f"Setting write nodes to: {submission_params['write_nodes']}")
-                engine.write_nodes = submission_params["write_nodes"]
-                
-            return engine, temp_script_path
+        # Return submission engine and path to temp script for cleanup
+        return submission, temp_script_path
     
     # Return the factory function
     return _create_submission
@@ -484,21 +313,13 @@ def test_submit_write_nodes_as_separate_tasks(test_mode, create_submission):
             Path(temp_script_path).unlink(missing_ok=True)
 
 
+@pytest.mark.parametrize("test_mode", [TestMode.MOCKED, TestMode.REAL])
 def test_submit_job_with_invalid_frame_range(create_submission):
     """Test submitting a job with an invalid frame range."""
-    
-    # Create a submission engine with default settings
-    submission_engine, temp_script_path = create_submission()
-    
-    try:
-        # Set an invalid frame range - this should be caught in job preparation
-        with patch.object(submission_engine, '_prepare_job_info', side_effect=ValidationError("Invalid frame range")):
-            with pytest.raises(SubmissionError):  # Now wrapped in SubmissionError
-                submission_engine.submit()
-    finally:
-        # Clean up the temporary script file
-        if temp_script_path and os.path.exists(temp_script_path):
-            Path(temp_script_path).unlink(missing_ok=True)
+    # Create a submission with an invalid frame range
+    with pytest.raises(SubmissionError):
+        sub, temp_script = create_submission(frames="invalid_frame_range")
+        sub.submit()
 
 
 def test_submit_job_with_no_write_nodes(test_mode, create_submission):
@@ -781,54 +602,19 @@ def test_nuke_submission_render_order_dependencies(test_mode, create_submission)
             Path(temp_script_path).unlink(missing_ok=True)
 
 
-def test_nuke_submission_use_nodes_frame_list(test_mode, create_submission):
-    """Test NukeSubmission with node frame list."""
-    
-    # Define mock write nodes with frame ranges
-    mock_write_nodes = [
-        {
-            "name": "Write1", 
-            "render_order": 10, 
-            "disable": False,
-            "properties": {
-                "use_limit": True,
-                "first": 1001,
-                "last": 1050
-            }
-        }
-    ]
-    
-    # Prepare parameters based on test mode
-    submission_params = {
-        "write_nodes": ["Write1"],
-        "use_nodes_frame_list": True
+def test_nuke_submission_use_node_frame_list(test_mode, create_submission):
+    """Test submitting with use_node_frame_list enabled."""
+    EXPECTED_JOBS = {
+        "job1": {"Name": "Test Job", "Frames": "1001-1010", "WriteNode": "Write1,Write2,Write3"},
     }
-    
-    # Only add mock parameters for mock mode
-    if test_mode == "mock":
-        submission_params["mock_write_nodes"] = mock_write_nodes
-    
-    # Create a submission engine with node frame list
-    submission_engine, temp_script_path = create_submission(**submission_params)
-    
-    try:
-        # Explicitly patch methods for both test modes
-        with patch.object(NukeSubmission, '_get_sorted_write_nodes', return_value=["Write1"]):
-            with patch.object(NukeSubmission, '_get_write_nodes_by_render_order', return_value={10: ["Write1"]}):
-                # Submit job
-                job_ids = submission_engine.submit()
-                
-                assert 0 in job_ids
-                if test_mode == "mock":
-                    assert job_ids[0] == ["mock-job-id"]
-                    submission_engine.connection.submit_job.assert_called_once()
-                else:
-                    assert len(job_ids[0]) > 0
-                    assert job_ids[0][0] is not None
-    finally:
-        # Clean up the temporary script file
-        if temp_script_path and os.path.exists(temp_script_path):
-            Path(temp_script_path).unlink(missing_ok=True)
+
+    with mock_deadline_connection(EXPECTED_JOBS) as mock_conn:
+        sub = create_submission(
+            write_nodes=["Write1", "Write2", "Write3"],
+            use_node_frame_list=True)
+        sub.submit()
+
+    assert mock_conn.call_count == 1
 
 
 def test_submit_nuke_script(create_submission):
@@ -861,21 +647,19 @@ def test_submit_nuke_script(create_submission):
             Path(temp_script_path).unlink(missing_ok=True)
 
 
-def test_frame_range_creation(test_mode):
-    """Test that FrameRange objects are created correctly. This test can run in both mock and real modes."""
-    # This test doesn't interact with Nuke or Deadline, so it can run in both modes
-    
-    # Test simple frame range
+def test_frame_range_class_functionality(test_mode):
+    """Test the FrameRange class functionality."""
+    # Test standard frame range
     frame_range = FrameRange("1-10")
     assert str(frame_range) == "1-10"
     assert frame_range.expand_range() == list(range(1, 11))
     
-    # Test with by-frame
+    # Test step frame range
     frame_range = FrameRange("1-10x2")
     assert str(frame_range) == "1-10x2"
     assert frame_range.expand_range() == [1, 3, 5, 7, 9]
     
-    # Test with comma separated ranges
+    # Test comma-separated frame ranges
     frame_range = FrameRange("1-5,10-15")
     assert str(frame_range) == "1-5,10-15"
     assert frame_range.expand_range() == [1, 2, 3, 4, 5, 10, 11, 12, 13, 14, 15]

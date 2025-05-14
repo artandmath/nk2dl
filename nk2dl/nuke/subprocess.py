@@ -10,6 +10,7 @@ import json
 import tempfile
 import subprocess as sp
 from typing import Dict, List, Any, Optional
+import re
 
 from ..common.framerange import FrameRange
 from ..common.logging import logger
@@ -64,8 +65,8 @@ try:
     # Parse arguments from JSON
     kwargs = json.loads('''{serialize_kwargs(kwargs)}''')
     
-    # Add script_path_same_as_current_nuke_session=True
-    kwargs['script_path_same_as_current_nuke_session'] = True
+    # Add script_is_open=True
+    kwargs['script_is_open'] = True
     
     # Submit the script
     result = submit_nuke_script('{script_path}', **kwargs)
@@ -189,69 +190,45 @@ def execute_submission_script(script_path: str, use_parser_instead_of_nuke: bool
         logger.error(f"Exception: {str(e)}")
         raise RuntimeError(f"Failed to parse subprocess output: {e}")
 
-def script_parsing_required(**kwargs):
-    """Determine if we need to parse the Nuke script based on submission parameters.
+def script_parsing_required(**kwargs) -> bool:
+    """Determine whether we need to parse the script based on kwargs.
     
     Args:
-        **kwargs: Keyword arguments from submission function
+        **kwargs: Submission keyword arguments
         
     Returns:
         bool: True if script parsing is required, False otherwise
     """
+    # Criteria that would require parsing the Nuke script
+    # 1. If write_nodes_as_tasks is enabled, we need to parse the script to get write nodes
+    # 2. If write_nodes is provided but we need to get frame ranges for each node with use_node_frame_list
+    # 3. If frames contains tokens like 'f-l' or 'i', we need to parse the script to get the actual frame range
+    # 4. If all the following are true, we need to parse the script:
+    #    a. parse_output_paths_to_deadline is True
+    #    b. At least one write node is specified or the default is all write nodes
+    # 5. If we need to sort write nodes by render order or alphabetically
     
-    # Extract relevant parameters
-    write_nodes = kwargs.get('write_nodes', None)
-
-    # Extract string fields that might contain tokens
-    job_name = kwargs.get('job_name', '')
-    batch_name = kwargs.get('batch_name', '')
-    comment = kwargs.get('comment', '')
-    extra_info = kwargs.get('extra_info', '')
-    
-    # Define token groups that require script parsing
-    file_stem_tokens    = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", 
-                           "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
-    output_tokens       = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
-    render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
-    gsv_tokens          = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}", 
-                           "{graph_scope_vars}", "{graph_scope_variables}"]
-    
-    # Write node tokens require parsing only if write_nodes not specified
-    write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
-    
-    # Combine all token groups that require parsing
-    parsing_required_tokens = file_stem_tokens + output_tokens + render_order_tokens + gsv_tokens
-    
-    # If write_nodes is not specified, add write_node_tokens to parsing_required_tokens
-    if not write_nodes:
-        parsing_required_tokens.extend(write_node_tokens)
-    
-    # Check if any of the string fields contain tokens requiring parsing
-    fields_to_check = [job_name, batch_name, comment, extra_info]
-    for field in fields_to_check:
-        if any(token in field for token in parsing_required_tokens):
-            return True
-
-    # Extract rem relevant parameters
-    frame_range = kwargs.get('frame_range', '')
+    # Check if required parameters are provided
+    write_nodes_as_tasks = kwargs.get('write_nodes_as_tasks', False)
+    write_nodes = kwargs.get('write_nodes')
+    use_node_frame_list = kwargs.get('use_node_frame_list', False)
+    frames = kwargs.get('frames', '')
+    parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', False)
     submit_alphabetically = kwargs.get('submit_alphabetically', False)
     submit_in_render_order = kwargs.get('submit_in_render_order', False)
-    write_nodes_as_tasks = kwargs.get('write_nodes_as_tasks', False)
-    write_nodes_as_separate_jobs = kwargs.get('write_nodes_as_separate_jobs', False)
-    render_order_dependencies = kwargs.get('render_order_dependencies', False)
-    use_nodes_frame_list = kwargs.get('use_nodes_frame_list', False)
-    graph_scope_variables = kwargs.get('graph_scope_variables', None)
-    parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', False)
-
-    # Check if frame range has tokens using FrameRange's has_tokens property
-    fr = FrameRange(frame_range)
     
-    # Check other conditions requiring script parsing
-    return (fr.has_tokens or
-            (submit_alphabetically and not write_nodes) or
-            submit_in_render_order or
-            (not write_nodes and (write_nodes_as_tasks or write_nodes_as_separate_jobs)) or
-            render_order_dependencies or
-            use_nodes_frame_list or
-            graph_scope_variables is not None or
-            parse_output_paths_to_deadline) 
+    # Check for token patterns in frames
+    token_pattern = r"(?i)\b(f-l|first-last|f-m|f,m,l|i|input)\b"
+    has_tokens = bool(re.search(token_pattern, frames)) if frames else False
+
+    # Check criteria
+    needs_parsing = (
+        write_nodes_as_tasks or  # Need to parse to get write nodes for tasks
+        (write_nodes and use_node_frame_list) or  # Need to parse to get frame ranges for write nodes
+        has_tokens or  # Need to parse to resolve frame range tokens
+        (parse_output_paths_to_deadline and (write_nodes or write_nodes is None)) or  # Need to parse to get output paths
+        submit_alphabetically or  # Need to parse to list write nodes
+        submit_in_render_order  # Need to parse to get render order of write nodes
+    )
+    
+    return needs_parsing 

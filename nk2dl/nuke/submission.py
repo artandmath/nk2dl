@@ -25,7 +25,7 @@ class NukeSubmission:
     def __init__(self, 
                 # nk2dl specific parameters
                 script_path: str,
-                script_path_same_as_current_nuke_session: bool = False,
+                script_is_open: bool = False,
                 use_parser_instead_of_nuke: bool = False,
                 submit_alphabetically: bool = False,
                 submit_in_render_order: bool = False,
@@ -46,39 +46,39 @@ class NukeSubmission:
                 comment: Optional[str] = None,
                 concurrent_tasks: Optional[int] = None,
                 extra_info: Optional[List[str]] = None,
-                frame_range: str = "",
+                frames: str = "",
                 job_dependencies: Optional[str] = None,
                 
                 # Plugin Info parameters
-                output_path: str = "",
+                output_file_path: str = "",
                 parse_output_paths_to_deadline: bool = False,
                 nuke_version: Optional[Union[str, int, float]] = None,
                 use_nuke_x: bool = False,
                 batch_mode: bool = True,
-                render_threads: Optional[int] = None,
+                threads: Optional[int] = None,
                 use_gpu: bool = False,
                 gpu_override: Optional[str] = None,
-                max_ram_usage: Optional[int] = None,
+                ram_use: Optional[int] = None,
                 enforce_render_order: bool = True,
-                min_stack_size: Optional[int] = None,
+                stack_size: Optional[int] = None,
                 continue_on_error: bool = False,
                 reload_plugins: bool = False,
-                use_profiler: bool = False,
-                profile_dir: Optional[str] = None,
+                performance_profiler: bool = False,
+                performance_profiler_dir: Optional[str] = None,
                 use_proxy: bool = False,
                 write_nodes: Optional[List[str]] = None,
                 render_mode: str = "full",
                 write_nodes_as_tasks: bool = False,
                 write_nodes_as_separate_jobs: bool = False,
                 render_order_dependencies: bool = False,
-                use_nodes_frame_list: bool = False,
+                use_node_frame_list: bool = False,
                 
                 # Graph Scope Variables parameters (Nuke 15.2+)
                 graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None,
                 
                 # Environment Variables parameters
                 use_current_environment: bool = False,
-                include_environment_keys: Optional[List[str]] = None,
+                environment_keys: Optional[List[str]] = None,
                 environment: Optional[Dict[str, str]] = None,
                 omit_environment_keys: Optional[List[str]] = None):
         
@@ -87,8 +87,8 @@ class NukeSubmission:
         Args:
             # nk2dl specific parameters
             script_path: Path to the Nuke script file
-            script_path_same_as_current_nuke_session: Whether this script path is already open in the current Nuke session
-                                                      (can also be also true if submitted script mirrors current Nuke session)
+            script_is_open: Whether this script path is already open in the current Nuke session
+                              (can also be also true if submitted script mirrors current Nuke session)
             use_parser_instead_of_nuke: Whether to use a parser instead of Nuke for parsing script
             submit_alphabetically: Whether to sort write nodes alphabetically by name
             submit_in_render_order: Whether to sort write nodes by render order
@@ -124,13 +124,13 @@ class NukeSubmission:
             concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
             extra_info: List of extra info fields with optional tokens for customization
                         Each item supports the same tokens as job_name
-            frame_range: Frame range to render (defaults to Nuke script settings)
+            frames: Frame range to render (defaults to Nuke script settings)
             job_dependencies: Comma or space separated list of job IDs
             
             # Plugin Info parameters
-            output_path: Output directory for rendered files
+            output_file_path: Output directory for rendered files
             parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
-                                           Defaults to True if script_path_same_as_current_nuke_session is True
+                                           Defaults to True if script_is_open is True
             nuke_version: Version of Nuke to use for rendering. Can be:
                           - String: "15.1"
                           - Float: 15.1 (converts to "15.1")
@@ -188,24 +188,24 @@ class NukeSubmission:
         if write_nodes_as_tasks and write_nodes_as_separate_jobs:
             raise SubmissionError("Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs or render_order_dependencies simultaneously")
         
-        # Check if write_nodes_as_tasks is enabled with a custom frame range but use_nodes_frame_list is disabled
-        if write_nodes_as_tasks and frame_range and not use_nodes_frame_list and not (
-            frame_range.lower() in ['f-l', 'first-last', 'f', 'm', 'l', 'first', 'middle', 'last', 'i', 'input'] or
-            re.match(r'^\d+\-\d+$', frame_range)  # Allow numeric frame ranges like "1001-1100"
+        # Check if write_nodes_as_tasks is enabled with a custom frame range but use_node_frame_list is disabled
+        if write_nodes_as_tasks and frames and not use_node_frame_list and not (
+            frames.lower() in ['f-l', 'first-last', 'f', 'm', 'l', 'first', 'middle', 'last', 'i', 'input'] or
+            re.match(r'^\d+\-\d+$', frames)  # Allow numeric frame ranges like "1001-1100"
         ):
             raise SubmissionError("Custom frame list is not supported when submitting write nodes as separate tasks. "
-                                 "Please use global (f-l) or input (i) frame ranges, or enable use_nodes_frame_list.")
+                                 "Please use global (f-l) or input (i) frame ranges, or enable use_node_frame_list.")
             
 
         self.use_parser_instead_of_nuke = use_parser_instead_of_nuke
-        self.script_path_same_as_current_nuke_session = script_path_same_as_current_nuke_session
+        self.script_is_open = script_is_open
 
         self.script_path = Path(script_path)
         if not self.script_path.exists():
             raise SubmissionError(f"Nuke script does not exist: {script_path}")
             
-        self.frame_range = frame_range
-        self.output_path = output_path
+        self.frames = frames
+        self.output_file_path = output_file_path
         
         # Get default values from config
         self.priority = priority if priority is not None else config.get('submission.priority', 50)
@@ -240,16 +240,16 @@ class NukeSubmission:
         # Nuke-specific options
         self.use_nuke_x = use_nuke_x if isinstance(use_nuke_x, bool) else config.get('submission.use_nuke_x', False)
         self.batch_mode = batch_mode if isinstance(batch_mode, bool) else config.get('submission.batch_mode', True)
-        self.render_threads = render_threads if render_threads is not None else config.get('submission.render_threads')
+        self.threads = threads if threads is not None else config.get('submission.threads')
         self.use_gpu = use_gpu if isinstance(use_gpu, bool) else config.get('submission.use_gpu', False)
         self.gpu_override = gpu_override if gpu_override is not None else config.get('submission.gpu_override')
-        self.max_ram_usage = max_ram_usage if max_ram_usage is not None else config.get('submission.max_ram_usage')
+        self.ram_use = ram_use if ram_use is not None else config.get('submission.ram_use')
         self.enforce_render_order = enforce_render_order if isinstance(enforce_render_order, bool) else config.get('submission.enforce_render_order', True)
-        self.min_stack_size = min_stack_size if min_stack_size is not None else config.get('submission.min_stack_size')
+        self.stack_size = stack_size if stack_size is not None else config.get('submission.stack_size')
         self.continue_on_error = continue_on_error if isinstance(continue_on_error, bool) else config.get('submission.continue_on_error', False)
         self.reload_plugins = reload_plugins if isinstance(reload_plugins, bool) else config.get('submission.reload_plugins', False)
-        self.use_profiler = use_profiler if isinstance(use_profiler, bool) else config.get('submission.use_profiler', False)
-        self.profile_dir = profile_dir if profile_dir is not None else config.get('submission.profile_dir')
+        self.performance_profiler = performance_profiler if isinstance(performance_profiler, bool) else config.get('submission.performance_profiler', False)
+        self.performance_profiler_dir = performance_profiler_dir if performance_profiler_dir is not None else config.get('submission.performance_profiler_dir')
         self.use_proxy = use_proxy if isinstance(use_proxy, bool) else config.get('submission.use_proxy', False)
         self.write_nodes = write_nodes
         self.render_mode = render_mode if render_mode else config.get('submission.render_mode', 'full')
@@ -259,7 +259,7 @@ class NukeSubmission:
         self.write_nodes_as_separate_jobs = write_nodes_as_separate_jobs if isinstance(write_nodes_as_separate_jobs, bool) else config.get('submission.write_nodes_as_separate_jobs', False)
         self.submit_alphabetically = submit_alphabetically if isinstance(submit_alphabetically, bool) else config.get('submission.submit_alphabetically', False)
         self.submit_in_render_order = submit_in_render_order if isinstance(submit_in_render_order, bool) else config.get('submission.submit_in_render_order', False)
-        self.use_nodes_frame_list = use_nodes_frame_list if isinstance(use_nodes_frame_list, bool) else config.get('submission.use_nodes_frame_list', False)
+        self.use_node_frame_list = use_node_frame_list if isinstance(use_node_frame_list, bool) else config.get('submission.use_node_frame_list', False)
         self.use_parser_instead_of_nuke = use_parser_instead_of_nuke
         
         # Script copying options
@@ -277,7 +277,7 @@ class NukeSubmission:
         
         # Store environment variables settings
         self.use_current_environment = use_current_environment if isinstance(use_current_environment, bool) else config.get('submission.use_current_environment', False)
-        self.include_environment_keys = include_environment_keys if include_environment_keys is not None else config.get('submission.include_environment_keys', [])
+        self.environment_keys = environment_keys if environment_keys is not None else config.get('submission.environment_keys', [])
         self.environment = environment if environment is not None else config.get('submission.environment', {})
         self.omit_environment_keys = omit_environment_keys if omit_environment_keys is not None else config.get('submission.omit_environment_keys', [])
         
@@ -297,8 +297,8 @@ class NukeSubmission:
                 self.graph_scope_variables = None
         
         # Initialize frame range
-        if frame_range:
-            self.fr = FrameRange(frame_range)
+        if frames:
+            self.fr = FrameRange(frames)
             # If frame range contains tokens, try to substitute them
             if self.fr.has_tokens:
                 # First ensure we can parse the script
@@ -306,7 +306,7 @@ class NukeSubmission:
                 
                 try:
                     # Only substitute tokens if it's not "i" or "input"
-                    if not re.search(r'\b(i|input)\b', frame_range):
+                    if not re.search(r'\b(i|input)\b', frames):
                         self._get_frame_range_from_nuke()
                     else:
                         # For input token, we need to specify the write node
@@ -314,14 +314,14 @@ class NukeSubmission:
                             self._get_frame_range_from_nuke(write_nodes[0])
                         else:
                             logger.debug(f"Input token found in frame_range object and multiple write nodes specified. We will resolve the input token later."
-                                         f"writenodes: {write_nodes} frame_range: \"{frame_range}\"")
+                                         f"writenodes: {write_nodes} frames: \"{frames}\"")
 
                 except Exception as e:
                     logger.warning(f"Failed to substitute frame range tokens: {e}")
             
             # Validate frame range syntax
             if not self.fr.is_valid_syntax():
-                raise SubmissionError(f"Invalid frame range syntax: {frame_range}")
+                raise SubmissionError(f"Invalid frame range syntax: {frames}")
         else:
             # Get frame range from Nuke script
             self._get_frame_range_from_nuke()
@@ -332,10 +332,10 @@ class NukeSubmission:
         if self.graph_scope_variables:
             self._parse_graph_scope_variables()
 
-        # Set parse_output_paths_to_deadline to True if script_path_same_as_current_nuke_session is True
+        # Set parse_output_paths_to_deadline to True if script_is_open is True
         # unless explicitly set by the user
         self.parse_output_paths_to_deadline = parse_output_paths_to_deadline
-        if script_path_same_as_current_nuke_session and parse_output_paths_to_deadline is False:
+        if script_is_open and parse_output_paths_to_deadline is False:
             self.parse_output_paths_to_deadline = True
         
 
@@ -356,11 +356,11 @@ class NukeSubmission:
             nuke = nuke_utils.parser_module()
             
             # If the script path is different from what's currently parsed, we need to open it
-            if not self.script_path_same_as_current_nuke_session:
+            if not self.script_is_open:
                 # Open the script
                 nuke.scriptOpen(str(self.script_path.absolute()))
                 # Mark as same as current session now
-                self.script_path_same_as_current_nuke_session = True
+                self.script_is_open = True
                 # Track that we opened a script
                 self._script_will_close = True
             
@@ -370,11 +370,11 @@ class NukeSubmission:
             nuke = nuke_utils.nuke_module()
             
             # If the script path is different from what's currently open in Nuke, we need to open it
-            if not self.script_path_same_as_current_nuke_session:
+            if not self.script_is_open:
                 # Open the script
                 nuke.scriptOpen(str(self.script_path.absolute()))
                 # Mark as same as current session now
-                self.script_path_same_as_current_nuke_session = True
+                self.script_is_open = True
                 # Track that we opened a script
                 self._script_will_close = True
             
@@ -513,7 +513,7 @@ class NukeSubmission:
                 elif token in batch_name_tokens:
                     value = self.batch_name
                 elif token in frame_range_tokens:
-                    value = self.frame_range
+                    value = self.frames
                 elif token in gsv_tokens:
                     # Check Nuke version before attempting to use GSV tokens
                     nuke_version_str = nuke_utils.nuke_version(self.nuke_version) if self.nuke_version else nuke_utils.nuke_version()
@@ -670,17 +670,17 @@ class NukeSubmission:
             # Use token substitution with the write node if specified
             if self.fr.has_tokens:
                 self.fr.substitute_tokens_from_nuke(write_node_name)
-                self.frame_range = str(self.fr)
+                self.frames = str(self.fr)
             else:
                 # Get frame range from root
                 root = nuke.root()
                 first_frame = int(root['first_frame'].value())
                 last_frame = int(root['last_frame'].value())
                 
-                self.frame_range = f"{first_frame}-{last_frame}"
-                self.fr = FrameRange(self.frame_range)
+                self.frames = f"{first_frame}-{last_frame}"
+                self.fr = FrameRange(self.frames)
             
-            logger.debug(f"Got frame range from Nuke API: {self.frame_range}")
+            logger.debug(f"Got frame range from Nuke API: {self.frames}")
         except Exception as e:
             raise SubmissionError(f"Failed to get frame range from Nuke API: {e}")
     
@@ -891,7 +891,7 @@ class NukeSubmission:
         job_info = {
             "Name": self.job_name,
             "Plugin": "Nuke",
-            "Frames": self.frame_range,
+            "Frames": self.frames,
             "ChunkSize": self.chunk_size,
             "ConcurrentTasks": self.concurrent_tasks,
             "Pool": self.pool,
@@ -982,10 +982,10 @@ class NukeSubmission:
             import os
             env_vars.update(os.environ)
             
-        # If include_environment_keys is provided, only include those specific keys
-        elif self.include_environment_keys:
+        # If environment_keys is provided, only include those specific keys
+        elif self.environment_keys:
             import os
-            for key in self.include_environment_keys:
+            for key in self.environment_keys:
                 if key in os.environ:
                     env_vars[key] = os.environ[key]
         
@@ -1084,22 +1084,22 @@ class NukeSubmission:
             plugin_info["BatchModeIsMovie"] = "True"
         
         # Add optional plugin settings
-        if self.render_threads is not None:
-            plugin_info["Threads"] = str(self.render_threads)
+        if self.threads is not None:
+            plugin_info["Threads"] = str(self.threads)
         if self.use_gpu:
             plugin_info["UseGpu"] = "1"
         if self.gpu_override:
             plugin_info["GpuOverride"] = self.gpu_override
-        if self.max_ram_usage is not None:
-            plugin_info["RamUse"] = str(self.max_ram_usage)
-        if self.min_stack_size is not None:
-            plugin_info["StackSize"] = str(self.min_stack_size)
+        if self.ram_use is not None:
+            plugin_info["RamUse"] = str(self.ram_use)
+        if self.stack_size is not None:
+            plugin_info["StackSize"] = str(self.stack_size)
         if self.reload_plugins:
             plugin_info["ReloadPlugins"] = "1"
-        if self.use_profiler:
+        if self.performance_profiler:
             plugin_info["PerformanceProfiler"] = "1"
-            if self.profile_dir:
-                plugin_info["PerformanceProfilerDir"] = self.profile_dir
+            if self.performance_profiler_dir:
+                plugin_info["PerformanceProfilerDir"] = self.performance_profiler_dir
         if self.use_proxy:
             plugin_info["UseProxy"] = "1"
         
@@ -1111,16 +1111,16 @@ class NukeSubmission:
             # This is legacy debt from the Thinkbox Deadline plugin naming
             plugin_info["WriteNodesAsSeparateJobs"] = "True"
             
-            # If we have an explicit frame range with no tokens, and use_nodes_frame_list is False,
+            # If we have an explicit frame range with no tokens, and use_node_frame_list is False,
             # we can skip checking node frame ranges and use the explicit range for all nodes
-            explicit_frame_range = (self.frame_range and 
+            explicit_frame_range = (self.frames and 
                                   not self.fr.has_tokens and 
-                                  not self.use_nodes_frame_list and 
-                                  re.match(r'^\d+\-\d+$', self.frame_range))
+                                  not self.use_node_frame_list and 
+                                  re.match(r'^\d+\-\d+$', self.frames))
             
             if explicit_frame_range:
                 # Parse explicit frame range
-                start_frame, end_frame = map(int, self.frame_range.split('-'))
+                start_frame, end_frame = map(int, self.frames.split('-'))
                 # Use the same frame range for all write nodes
                 write_node_info = [(node_name, start_frame, end_frame) for node_name in self.write_nodes]
             else:
@@ -1140,8 +1140,8 @@ class NukeSubmission:
             # Use a comma-separated list for all write nodes
             plugin_info["WriteNode"] = ",".join(self.write_nodes)
         
-        if self.output_path:
-            plugin_info["OutputFilePath"] = self.output_path
+        if self.output_file_path:
+            plugin_info["OutputFilePath"] = self.output_file_path
         
         # Add GSV information to plugin info if provided
         if gsv_combination:
@@ -1161,9 +1161,9 @@ class NukeSubmission:
         """Get frame ranges for each write node using Nuke API.
         
         Behavior:
-        1. If use_nodes_frame_list is true and the node has use_limit enabled, use the node's first/last knobs
-        2. If no frame_range was specified (empty string), implicitly use "input" (node input frame range)
-        3. If an explicit frame_range was provided, use that according to the match rules
+        1. If use_node_frame_list is true and the node has use_limit enabled, use the node's first/last knobs
+        2. If no frames was specified (empty string), implicitly use "input" (node input frame range)
+        3. If an explicit frames was provided, use that according to the match rules
         
         Args:
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
@@ -1175,8 +1175,8 @@ class NukeSubmission:
         nuke = self._ensure_script_can_be_parsed()
         
         # Debug logging
-        logger.debug(f"_get_write_node_frame_ranges called with frame_range: '{self.frame_range}'")
-        logger.debug(f"use_nodes_frame_list: {self.use_nodes_frame_list}")
+        logger.debug(f"_get_write_node_frame_ranges called with frames: '{self.frames}'")
+        logger.debug(f"use_node_frame_list: {self.use_node_frame_list}")
         
         write_node_info = []
         
@@ -1217,28 +1217,28 @@ class NukeSubmission:
         has_explicit_frame_range = False
         is_input_frame_range = False
         
-        if self.frame_range:
+        if self.frames:
             # Check if it's an "input" frame range
-            if re.search(r'\b(i|input)\b', self.frame_range):
+            if re.search(r'\b(i|input)\b', self.frames):
                 is_input_frame_range = True
                 logger.debug("Using input frame range mode")
             # Check if it's a numeric frame range like "1001-2000"
-            elif re.match(r'^\d+\-\d+$', self.frame_range):
+            elif re.match(r'^\d+\-\d+$', self.frames):
                 try:
-                    parts = self.frame_range.split('-')
+                    parts = self.frames.split('-')
                     default_start = int(parts[0])
                     default_end = int(parts[1])
                     has_explicit_frame_range = True
                     logger.debug(f"Using explicit numeric frame range: {default_start}-{default_end}")
                 except (ValueError, IndexError):
-                    logger.warning(f"Invalid numeric frame range: {self.frame_range}, using root frame range")
+                    logger.warning(f"Invalid numeric frame range: {self.frames}, using root frame range")
             # Check if it's a token frame range like "f-l", "first-last", etc.
-            elif (re.match(r'^[fm]\-[lm]$', self.frame_range) or 
-                  re.match(r'^first\-last$', self.frame_range) or 
-                  re.match(r'^first\-middle$', self.frame_range) or 
-                  re.match(r'^middle\-last$', self.frame_range)):
+            elif (re.match(r'^[fm]\-[lm]$', self.frames) or 
+                  re.match(r'^first\-last$', self.frames) or 
+                  re.match(r'^first\-middle$', self.frames) or 
+                  re.match(r'^middle\-last$', self.frames)):
                 has_explicit_frame_range = True
-                logger.debug(f"Using token-based frame range: {self.frame_range}")
+                logger.debug(f"Using token-based frame range: {self.frames}")
         else:
             # If no frame range was specified, implicitly use "input"
             is_input_frame_range = True
@@ -1250,9 +1250,9 @@ class NukeSubmission:
                 node = nuke.toNode(node_name)
                 if node and node.Class() == "Write":
                     frame_range_source = "unknown"
-                    # Case 1: If use_nodes_frame_list is true and the node has use_limit enabled,
+                    # Case 1: If use_node_frame_list is true and the node has use_limit enabled,
                     # use the node's first/last knobs
-                    if self.use_nodes_frame_list and 'use_limit' in node.knobs() and node['use_limit'].value():
+                    if self.use_node_frame_list and 'use_limit' in node.knobs() and node['use_limit'].value():
                         if 'first' in node.knobs() and 'last' in node.knobs():
                             node_start = int(node['first'].value())
                             node_end = int(node['last'].value())
@@ -1517,8 +1517,8 @@ class NukeSubmission:
                 name_template = copy_config.get('name') or '{basename}.{ext}'
                 
                 # Determine base directory based on relative_to setting
-                if relative_to == 'OUTPUT' and self.output_path:
-                    base_dir = Path(self.output_path)
+                if relative_to == 'OUTPUT' and self.output_file_path:
+                    base_dir = Path(self.output_file_path)
                 elif relative_to == 'OUTPUT' and self.write_nodes and len(self.write_nodes) == 1:
                     # Get output path from the first write node
                     node = nuke.toNode(self.write_nodes[0])
@@ -1673,7 +1673,7 @@ class NukeSubmission:
                     elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                         # Get write node frame ranges if use_nodes_frame_list is enabled
                         write_node_frames = {}
-                        if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
+                        if self.use_node_frame_list or re.search(r'\b(i|input)\b', self.frames):
                             write_node_info = self._get_write_node_frame_ranges(gsv_combination)
                             for node_name, start_frame, end_frame in write_node_info:
                                 write_node_frames[node_name] = (start_frame, end_frame)
@@ -1740,7 +1740,7 @@ class NukeSubmission:
                             node_plugin_info["WriteNode"] = write_node
                             
                             # Override frame range if use_nodes_frame_list is enabled and frame range is available
-                            if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
+                            if (self.use_node_frame_list or re.search(r'\b(i|input)\b', self.frames)) and write_node in write_node_frames:
                                 start_frame, end_frame = write_node_frames[write_node]
                                 node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                             
@@ -1812,9 +1812,9 @@ class NukeSubmission:
                 elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                     logger.info(f"Processing {len(self.write_nodes)} write nodes for separate submission")
                     
-                    # Get write node frame ranges if use_nodes_frame_list is enabled
+                    # Get write node frame ranges if use_node_frame_list is enabled
                     write_node_frames = {}
-                    if self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range):
+                    if self.use_node_frame_list or re.search(r'\b(i|input)\b', self.frames):
                         write_node_info = self._get_write_node_frame_ranges()
                         logger.info(f"Write node frame ranges: {write_node_info}")
                         for node_name, start_frame, end_frame in write_node_info:
@@ -1887,8 +1887,8 @@ class NukeSubmission:
                         # For write_nodes_as_separate_jobs: Format is WriteNode=Write1 (single write node per job)
                         node_plugin_info["WriteNode"] = write_node
                         
-                        # Override frame range if use_nodes_frame_list is enabled and frame range is available
-                        if (self.use_nodes_frame_list or re.search(r'\b(i|input)\b', self.frame_range)) and write_node in write_node_frames:
+                        # Override frame range if use_node_frame_list is enabled and frame range is available
+                        if (self.use_node_frame_list or re.search(r'\b(i|input)\b', self.frames)) and write_node in write_node_frames:
                             start_frame, end_frame = write_node_frames[write_node]
                             node_job_info["Frames"] = f"{start_frame}-{end_frame}"
                         
@@ -1975,13 +1975,13 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
         **kwargs: Additional submission parameters
         
           # nk2dl specific parameters
-          - script_path_same_as_current_nuke_session: Whether this script path is already open in the current Nuke session
+          - script_is_open: Whether this script path is already open in the current Nuke session
           - use_parser_instead_of_nuke: Whether to use a parser instead of Nuke for parsing script
           - submit_alphabetically: Whether to sort write nodes alphabetically by name
           - submit_in_render_order: Whether to sort write nodes by render order
+          - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
           - copy_script: Whether to make copies of the script before submission
           - submit_copied_script: Whether to use the copied script path in the submission
-          - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
           - graph_scope_variables: List of graph scope variables in either flat format:
             ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
             Or nested format:
@@ -1998,13 +1998,13 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - comment: Job comment (defaults to config value)
           - concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
           - extra_info: List of extra info fields
-          - frame_range: Frame range to render (defaults to Nuke script settings)
+          - frames: Frame range to render (defaults to Nuke script settings)
           - job_dependencies: Comma or space separated list of job IDs
           
           # Plugin Info parameters
-          - output_path: Output directory for rendered files
+          - output_file_path: Output directory for rendered files
           - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
-                                           Defaults to True if script_path_same_as_current_nuke_session is True
+                                           Defaults to True if script_is_open is True
           - nuke_version: Version of Nuke to use for rendering. Can be:
                           - String: "15.1"
                           - Float: 15.1 (converts to "15.1")
@@ -2012,29 +2012,29 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
                           If None, uses config or current Nuke version
           - use_nuke_x: Whether to use NukeX for rendering
           - batch_mode: Whether to use batch mode
-          - render_threads: Number of render threads
+          - threads: Number of render threads
           - use_gpu: Whether to use GPU for rendering
           - gpu_override: Specific GPU to use
-          - max_ram_usage: Maximum RAM usage (MB)
+          - ram_use: Maximum RAM usage (MB)
           - enforce_render_order: Whether to enforce write node render order
-          - min_stack_size: Minimum stack size (MB)
+          - stack_size: Minimum stack size (MB)
           - continue_on_error: Whether to continue rendering on error
           - reload_plugins: Whether to reload plugins between tasks
-          - use_profiler: Whether to use the performance profiler
-          - profile_dir: Directory for performance profile files
+          - performance_profiler: Whether to use the performance profiler
+          - performance_profiler_dir: Directory for performance profile files
           - use_proxy: Whether to use proxy mode for rendering
           - write_nodes: List of write nodes to render
           - render_mode: Render mode (full, proxy)
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - render_order_dependencies: Whether to set job dependencies based on render order
-          - use_nodes_frame_list: Whether to use node-specific frame lists
+          - use_node_frame_list: Whether to use node-specific frame lists
           - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
-                                           Defaults to True if script_path_same_as_current_nuke_session is True
+                                           Defaults to True if script_is_open is True
           
           # Environment Variables parameters
           - use_current_environment: Whether to use the current environment variables
-          - include_environment_keys: List of environment variables to include
+          - environment_keys: List of environment variables to include
           - environment: Dictionary of environment variables to add to jobs
           - omit_environment_keys: List of environment variables to omit from jobs
     
@@ -2042,7 +2042,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
         Dictionary where keys are render order values (int) and values are lists of job IDs (str)
     """
     # Extract parameters needed for determining script path
-    script_path_same_as_current_nuke_session = kwargs.get('script_path_same_as_current_nuke_session', False)
+    script_is_open = kwargs.get('script_is_open', False)
     use_parser_instead_of_nuke = kwargs.get('use_parser_instead_of_nuke', False)
     
     # Check if we need to parse the script
@@ -2064,7 +2064,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
 
     # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
     launch_subprocess = False
-    if requires_parsing and running_in_nuke_gui and not script_path_same_as_current_nuke_session:
+    if requires_parsing and running_in_nuke_gui and not script_is_open:
         launch_subprocess = True
         
     if not running_in_nuke_gui or launch_subprocess:
@@ -2082,10 +2082,10 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
     
     if not running_in_nuke_gui:
         logger.info(f"Not running in Nuke GUI. Proceeding with submission within the current process for {script_path}")
-        # Set script_path_same_as_current_nuke_session to False to ensure the script is loaded if it needs to be parsed
+        # Set script_is_open to False to ensure the script is loaded if it needs to be parsed
         # By definition, if we're not running in the Nuke GUI, there is no open script in the current session
         # We wont deal with cases where nuke.scriptOpen() has been run in a python session, as this is an edge case
-        kwargs['script_path_same_as_current_nuke_session']=False
+        kwargs['script_is_open']=False
 
     # Proceed with submission within the current process if submitted script is same as currently open script
     submission = NukeSubmission(script_path=script_path, **kwargs)

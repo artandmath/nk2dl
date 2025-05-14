@@ -49,7 +49,7 @@ venv.bak/
 
 # Project specific
 plan/
-scratch/
+sandbox/
 logs/
 *.log
 .coverage

@@ -18,25 +18,52 @@ logging:
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
 submission:
-  pool: none
-  group: none
   priority: 50
-  chunk_size: 1
-  department: ""
-  job_name_template: "{batch} / {write}"
-  batch_name_template: "{scriptname}"
+  pool: "nuke"
+  group: "none"
+  chunk_size: 10
+  concurrent_tasks: 1
+  threads: 0
+  ram_use: 0
+  stack_size: 0
+  batch_name_template: "{script_stem}"
+  job_name_template: "{batch} / {write} / {file}"
   comment_template: ""
-  
-  # Script copying and submission
+  render_mode: "full"
+  write_nodes_as_tasks: false
+  write_nodes_as_separate_jobs: false
+  render_order_dependencies: false
+  enforce_render_order: true
+  use_node_frame_list: false
+  use_nuke_x: false
+  batch_mode: true
+  use_gpu: false
+  performance_profiler: false
+  performance_profiler_dir: ""
+  continue_on_error: false
+  reload_plugins: false
+  use_proxy: false
+  submit_alphabetically: false
+  submit_in_render_order: false
   copy_script: false
   submit_copied_script: false
   submit_script_as_auxiliary_file: false
-  script_copy_path: ./.farm/
-  script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
-  script_copy_name: '{basename}.{ext}'
-  
+
   # Environment variables
   use_current_environment: false
-  include_environment_keys: []
+  environment_keys: []
   environment: {}
   omit_environment_keys: []
+
+  # Script copying options (can define multiple copy locations)
+  script_copy_path: ""  # Leave empty to use temporary directory
+  script_copy_relative_to: "SCRIPT"  # Options: SCRIPT, OUTPUT, ABSOLUTE
+  script_copy_name: "{script_stem}_copy.nk"  # Token-based naming template
+
+  # Alternatively, define multiple copy locations:
+  # script_copy0_path: "/path/to/copies"
+  # script_copy0_relative_to: "SCRIPT"
+  # script_copy0_name: "{script_stem}_copy1.nk"
+  # script_copy1_path: "/another/path"
+  # script_copy1_relative_to: "OUTPUT"
+  # script_copy1_name: "{script_stem}_copy2.nk"

@@ -70,28 +70,46 @@ class Config:
             'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         },
         'submission': {
-            'pool': 'none',
-            'group': 'none',
             'priority': 50,
-            'chunk_size': 1,
-            'department': '',
-            'job_name_template': "{batch} / {write}",
-            'batch_name_template': "{scriptname}",
-            'comment_template': "",
-            
-            # Script copying and submission
+            'pool': 'nuke',
+            'group': 'none',
+            'chunk_size': 10,
+            'concurrent_tasks': 1,
+            'threads': 0,
+            'ram_use': 0,
+            'stack_size': 0,
+            'batch_name_template': '{script_stem}',
+            'job_name_template': '{batch} / {write} / {file}',
+            'comment_template': '',
+            'render_mode': 'full',
+            'write_nodes_as_tasks': False,
+            'write_nodes_as_separate_jobs': False,
+            'render_order_dependencies': False,
+            'enforce_render_order': True,
+            'use_node_frame_list': False,
+            'use_nuke_x': False,
+            'batch_mode': True,
+            'use_gpu': False,
+            'performance_profiler': False,
+            'performance_profiler_dir': '',
+            'continue_on_error': False,
+            'reload_plugins': False,
+            'use_proxy': False,
+            'submit_alphabetically': False,
+            'submit_in_render_order': False,
             'copy_script': False,
             'submit_copied_script': False,
             'submit_script_as_auxiliary_file': False,
-            'script_copy_path': './.farm/',
-            'script_copy_relative_to': 'OUTPUT',  # SCRIPT or OUTPUT
-            'script_copy_name': '{basename}.{ext}',
+            'use_current_environment': False,
+            'environment_keys': [],
+            'environment': {},
+            'omit_environment_keys': [],
+            'script_copy_path': '',
+            'script_copy_relative_to': 'SCRIPT',
+            'script_copy_name': '{script_stem}_copy.nk',
             
             # Environment variables
-            'use_current_environment': False,
-            'include_environment_keys': [],
-            'environment': {},
-            'omit_environment_keys': []
+            'department': '',
         }
     }
     
