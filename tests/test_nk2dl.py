@@ -15,7 +15,7 @@ root_dir = os.path.dirname(os.path.abspath(__file__))
 
 # Submit the script with the dependencies example.
 job_ids = submit_nuke_script(
-    root_dir + "/dependencies_example.nk",
+    root_dir + "nukescripts/dependencies_example.nk",
     copy_script=True,
     submit_copied_script=True,
     frame_range="input",
@@ -43,7 +43,7 @@ minor = nuke.NUKE_VERSION_MINOR
 
 if major >= 15 and minor >= 2:
     job_ids = submit_nuke_script(
-        root_dir + "/multishot_example.nk",
+        root_dir + "nukescripts/multishot_example.nk",
         copy_script=True,
         submit_copied_script=True,
         frame_range="input",

@@ -99,10 +99,8 @@ Make sure to follow these steps before running the tests:
 3. run test:
     python -m pytest tests/pytest/pytest_submission.py -v -s
 
-NOTE: The tests are designed to run using Nuke's Python interpreter,
-which should be loaded by the activation script above.
-If you are a code assistant, don't create a mock nuke module for the fixture,
-as it will not create a reliable test.
+NOTE: The tests are designed to run using Nuke's Python interpreter, which should be loaded by the activation script above.
+INSTRUCTIONS FOR CODE ASSISTANTS: DON'T create a mock nuke module as it will not create a reliable test.
 
 Run the environment check test to verify:
     python -m pytest tests/pytest/pytest_submission.py::test_000_environment_check -v -s
