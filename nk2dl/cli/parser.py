@@ -103,6 +103,11 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Job priority (0-100, default: 50)"
     )
     resource_group.add_argument(
+        "--LimitGroups", 
+        metavar="LIST",
+        help="Resource limits to use (comma-separated)"
+    )
+    resource_group.add_argument(
         "--TaskTimeout", 
         metavar="MINUTES",
         type=int,
@@ -122,7 +127,7 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
     resource_group.add_argument(
         "--LimitWorkerTasks", 
         action="store_true",
-        help="Limit tasks to one per worker"
+        help="Limit tasks to worker's task limit"
     )
     resource_group.add_argument(
         "--MachineLimit", 
@@ -162,6 +167,11 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         "--SubmitJobsAsSuspended", 
         action="store_true",
         help="Submit jobs as suspended"
+    )
+    dependency_group.add_argument(
+        "--OnJobComplete", 
+        choices=["Nothing", "Archive", "Delete"],
+        help="Action to take when the job completes"
     )
     dependency_group.add_argument(
         "--SubmitNukeScript", 
@@ -285,14 +295,6 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         dest="GraphScopeVariables",
         action="append",
         help="Graph scope variables (format: var:value1,value2,var2:value3,value4)"
-    )
-    
-    # Job completion options
-    completion_group = parser.add_argument_group("Job completion options")
-    completion_group.add_argument(
-        "--OnJobComplete", 
-        choices=["Nothing", "Archive", "Delete"],
-        help="Action to take when job completes"
     )
 
 

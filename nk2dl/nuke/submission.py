@@ -55,6 +55,12 @@ class NukeSubmission:
                 extra_info: Optional[List[str]] = None,
                 frames: str = "",
                 job_dependencies: Optional[str] = None,
+                on_job_complete: Optional[str] = None,
+                submit_suspended: bool = False,
+                limit_groups: Optional[str] = None,
+                task_timeout: Optional[int] = None,
+                enable_auto_timeout: bool = False,
+                limit_worker_tasks: bool = False,
                 
                 # Plugin Info parameters
                 output_file_path: str = "",
@@ -140,6 +146,12 @@ class NukeSubmission:
                         Each item supports the same tokens as job_name
             frames: Frame range to render (defaults to Nuke script settings)
             job_dependencies: Comma or space separated list of job IDs
+            on_job_complete: Optional job completion script
+            submit_suspended: Whether to submit the job suspended
+            limit_groups: Optional comma-separated list of group names to limit
+            task_timeout: Optional task timeout in seconds
+            enable_auto_timeout: Whether to enable auto timeout
+            limit_worker_tasks: Whether to limit concurrent tasks
             
             # Plugin Info parameters
             output_file_path: Output directory for rendered files
@@ -250,6 +262,19 @@ class NukeSubmission:
         
         # Store the job_name template for later processing
         self.job_name_template = job_name if job_name else config.get('submission.job_name_template', "{batch} / {write} / {file}")
+        
+        # Store job dependencies
+        self.job_dependencies = job_dependencies
+        
+        # Store job completion options
+        self.on_job_complete = on_job_complete if on_job_complete is not None else config.get('submission.on_job_complete')
+        self.submit_suspended = submit_suspended if isinstance(submit_suspended, bool) else config.get('submission.submit_suspended', False)
+        
+        # Store resource limitation options
+        self.limit_groups = limit_groups if limit_groups is not None else config.get('submission.limit_groups')
+        self.task_timeout = task_timeout if task_timeout is not None else config.get('submission.task_timeout')
+        self.enable_auto_timeout = enable_auto_timeout if isinstance(enable_auto_timeout, bool) else config.get('submission.enable_auto_timeout', False)
+        self.limit_worker_tasks = limit_worker_tasks if isinstance(limit_worker_tasks, bool) else config.get('submission.limit_worker_tasks', False)
         
         # Nuke-specific options
         self.use_nuke_x = use_nuke_x if isinstance(use_nuke_x, bool) else config.get('submission.use_nuke_x', False)
@@ -1048,6 +1073,30 @@ class NukeSubmission:
         # Add machine limit if specified
         if self.machine_limit is not None:
             job_info["MachineLimit"] = str(self.machine_limit)
+        
+        # Add job completion options
+        if self.on_job_complete:
+            job_info["OnJobComplete"] = self.on_job_complete
+        
+        # Add initial status if job should be submitted suspended
+        if self.submit_suspended:
+            job_info["InitialStatus"] = "Suspended"
+            
+        # Add limit groups if specified
+        if self.limit_groups:
+            job_info["LimitGroups"] = self.limit_groups
+            
+        # Add task timeout if specified
+        if self.task_timeout is not None:
+            job_info["TaskTimeoutSeconds"] = str(self.task_timeout)
+            
+        # Add auto task timeout if enabled
+        if self.enable_auto_timeout:
+            job_info["EnableAutoTimeout"] = "true"
+            
+        # Add limit concurrent tasks if enabled
+        if self.limit_worker_tasks:
+            job_info["LimitConcurrentTasks"] = "true"
         
         # Add environment variables to job info
         self._add_environment_variables_to_job_info(job_info)
@@ -2085,6 +2134,12 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - extra_info: List of extra info fields
           - frames: Frame range to render (defaults to Nuke script settings)
           - job_dependencies: Comma or space separated list of job IDs
+          - on_job_complete: Optional job completion script
+          - submit_suspended: Whether to submit the job suspended
+          - limit_groups: Optional comma-separated list of group names to limit
+          - task_timeout: Optional task timeout in seconds
+          - enable_auto_timeout: Whether to enable auto timeout
+          - limit_worker_tasks: Whether to limit concurrent tasks
           
           # Plugin Info parameters
           - output_file_path: Output directory for rendered files
@@ -2096,17 +2151,17 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
                           - Int: 15 (converts to "15.0")
                           If None, uses config or current Nuke version
           - use_nuke_x: Whether to use NukeX for rendering
-          - batch_mode: Whether to use batch mode
-          - threads: Number of render threads
+          - use_batch_mode: Whether to use batch mode
+          - render_threads: Number of render threads
           - use_gpu: Whether to use GPU for rendering
           - gpu_override: Specific GPU to use
-          - ram_use: Maximum RAM usage (MB)
+          - max_ram_usage: Maximum RAM usage (MB)
           - enforce_render_order: Whether to enforce write node render order
-          - stack_size: Minimum stack size (MB)
+          - min_stack_size: Minimum stack size (MB)
           - continue_on_error: Whether to continue rendering on error
           - reload_plugins: Whether to reload plugins between tasks
-          - performance_profiler: Whether to use the performance profiler
-          - performance_profiler_dir: Directory for performance profile files
+          - use_profiler: Whether to use the performance profiler
+          - profile_dir: Directory for performance profile files
           - use_proxy: Whether to use proxy mode for rendering
           - write_nodes: List of write nodes to render
           - render_mode: Render mode (full, proxy)

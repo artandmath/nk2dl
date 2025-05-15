@@ -142,7 +142,17 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["machine_deny_list"] = args.MachineDenyList.split(',')
         
     if hasattr(args, "Limits") and args.Limits is not None:
-        kwargs["limits"] = args.Limits
+        kwargs["limit_groups"] = args.Limits
+    
+    if hasattr(args, "TaskTimeout") and args.TaskTimeout is not None:
+        # Convert minutes to seconds
+        kwargs["task_timeout"] = args.TaskTimeout * 60
+        
+    if hasattr(args, "AutoTaskTimeout") and args.AutoTaskTimeout:
+        kwargs["enable_auto_timeout"] = True
+        
+    if hasattr(args, "LimitGroups") and args.LimitGroups is not None:
+        kwargs["limit_groups"] = args.LimitGroups
         
     # Dependencies options
     if hasattr(args, "Dependencies") and args.Dependencies is not None:

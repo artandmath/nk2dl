@@ -50,7 +50,7 @@ The `submit` command supports the following options:
 | `--TaskTimeout MINUTES` | Task timeout in minutes (0 for no timeout) |
 | `--AutoTaskTimeout` | Enable automatic task timeout |
 | `--ConcurrentTasks COUNT` | Maximum number of concurrent tasks per job (default: 1) |
-| `--LimitWorkerTasks` | Limit tasks to one per worker |
+| `--LimitWorkerTasks` | Limit tasks to maximum allowed by worker |
 | `--MachineLimit COUNT` | Maximum number of machines to use (0 for no limit) |
 | `--MachineList LIST` | List of machines to allow (comma-separated machine names) |
 | `--MachineListIsDenyList` | Treat MachineList as a deny list instead of an allow list |

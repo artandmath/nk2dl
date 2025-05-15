@@ -105,6 +105,24 @@ submission:
   # Template for job names
   job_name_template: "{batch} / {write} / {file}"
   
+  # Action to take when job completes ("Nothing", "Archive", "Delete")
+  on_job_complete: null
+  
+  # Whether to submit jobs in suspended state
+  submit_suspended: false
+  
+  # Comma-separated list of limit names that this job must obey
+  limit_groups: null
+  
+  # Task timeout in seconds (0 for no timeout)
+  task_timeout: null
+  
+  # Whether to enable automatic task timeout
+  enable_auto_timeout: false
+  
+  # Whether to limit tasks to worker's task limit
+  limit_worker_tasks: false
+  
   # Whether to submit write nodes as separate jobs
   write_nodes_as_separate_jobs: false
   
