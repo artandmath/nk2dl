@@ -85,6 +85,7 @@ class NukeSubmission:
                 write_nodes_as_separate_jobs: bool = False,
                 render_order_dependencies: bool = False,
                 use_node_frame_list: bool = False,
+                views: Optional[List[str]] = None,
                 
                 # Graph Scope Variables parameters (Nuke 15.2+)
                 graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None,
@@ -181,6 +182,7 @@ class NukeSubmission:
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
             render_order_dependencies: Whether to set job dependencies based on render order
             use_nodes_frame_list: Whether to use the frame range defined in write nodes with use_limit enabled
+            views: List of view names to render. If None, all views will be rendered.
             
             # Graph Scope Variables parameters (Nuke 15.2+)
             graph_scope_variables: List of graph scope variables to use for rendering. Can be provided in two formats:
@@ -300,6 +302,9 @@ class NukeSubmission:
         self.submit_writes_in_render_order = submit_writes_in_render_order if isinstance(submit_writes_in_render_order, bool) else config.get('submission.submit_writes_in_render_order', False)
         self.use_node_frame_list = use_node_frame_list if isinstance(use_node_frame_list, bool) else config.get('submission.use_node_frame_list', False)
         self.use_parser_instead_of_nuke = use_parser_instead_of_nuke
+        
+        # Store views parameter
+        self.views = views if views is not None else config.get('submission.views', None)
         
         # Script copying options
         self.copy_script = copy_script if copy_script is not None else config.get('submission.copy_script', False)
@@ -1216,6 +1221,10 @@ class NukeSubmission:
             not self.write_nodes_as_tasks and 
             self._is_movie_format(self.write_nodes[0])):
             plugin_info["BatchModeIsMovie"] = "True"
+        
+        # Add views if specified
+        if self.views:
+            plugin_info["Views"] = ",".join(self.views)
         
         # Add optional plugin settings
         if self.threads is not None:
@@ -2171,6 +2180,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - use_nodes_frame_list: Whether to use node-specific frame lists
           - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
                                            Defaults to True if script_is_open is True
+          - views: List of view names to render. If None, all views will be rendered.
           
           # Environment Variables parameters
           - use_current_environment: Whether to use the current environment variables

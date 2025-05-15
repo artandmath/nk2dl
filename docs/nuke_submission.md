@@ -81,6 +81,7 @@ job_ids = submit_nuke_script(
 | `performance_profiler` | bool | `False` | Use the profiler |
 | `performance_profiler_dir` | str | `None` | Directory for profile files |
 | `use_proxy` | bool | `False` | Use proxy mode for rendering |
+| `views` | list | `None` | List of view names to render |
 | `write_nodes` | list | `None` | List of write nodes to render |
 | `render_mode` | str | `"full"` | Render mode (full, proxy) |
 | `write_nodes_as_tasks` | bool | `False` | Submit write nodes as separate tasks |
@@ -187,6 +188,22 @@ submit_nuke_script(
     render_order_dependencies=True  # Automatically sets write_nodes_as_separate_jobs=True
 )
 ```
+
+## Views
+
+For multi-view or stereoscopic Nuke scripts, you can specify which views to render:
+
+```python
+from nk2dl import submit_nuke_script
+
+# Render specific views
+submit_nuke_script(
+    "/path/to/script.nk",
+    views=["left", "right"]  # Render only the left and right views
+)
+```
+
+This is useful for stereoscopic workflows where you want to control which eye views to render.
 
 ## Environment Variables
 
@@ -318,90 +335,4 @@ print(job_ids)  # {0: ['12345']}
 
 For `render_order_dependencies`, the dictionary keys are render order values:
 
-```python
-job_ids = submit_nuke_script(
-    "/path/to/script.nk",
-    write_nodes=["Write1", "Write2", "Write3"],
-    render_order_dependencies=True
-)
-print(job_ids)  # {10: ['12345'], 20: ['67890']}
-```
-
-## Error Handling
-
-The function may raise exceptions if there are issues with submission:
-
-```python
-from nk2dl.common.errors import DeadlineError, NukeError
-
-try:
-    job_ids = submit_nuke_script("/path/to/script.nk")
-    print(f"Successfully submitted {len(job_ids)} jobs")
-except DeadlineError as e:
-    print(f"Deadline error: {e}")
-except NukeError as e:
-    print(f"Nuke error: {e}")
-except Exception as e:
-    print(f"Unexpected error: {e}")
-```
-
-## Using in Nuke GUI (UNTESTED)
-
-To use `nk2dl` within the Nuke GUI:
-
-1. Ensure that the `nk2dl` package is available in your Nuke Python path
-2. Create an init.py file that adds the path to your `nk2dl` installation
-3. Import and use the module in your Nuke Python scripts or panels
-
-Example init.py:
-
-```python
-import sys
-import os
-
-# Add nk2dl to the Python path
-nk2dl_path = "/path/to/nk2dl"
-if os.path.exists(nk2dl_path) and nk2dl_path not in sys.path:
-    sys.path.append(nk2dl_path)
-```
-
-## Practical Examples
-
-### Basic Production Setup
-
-```python
-from nk2dl.nuke import submit_nuke_script
-
-# Submit a show with standard settings
-job_ids = submit_nuke_script(
-    "/shows/project123/shots/shot001/comp/shot001_comp_v003.nk",
-    pool="nuke",
-    group="renderfarm",
-    priority=50,
-    department="comp",
-    batch_name="{scriptname}",
-    job_name="{batchname} | {write} | {output}",
-    chunk_size=5,
-    use_nuke_x=True,
-    render_threads=0
-)
-```
-
-### Multi-Shot Submission with Variables
-
-```python
-from nk2dl.nuke import submit_nuke_script
-
-# Submit multiple shots using graph scope variables
-job_ids = submit_nuke_script(
-    "/shows/project123/templates/shot_template.nk",
-    batch_name="Project123_overnight",
-    graph_scope_variables=[
-        ["shotcode:shot001,shot002,shot003", "res:full"],
-        ["shotcode:shot004,shot005,shot006", "res:half"]
-    ],
-    frame_range="1-100",
-    priority=80,
-    write_nodes_as_separate_jobs=True
-) 
 ```
