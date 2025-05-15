@@ -56,6 +56,10 @@ job_ids = submit_nuke_script(
 | `extra_info` | list | `[]` | List of extra info fields |
 | `frames` | str | `""` | Frame range to render (e.g., "1-100", "f-l") |
 | `job_dependencies` | str | `None` | Comma or space separated list of job IDs |
+| `machine_list` | list | `None` | List of machine names to allow or deny |
+| `machine_list_is_a_deny_list` | bool | `False` | Whether the machine list is a deny list |
+| `machine_allow_list` | list | `None` | Alternative to machine_list, explicitly specifies an allow list |
+| `machine_deny_list` | list | `None` | List of machine names to deny |
 
 ### Optional Plugin Info Parameters
 
@@ -204,6 +208,51 @@ submit_nuke_script(
     environment={"OCIO": "/path/to/config.ocio"}
 )
 ```
+
+## Machine Lists
+
+Control which machines can or cannot render your job:
+
+```python
+# Allow specific machines only
+submit_nuke_script(
+    "/path/to/script.nk",
+    machine_list=["render01", "render02", "render03"]
+)
+
+# Deny specific machines
+submit_nuke_script(
+    "/path/to/script.nk",
+    machine_list=["render01", "render02"],
+    machine_list_is_a_deny_list=True
+)
+
+# Alternative explicit syntax
+submit_nuke_script(
+    "/path/to/script.nk",
+    machine_allow_list=["render01", "render02", "render03"]  # Same as machine_list
+)
+
+submit_nuke_script(
+    "/path/to/script.nk",
+    machine_deny_list=["render04", "render05"]  # Deny specific machines
+)
+```
+
+Note: You cannot use both allow and deny lists in the same submission.
+
+### Configuration
+
+Machine lists can also be specified in the configuration files:
+
+```yaml
+submission:
+  machine_allow_list: ["render01", "render02", "render03"]
+  # OR
+  machine_deny_list: ["render04", "render05"]
+```
+
+These configuration values will be used if no machine lists are explicitly provided in the submission parameters. The same validation rules apply - you cannot have both allow and deny lists in the configuration.
 
 ## Graph Scope Variables (Nuke 15.2+)
 

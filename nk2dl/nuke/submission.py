@@ -35,6 +35,12 @@ class NukeSubmission:
                 copy_script: Optional[bool] = None,
                 submit_copied_script: Optional[bool] = None,
                 
+                # Machine list parameters
+                machine_list: Optional[List[str]] = None,
+                machine_list_is_a_deny_list: Optional[bool] = None,
+                machine_allow_list: Optional[List[str]] = None,
+                machine_deny_list: Optional[List[str]] = None,
+                
                 # Job Info parameters
                 job_name: Optional[str] = None,
                 batch_name: Optional[str] = None,
@@ -110,6 +116,12 @@ class NukeSubmission:
             copy_script: Whether to copy the script before submission
             submit_copied_script: Whether to submit the copied script
             submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
+            
+            # Machine list parameters
+            machine_list: List of machine names to allow or deny
+            machine_list_is_a_deny_list: Whether the machine list is a deny list
+            machine_allow_list: List of machine names to allow
+            machine_deny_list: List of machine names to deny
             
             # Job Info parameters
             job_name: Job name template (defaults to config value)
@@ -268,6 +280,9 @@ class NukeSubmission:
         self.submit_script_as_auxiliary_file = submit_script_as_auxiliary_file if submit_script_as_auxiliary_file is not None else config.get('submission.submit_script_as_auxiliary_file', False)
         self.copied_script_paths = []
         
+        # Initialize machine list parameters
+        self.machine_allow_list, self.machine_deny_list = self._initialize_machine_lists(machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list)
+        
         # Store Nuke version
         self.nuke_version = nuke_version
         
@@ -338,6 +353,61 @@ class NukeSubmission:
         if script_is_open and parse_output_paths_to_deadline is False:
             self.parse_output_paths_to_deadline = True
         
+
+    def _initialize_machine_lists(self, machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list):
+        """Initialize machine allow and deny lists based on provided parameters.
+        
+        Args:
+            machine_list: Generic list of machines
+            machine_list_is_a_deny_list: Whether the machine_list should be treated as a deny list
+            machine_allow_list: Explicit allow list of machines
+            machine_deny_list: Explicit deny list of machines
+            
+        Returns:
+            tuple: (machine_allow_list, machine_deny_list)
+            
+        Raises:
+            SubmissionError: If more than one machine list parameter is provided
+        """
+        # Check that only one of the three machine list parameters is provided
+        provided_lists = [
+            (machine_list is not None, "machine_list"),
+            (machine_allow_list is not None, "machine_allow_list"),
+            (machine_deny_list is not None, "machine_deny_list")
+        ]
+        provided = [name for is_provided, name in provided_lists if is_provided]
+
+        if len(provided) > 1:
+            raise SubmissionError(f"Only one of these parameters can be specified: {', '.join(provided)}")
+
+        # Handle machine list logic from parameters
+        if machine_list is not None:
+            # If machine_list_is_a_deny_list is True, use it as deny list
+            if machine_list_is_a_deny_list:
+                return None, machine_list
+            # Otherwise, use it as allow list
+            else:
+                return machine_list, None
+        elif machine_allow_list is not None:
+            return machine_allow_list, None
+        elif machine_deny_list is not None:
+            return None, machine_deny_list
+        
+        # If no machine lists were provided through parameters, check config
+        config_allow_list = config.get('submission.machine_allow_list')
+        config_deny_list = config.get('submission.machine_deny_list')
+        
+        # Check that both aren't specified in the config
+        if config_allow_list and config_deny_list:
+            raise SubmissionError("Cannot have both machine_allow_list and machine_deny_list specified in the configuration")
+            
+        if config_allow_list:
+            return config_allow_list, None
+        elif config_deny_list:
+            return None, config_deny_list
+        else:
+            # No machine lists specified in parameters or config
+            return None, None
 
     def _ensure_script_can_be_parsed(self):
         """Ensure the script is open in Nuke or available for parsing.
@@ -963,6 +1033,12 @@ class NukeSubmission:
                 script_file_path = self.copied_script_paths[0]
             
             job_info["AuxiliaryFiles"] = script_file_path
+        
+        # Add machine list to job info if specified
+        if self.machine_allow_list:
+            job_info["Allowlist"] = ",".join(self.machine_allow_list)
+        elif self.machine_deny_list:
+            job_info["Denylist"] = ",".join(self.machine_deny_list)
         
         # Add environment variables to job info
         self._add_environment_variables_to_job_info(job_info)
@@ -2037,6 +2113,12 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - environment_keys: List of environment variables to include
           - environment: Dictionary of environment variables to add to jobs
           - omit_environment_keys: List of environment variables to omit from jobs
+          
+          # Machine List parameters
+          - machine_list: List of machine names to allow or deny based on machine_list_is_a_deny_list
+          - machine_list_is_a_deny_list: Whether the machine_list is a deny list (default: False, treat as allow list)
+          - machine_allow_list: Alternative to machine_list, explicitly specifies an allow list
+          - machine_deny_list: List of machine names to deny (cannot be used with machine_allow_list/machine_list)
     
     Returns:
         Dictionary where keys are render order values (int) and values are lists of job IDs (str)

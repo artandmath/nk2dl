@@ -149,6 +149,10 @@ submission:
   environment_keys: []              # List of environment variables to include (if not using all)
   environment: {}                    # Add or override environment variables
   omit_environment_keys: []          # Environment variables to omit
+  
+  # Machine list options
+  machine_allow_list: null          # List of machines allowed to render this job
+  machine_deny_list: null           # List of machines not allowed to render this job
 ```
 
 ### Nuke Settings

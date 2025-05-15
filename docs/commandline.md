@@ -52,7 +52,9 @@ The `submit` command supports the following options:
 | `--ConcurrentTasks COUNT` | Maximum number of concurrent tasks per job (default: 1) |
 | `--LimitWorkerTasks` | Limit tasks to one per worker |
 | `--MachineLimit COUNT` | Maximum number of machines to use (0 for no limit) |
-| `--MachineList LIST` | List of machines to allow or deny (format: allow:machine1,machine2 or deny:machine1,machine2) |
+| `--MachineList LIST` | List of machines to allow (comma-separated machine names) |
+| `--MachineListIsDenyList` | Treat MachineList as a deny list instead of an allow list |
+| `--MachineDenyList LIST` | List of machines to deny (comma-separated machine names) |
 | `--Limits LIST` | Resource limits to use (comma-separated) |
 
 ### Dependencies and submission options
@@ -119,6 +121,12 @@ nk2dl submit /path/to/script.nk --NukeX --Gpu --WriteNodes Write1,Write2
 
 # Specify graph scope variables
 nk2dl submit /path/to/script.nk --Var "shotcode:ABC_0010,ABC_0020"
+
+# Allow specific machines for rendering
+nk2dl submit /path/to/script.nk --MachineList render01,render02,render03
+
+# Deny specific machines for rendering
+nk2dl submit /path/to/script.nk --MachineDenyList render04,render05
 
 # Full example with multiple options
 nk2dl submit /path/to/script.nk \

@@ -128,8 +128,19 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["limit_worker_tasks"] = True
     if hasattr(args, "MachineLimit") and args.MachineLimit is not None:
         kwargs["machine_limit"] = args.MachineLimit
+    
+    # Machine list options
     if hasattr(args, "MachineList") and args.MachineList is not None:
-        kwargs["machine_list"] = args.MachineList
+        machine_list = args.MachineList.split(',')
+        if hasattr(args, "MachineListIsDenyList") and args.MachineListIsDenyList:
+            kwargs["machine_list"] = machine_list
+            kwargs["machine_list_is_a_deny_list"] = True
+        else:
+            kwargs["machine_allow_list"] = machine_list
+    
+    if hasattr(args, "MachineDenyList") and args.MachineDenyList is not None:
+        kwargs["machine_deny_list"] = args.MachineDenyList.split(',')
+        
     if hasattr(args, "Limits") and args.Limits is not None:
         kwargs["limits"] = args.Limits
         

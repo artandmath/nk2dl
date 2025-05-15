@@ -133,7 +133,17 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
     resource_group.add_argument(
         "--MachineList", 
         metavar="LIST",
-        help="List of machines to allow or deny (format: allow:machine1,machine2 or deny:machine1,machine2)"
+        help="List of machines to allow (comma-separated machine names)"
+    )
+    resource_group.add_argument(
+        "--MachineListIsDenyList",
+        action="store_true",
+        help="Treat MachineList as a deny list instead of an allow list"
+    )
+    resource_group.add_argument(
+        "--MachineDenyList", 
+        metavar="LIST",
+        help="List of machines to deny (comma-separated machine names)"
     )
     resource_group.add_argument(
         "--Limits", 

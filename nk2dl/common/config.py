@@ -108,6 +108,10 @@ class Config:
             'script_copy_relative_to': 'SCRIPT',
             'script_copy_name': '{script_stem}_copy.nk',
             
+            # Machine list options
+            'machine_allow_list': None,
+            'machine_deny_list': None,
+            
             # Environment variables
             'department': '',
         }
