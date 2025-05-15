@@ -111,6 +111,7 @@ class Config:
             # Machine list options
             'machine_allow_list': None,
             'machine_deny_list': None,
+            'machine_limit': None,
             
             # Environment variables
             'department': '',

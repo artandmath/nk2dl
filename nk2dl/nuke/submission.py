@@ -40,6 +40,7 @@ class NukeSubmission:
                 machine_list_is_a_deny_list: Optional[bool] = None,
                 machine_allow_list: Optional[List[str]] = None,
                 machine_deny_list: Optional[List[str]] = None,
+                machine_limit: Optional[int] = None,
                 
                 # Job Info parameters
                 job_name: Optional[str] = None,
@@ -122,6 +123,7 @@ class NukeSubmission:
             machine_list_is_a_deny_list: Whether the machine list is a deny list
             machine_allow_list: List of machine names to allow
             machine_deny_list: List of machine names to deny
+            machine_limit: Maximum number of machines to use
             
             # Job Info parameters
             job_name: Job name template (defaults to config value)
@@ -282,6 +284,9 @@ class NukeSubmission:
         
         # Initialize machine list parameters
         self.machine_allow_list, self.machine_deny_list = self._initialize_machine_lists(machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list)
+        
+        # Store machine limit
+        self.machine_limit = machine_limit if machine_limit is not None else config.get('submission.machine_limit')
         
         # Store Nuke version
         self.nuke_version = nuke_version
@@ -1039,6 +1044,10 @@ class NukeSubmission:
             job_info["Allowlist"] = ",".join(self.machine_allow_list)
         elif self.machine_deny_list:
             job_info["Denylist"] = ",".join(self.machine_deny_list)
+        
+        # Add machine limit if specified
+        if self.machine_limit is not None:
+            job_info["MachineLimit"] = str(self.machine_limit)
         
         # Add environment variables to job info
         self._add_environment_variables_to_job_info(job_info)
@@ -2119,6 +2128,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - machine_list_is_a_deny_list: Whether the machine_list is a deny list (default: False, treat as allow list)
           - machine_allow_list: Alternative to machine_list, explicitly specifies an allow list
           - machine_deny_list: List of machine names to deny (cannot be used with machine_allow_list/machine_list)
+          - machine_limit: Maximum number of machines that can work on the job simultaneously
     
     Returns:
         Dictionary where keys are render order values (int) and values are lists of job IDs (str)
