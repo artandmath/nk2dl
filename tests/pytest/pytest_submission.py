@@ -197,7 +197,7 @@ def test_submit_write_nodes_as_separate_jobs(test_mode, create_submission):
     # Set up parameters based on test mode
     submission_params = {
         "write_nodes": ["Write1", "Write2", "Write3"],
-        "submit_in_render_order": True,
+        "submit_writes_in_render_order": True,
         "write_nodes_as_separate_jobs": True
     }
     
@@ -566,7 +566,7 @@ def test_nuke_submission_render_order_dependencies(test_mode, create_submission)
         mock_job_ids=["job-1", "job-2", "job-3"],
         mock_write_nodes=mock_write_nodes,
         write_nodes=["Write1", "Write2", "Write3"],
-        submit_in_render_order=True,
+        submit_writes_in_render_order=True,
         write_nodes_as_separate_jobs=True,
         render_order_dependencies=True
     )

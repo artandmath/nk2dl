@@ -209,26 +209,33 @@ def script_parsing_required(**kwargs) -> bool:
     # 5. If we need to sort write nodes by render order or alphabetically
     
     # Check if required parameters are provided
+    write_nodes_as_separate_jobs = kwargs.get('write_nodes_as_separate_jobs', False)
     write_nodes_as_tasks = kwargs.get('write_nodes_as_tasks', False)
-    write_nodes = kwargs.get('write_nodes')
+    render_order_dependencies = kwargs.get('render_order_dependencies', False)
+    submit_writes_alphabetically = kwargs.get('submit_writes_alphabetically', False)
+    submit_writes_in_render_order = kwargs.get('submit_writes_in_render_order', False)
     use_node_frame_list = kwargs.get('use_node_frame_list', False)
     frames = kwargs.get('frames', '')
     parse_output_paths_to_deadline = kwargs.get('parse_output_paths_to_deadline', False)
-    submit_alphabetically = kwargs.get('submit_alphabetically', False)
-    submit_in_render_order = kwargs.get('submit_in_render_order', False)
+    write_nodes = kwargs.get('write_nodes')
     
     # Check for token patterns in frames
     token_pattern = r"(?i)\b(f-l|first-last|f-m|f,m,l|i|input)\b"
     has_tokens = bool(re.search(token_pattern, frames)) if frames else False
 
     # Check criteria
-    needs_parsing = (
-        write_nodes_as_tasks or  # Need to parse to get write nodes for tasks
-        (write_nodes and use_node_frame_list) or  # Need to parse to get frame ranges for write nodes
-        has_tokens or  # Need to parse to resolve frame range tokens
-        (parse_output_paths_to_deadline and (write_nodes or write_nodes is None)) or  # Need to parse to get output paths
-        submit_alphabetically or  # Need to parse to list write nodes
-        submit_in_render_order  # Need to parse to get render order of write nodes
+    requires_parsing = (
+        frames and (
+            'i' in frames.lower() or 
+            'input' in frames.lower()
+        ) or
+        use_node_frame_list or  # Need to parse to get frame ranges
+        write_nodes_as_tasks or  # Need to parse to set up tasks
+        write_nodes_as_separate_jobs or  # Need to parse to list write nodes
+        render_order_dependencies or  # Need to parse to get render order
+        submit_writes_alphabetically or  # Need to parse to list write nodes
+        submit_writes_in_render_order or  # Need to parse to get render order of write nodes
+        (parse_output_paths_to_deadline and (write_nodes or write_nodes is None))  # Need to parse to get output paths
     )
     
-    return needs_parsing 
+    return requires_parsing 

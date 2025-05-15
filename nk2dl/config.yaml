@@ -43,8 +43,8 @@ submission:
   continue_on_error: false
   reload_plugins: false
   use_proxy: false
-  submit_alphabetically: false
-  submit_in_render_order: false
+  submit_writes_alphabetically: false
+  submit_writes_in_render_order: false
   copy_script: false
   submit_copied_script: false
   submit_script_as_auxiliary_file: false

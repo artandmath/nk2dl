@@ -27,8 +27,8 @@ class NukeSubmission:
                 script_path: str,
                 script_is_open: bool = False,
                 use_parser_instead_of_nuke: bool = False,
-                submit_alphabetically: bool = False,
-                submit_in_render_order: bool = False,
+                submit_writes_alphabetically: bool = False,
+                submit_writes_in_render_order: bool = False,
                 submit_script_as_auxiliary_file: Optional[bool] = None,
                 
                 # Script copying and submission parameters
@@ -90,8 +90,8 @@ class NukeSubmission:
             script_is_open: Whether this script path is already open in the current Nuke session
                               (can also be also true if submitted script mirrors current Nuke session)
             use_parser_instead_of_nuke: Whether to use a parser instead of Nuke for parsing script
-            submit_alphabetically: Whether to sort write nodes alphabetically by name
-            submit_in_render_order: Whether to sort write nodes by render order
+            submit_writes_alphabetically: Whether to sort write nodes alphabetically by name
+            submit_writes_in_render_order: Whether to sort write nodes by render order
             graph_scope_variables: List of graph scope variables to use for rendering. Can be provided in two formats:
                                   
                                   1. Flat list format (all combinations will be generated):
@@ -257,8 +257,8 @@ class NukeSubmission:
         self.job_dependencies = job_dependencies
         self.write_nodes_as_tasks = write_nodes_as_tasks if isinstance(write_nodes_as_tasks, bool) else config.get('submission.write_nodes_as_tasks', False)
         self.write_nodes_as_separate_jobs = write_nodes_as_separate_jobs if isinstance(write_nodes_as_separate_jobs, bool) else config.get('submission.write_nodes_as_separate_jobs', False)
-        self.submit_alphabetically = submit_alphabetically if isinstance(submit_alphabetically, bool) else config.get('submission.submit_alphabetically', False)
-        self.submit_in_render_order = submit_in_render_order if isinstance(submit_in_render_order, bool) else config.get('submission.submit_in_render_order', False)
+        self.submit_writes_alphabetically = submit_writes_alphabetically if isinstance(submit_writes_alphabetically, bool) else config.get('submission.submit_writes_alphabetically', False)
+        self.submit_writes_in_render_order = submit_writes_in_render_order if isinstance(submit_writes_in_render_order, bool) else config.get('submission.submit_writes_in_render_order', False)
         self.use_node_frame_list = use_node_frame_list if isinstance(use_node_frame_list, bool) else config.get('submission.use_node_frame_list', False)
         self.use_parser_instead_of_nuke = use_parser_instead_of_nuke
         
@@ -1369,13 +1369,13 @@ class NukeSubmission:
                 write_nodes_info = filtered_nodes
             
             # Handle sorting based on options
-            if self.submit_in_render_order and self.submit_alphabetically:
+            if self.submit_writes_in_render_order and self.submit_writes_alphabetically:
                 # Sort by render order first, then alphabetically within render order groups
                 write_nodes_info.sort(key=lambda x: (x[1], x[0]))
-            elif self.submit_in_render_order:
+            elif self.submit_writes_in_render_order:
                 # Sort by render order only
                 write_nodes_info.sort(key=lambda x: x[1])
-            elif self.submit_alphabetically:
+            elif self.submit_writes_alphabetically:
                 # Sort alphabetically by node name
                 write_nodes_info.sort(key=lambda x: x[0])
             # Otherwise, keep the original order (or filtered order if write_nodes was specified)
@@ -1405,13 +1405,13 @@ class NukeSubmission:
         sorted_nodes = []
         
         # Process the write nodes based on the sorting options
-        if self.submit_in_render_order:
+        if self.submit_writes_in_render_order:
             # Go through render orders in ascending order
             for render_order in sorted(write_nodes_by_order.keys()):
                 nodes_in_order = write_nodes_by_order[render_order]
                 
                 # If also sorting alphabetically, sort this group
-                if self.submit_alphabetically:
+                if self.submit_writes_alphabetically:
                     nodes_in_order.sort()
                 
                 sorted_nodes.extend(nodes_in_order)
@@ -1422,7 +1422,7 @@ class NukeSubmission:
                 all_nodes.extend(write_nodes_by_order[render_order])
             
             # If sorting alphabetically, sort the collected nodes
-            if self.submit_alphabetically:
+            if self.submit_writes_alphabetically:
                 all_nodes.sort()
             
             sorted_nodes = all_nodes
@@ -1812,7 +1812,7 @@ class NukeSubmission:
                 elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                     logger.info(f"Processing {len(self.write_nodes)} write nodes for separate submission")
                     
-                    # Get write node frame ranges if use_node_frame_list is enabled
+                    # Get write node frame ranges if use_nodes_frame_list is enabled
                     write_node_frames = {}
                     if self.use_node_frame_list or re.search(r'\b(i|input)\b', self.frames):
                         write_node_info = self._get_write_node_frame_ranges()
@@ -1887,7 +1887,7 @@ class NukeSubmission:
                         # For write_nodes_as_separate_jobs: Format is WriteNode=Write1 (single write node per job)
                         node_plugin_info["WriteNode"] = write_node
                         
-                        # Override frame range if use_node_frame_list is enabled and frame range is available
+                        # Override frame range if use_nodes_frame_list is enabled and frame range is available
                         if (self.use_node_frame_list or re.search(r'\b(i|input)\b', self.frames)) and write_node in write_node_frames:
                             start_frame, end_frame = write_node_frames[write_node]
                             node_job_info["Frames"] = f"{start_frame}-{end_frame}"
@@ -1977,8 +1977,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           # nk2dl specific parameters
           - script_is_open: Whether this script path is already open in the current Nuke session
           - use_parser_instead_of_nuke: Whether to use a parser instead of Nuke for parsing script
-          - submit_alphabetically: Whether to sort write nodes alphabetically by name
-          - submit_in_render_order: Whether to sort write nodes by render order
+          - submit_writes_alphabetically: Whether to sort write nodes alphabetically by name
+          - submit_writes_in_render_order: Whether to sort write nodes by render order
           - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
           - copy_script: Whether to make copies of the script before submission
           - submit_copied_script: Whether to use the copied script path in the submission
@@ -2028,7 +2028,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - render_order_dependencies: Whether to set job dependencies based on render order
-          - use_node_frame_list: Whether to use node-specific frame lists
+          - use_nodes_frame_list: Whether to use node-specific frame lists
           - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
                                            Defaults to True if script_is_open is True
           
