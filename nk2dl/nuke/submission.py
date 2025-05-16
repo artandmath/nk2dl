@@ -19,6 +19,299 @@ from ..common.framerange import FrameRange
 from ..deadline.connection import get_connection
 from . import utils as nuke_utils
 
+
+class WriteNode:
+    """Handles configuration for a single write node with optional overrides.
+    
+    This class provides a flexible way to specify write nodes with optional overrides
+    for both job info and plugin info parameters in Deadline submissions.
+    
+    Supports the following input formats:
+    - Single string: The name of a write node
+    - Dictionary: Write node name as 'write_node' key with overrides for submission
+    
+    The dictionary can contain both direct Deadline job/plugin info keys or nk2dl
+    submission variables that will be translated to the appropriate Deadline keys.
+    
+    Examples:
+        # Simple write node name
+        WriteNode('Write1')
+        
+        # Write node with direct Deadline parameter overrides
+        WriteNode({
+            'write_node': 'Write1',
+            'Priority': 90,           # Direct Deadline job info parameter
+            'ChunkSize': 5,           # Direct Deadline job info parameter
+            'UseGpu': '1',            # Direct Deadline plugin info parameter
+            'RamUse': '16000'         # Direct Deadline plugin info parameter
+        })
+        
+        # Write node with nk2dl parameter name overrides (automatically translated)
+        WriteNode({
+            'write_node': 'Write1',
+            'priority': 90,           # Translated to 'Priority'
+            'chunk_size': 5,          # Translated to 'ChunkSize'
+            'use_gpu': True,          # Translated to 'UseGpu': '1'
+            'ram_use': 16000          # Translated to 'RamUse': '16000'
+        })
+        
+        # Mixed direct and translated parameters
+        WriteNode({
+            'write_node': 'Write1',
+            'priority': 90,           # Translated parameter
+            'ChunkSize': 5,           # Direct parameter
+            'use_gpu': True,          # Translated parameter
+            'RamUse': '16000'         # Direct parameter
+        })
+    
+    This class handles automatic translation between nk2dl parameters and Deadline job/plugin
+    info keys, type conversions (e.g. boolean to "0"/"1"), and separation of job info vs. 
+    plugin info parameters.
+    """
+    
+    # Translation table from nk2dl variables to Deadline job/plugin info keys
+    NK2DL_TO_DEADLINE = {
+        # Job Info parameters
+        'priority': 'Priority',
+        'pool': 'Pool',
+        'group': 'Group',
+        'chunk_size': 'ChunkSize',
+        'department': 'Department',
+        'comment': 'Comment',
+        'concurrent_tasks': 'ConcurrentTasks',
+        'frames': 'Frames',
+        'job_dependencies': 'JobDependency0',  # Note: multiple dependencies need special handling
+        'on_job_complete': 'OnJobComplete',
+        'submit_suspended': 'InitialStatus',  # Will be set to "Suspended" if True
+        'limit_groups': 'LimitGroups',
+        'task_timeout': 'TaskTimeoutSeconds',
+        'enable_auto_timeout': 'EnableAutoTimeout',
+        'limit_worker_tasks': 'LimitConcurrentTasks',
+        'batch_name': 'BatchName',
+        
+        # Plugin Info parameters
+        'nuke_version': 'Version',
+        'use_nuke_x': 'UseNukeX',  # Will be set to "1" if True, "0" if False
+        'batch_mode': 'BatchMode',  # Will be set to "1" if True, "0" if False
+        'threads': 'Threads',
+        'use_gpu': 'UseGpu',  # Will be set to "1" if True, "0" if False
+        'gpu_override': 'GpuOverride',
+        'ram_use': 'RamUse',
+        'enforce_render_order': 'EnforceRenderOrder',  # Will be set to "1" if True, "0" if False
+        'stack_size': 'StackSize',
+        'continue_on_error': 'ContinueOnError',  # Will be set to "1" if True, "0" if False
+        'reload_plugins': 'ReloadPlugins',  # Will be set to "1" if True, "0" if False
+        'performance_profiler': 'PerformanceProfiler',  # Will be set to "1" if True, "0" if False
+        'performance_profiler_path': 'PerformanceProfilerDir',
+        'use_proxy': 'UseProxy',  # Will be set to "1" if True, "0" if False
+        'output_file_path': 'OutputFilePath',
+        'render_mode': 'RenderMode',  # Will be capitalized
+        'views': 'Views',  # Will be comma-joined if list
+    }
+    
+    # Boolean parameters that need translation to "0"/"1"
+    BOOLEAN_PARAMS = {
+        'use_nuke_x', 'batch_mode', 'use_gpu', 'enforce_render_order', 
+        'continue_on_error', 'reload_plugins', 'performance_profiler', 'use_proxy'
+    }
+    
+    # List of known Deadline Plugin Info keys (and future ones could be added)
+    PLUGIN_INFO_KEYS = {
+        'Version', 'UseNukeX', 'BatchMode', 'EnforceRenderOrder', 'ContinueOnError',
+        'RenderMode', 'SceneFile', 'BatchModeIsMovie', 'Views', 'Threads',
+        'UseGpu', 'GpuOverride', 'RamUse', 'StackSize', 'ReloadPlugins',
+        'PerformanceProfiler', 'PerformanceProfilerDir', 'UseProxy',
+        'WriteNode', 'WriteNodesAsSeparateJobs', 'OutputFilePath',
+        'GraphScopeVariablesEnabled', 'GraphScopeVariables'
+    }
+    
+    # Add prefixes for keys that have numeric suffixes
+    PLUGIN_INFO_KEY_PREFIXES = {
+        'WriteNode'
+    }
+    
+    def __init__(self, write_node_input=None):
+        """Initialize from various input formats.
+        
+        Args:
+            write_node_input: Flexible input format for write node(s)
+        """
+        self.name = None
+        self.overrides = {}
+        # Separate dictionaries for job info and plugin info for clearer organization
+        self.job_info_overrides = {}
+        self.plugin_info_overrides = {}
+        self._parse_input(write_node_input)
+        
+    def _parse_input(self, input_value):
+        """Parse the input value into write node name and overrides."""
+        # Handle None case
+        if input_value is None:
+            return
+            
+        # Single string case
+        if isinstance(input_value, str):
+            self.name = input_value
+            
+        # Dictionary case
+        elif isinstance(input_value, dict):
+            self._parse_dict(input_value)
+            
+        # Other cases are invalid
+        else:
+            raise ValueError(f"Invalid write node input format: {type(input_value)}")
+    
+    def _parse_dict(self, dict_input):
+        """Parse dictionary input format and translate nk2dl variables to Deadline keys."""
+        if 'write_node' in dict_input:
+            self.name = dict_input['write_node']
+            # Process all other keys as overrides
+            for key, value in dict_input.items():
+                if key != 'write_node':
+                    self._add_override(key, value)
+            
+            # Combine job and plugin info overrides for backward compatibility
+            self.overrides = {**self.job_info_overrides, **self.plugin_info_overrides}
+        else:
+            raise ValueError("Dictionary input must contain 'write_node' key")
+    
+    def _is_plugin_info_key(self, key):
+        """Determine if a key belongs to plugin info rather than job info."""
+        # Check direct match
+        if key in self.PLUGIN_INFO_KEYS:
+            return True
+        
+        # Check prefix match for keys with numeric suffixes
+        for prefix in self.PLUGIN_INFO_KEY_PREFIXES:
+            if key.startswith(prefix) and key[len(prefix):].isdigit():
+                return True
+        
+        return False
+    
+    def _add_override(self, key, value):
+        """Add an override, translating nk2dl variable names if necessary."""
+        # Check if it's a nk2dl variable that needs translation
+        if key in self.NK2DL_TO_DEADLINE:
+            deadline_key = self.NK2DL_TO_DEADLINE[key]
+            
+            # Handle special cases
+            if key == 'submit_suspended' and value:
+                self.job_info_overrides[deadline_key] = "Suspended"
+            elif key == 'render_mode':
+                self.plugin_info_overrides[deadline_key] = value.capitalize()
+            elif key == 'views' and isinstance(value, list):
+                self.plugin_info_overrides[deadline_key] = ",".join(value)
+            elif key in self.BOOLEAN_PARAMS:
+                self.plugin_info_overrides[deadline_key] = "1" if value else "0"
+            else:
+                # Check if this translated key is a plugin info key
+                if self._is_plugin_info_key(deadline_key):
+                    self.plugin_info_overrides[deadline_key] = str(value) if not isinstance(value, str) else value
+                else:
+                    self.job_info_overrides[deadline_key] = str(value) if not isinstance(value, str) else value
+        else:
+            # Assume it's already a valid Deadline key
+            # Determine if it's a plugin info or job info key
+            if self._is_plugin_info_key(key):
+                self.plugin_info_overrides[key] = str(value) if not isinstance(value, str) else value
+            else:
+                self.job_info_overrides[key] = str(value) if not isinstance(value, str) else value
+
+
+class WriteNodes:
+    """Collection of WriteNode objects with utility methods.
+    
+    This class manages a collection of WriteNode objects and provides methods to
+    access their properties and overrides. It supports multiple input formats
+    to make it flexible for various use cases.
+    
+    Examples:
+        # Single write node as string
+        write_nodes = WriteNodes("Write1")
+        
+        # Multiple write nodes as list of strings
+        write_nodes = WriteNodes(["Write1", "Write2", "Write3"])
+        
+        # Single write node with overrides
+        write_nodes = WriteNodes({
+            'write_node': 'Write1',
+            'priority': 90,
+            'use_gpu': True
+        })
+        
+        # Multiple write nodes with individual overrides
+        write_nodes = WriteNodes([
+            {
+                'write_node': 'Write1',
+                'priority': 90,
+                'chunk_size': 5
+            },
+            {
+                'write_node': 'Write2',
+                'priority': 80,
+                'use_gpu': True
+            },
+            "Write3"  # Mix of dict and string formats is supported
+        ])
+    
+    The class provides methods to get write node names and retrieve overrides
+    for specific write nodes when submitting to Deadline.
+    """
+    
+    def __init__(self, input_value=None):
+        self.nodes = []
+        self._parse_input(input_value)
+        
+    def _parse_input(self, input_value):
+        # Handle None case
+        if input_value is None:
+            return
+            
+        # List of strings or dictionaries
+        if isinstance(input_value, list):
+            for item in input_value:
+                if isinstance(item, (str, dict)):
+                    self.nodes.append(WriteNode(item))
+                else:
+                    raise ValueError(f"Invalid item in write_nodes list: {type(item)}")
+        else:
+            # Single WriteNode
+            self.nodes.append(WriteNode(input_value))
+    
+    def get_names(self):
+        """Get list of all write node names."""
+        return [node.name for node in self.nodes if node.name]
+        
+    def get_overrides(self, write_node_name):
+        """Get overrides for a specific write node."""
+        for node in self.nodes:
+            if node.name == write_node_name:
+                return node.overrides
+        return {}
+    
+    def get_job_info_overrides(self, write_node_name):
+        """Get job info overrides for a specific write node."""
+        for node in self.nodes:
+            if node.name == write_node_name:
+                return node.job_info_overrides
+        return {}
+    
+    def get_plugin_info_overrides(self, write_node_name):
+        """Get plugin info overrides for a specific write node."""
+        for node in self.nodes:
+            if node.name == write_node_name:
+                return node.plugin_info_overrides
+        return {}
+    
+    def __bool__(self):
+        """Return True if there are any nodes defined."""
+        return bool(self.nodes)
+    
+    def __len__(self):
+        """Return the number of nodes."""
+        return len(self.nodes)
+
+
 class NukeSubmission:
     """Handles submission of Nuke scripts to Deadline."""
 
@@ -79,7 +372,7 @@ class NukeSubmission:
                 performance_profiler: bool = False,
                 performance_profiler_path: Optional[str] = None,
                 use_proxy: bool = False,
-                write_nodes: Optional[List[str]] = None,
+                write_nodes: Optional[Union[str, List[str], Dict[str, Any], List[Dict[str, Any]]]] = None,
                 render_mode: str = "full",
                 write_nodes_as_tasks: bool = False,
                 write_nodes_as_separate_jobs: bool = False,
@@ -176,7 +469,44 @@ class NukeSubmission:
             use_profiler: Whether to use the performance profiler
             profile_dir: Directory for performance profile files
             use_proxy: Whether to use proxy mode for rendering
-            write_nodes: List of write nodes to render
+            write_nodes: Write nodes to render. Can be provided in multiple formats:
+                       - Single string: The name of a write node
+                       - List of strings: Multiple write node names
+                       - Dictionary: Write node name with overrides, must contain 'write_node' key
+                       - List of dictionaries: Multiple write nodes with their individual overrides
+                       
+                       The dictionary format allows overriding job and plugin info parameters
+                       on a per-write-node basis. You can use either direct Deadline parameter
+                       names or nk2dl parameter names (which will be translated).
+                       
+                       Examples:
+                       ```python
+                       # Simple list of write nodes (original format)
+                       write_nodes = ['Write1', 'Write2']
+                       
+                       # Single write node with overrides
+                       write_nodes = {
+                           'write_node': 'Write1',   # Required key
+                           'priority': 90,           # Override job priority
+                           'use_gpu': True           # Enable GPU rendering
+                       }
+                       
+                       # Multiple write nodes with individual settings
+                       write_nodes = [
+                           {
+                               'write_node': 'Write1',
+                               'priority': 90,       # Higher priority
+                               'chunk_size': 5       # Smaller chunks
+                           },
+                           {
+                               'write_node': 'Write2',
+                               'priority': 50,       # Lower priority
+                               'ram_use': 16000,     # More RAM
+                               'threads': 16         # More threads
+                           },
+                           'Write3'  # Regular write node without overrides
+                       ]
+                       ```
             render_mode: Render mode (full, proxy)
             write_nodes_as_tasks: Whether to submit write nodes as 1 task per write node
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
@@ -215,6 +545,14 @@ class NukeSubmission:
         # Check if write_nodes_as_tasks and write_nodes_as_separate_jobs are not both True
         if write_nodes_as_tasks and write_nodes_as_separate_jobs:
             raise SubmissionError("Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs or render_order_dependencies simultaneously")
+        
+        # Parse write_nodes parameter using the new WriteNodes class
+        try:
+            self.write_nodes_config = WriteNodes(write_nodes)
+            # Set self.write_nodes to be the list of names for backward compatibility
+            self.write_nodes = self.write_nodes_config.get_names()
+        except ValueError as e:
+            raise SubmissionError(f"Invalid write_nodes format: {e}")
         
         # Check if write_nodes_as_tasks is enabled with a custom frame range but use_node_frame_list is disabled
         if write_nodes_as_tasks and frames and not use_node_frame_list and not (
@@ -292,7 +630,6 @@ class NukeSubmission:
         self.performance_profiler = performance_profiler if isinstance(performance_profiler, bool) else config.get('submission.performance_profiler', False)
         self.performance_profiler_path = performance_profiler_path if performance_profiler_path is not None else config.get('submission.performance_profiler_path')
         self.use_proxy = use_proxy if isinstance(use_proxy, bool) else config.get('submission.use_proxy', False)
-        self.write_nodes = write_nodes
         self.render_mode = render_mode if render_mode else config.get('submission.render_mode', 'full')
         self.render_order_dependencies = render_order_dependencies if isinstance(render_order_dependencies, bool) else config.get('submission.render_order_dependencies', False)
         self.job_dependencies = job_dependencies
@@ -360,11 +697,11 @@ class NukeSubmission:
                         self._get_frame_range_from_nuke()
                     else:
                         # For input token, we need to specify the write node
-                        if write_nodes and len(write_nodes) == 1:
-                            self._get_frame_range_from_nuke(write_nodes[0])
+                        if self.write_nodes and len(self.write_nodes) == 1:
+                            self._get_frame_range_from_nuke(self.write_nodes[0])
                         else:
                             logger.debug(f"Input token found in frame_range object and multiple write nodes specified. We will resolve the input token later."
-                                         f"writenodes: {write_nodes} frames: \"{frames}\"")
+                                         f"writenodes: {self.write_nodes} frames: \"{frames}\"")
 
                 except Exception as e:
                     logger.warning(f"Failed to substitute frame range tokens: {e}")
@@ -1294,9 +1631,6 @@ class NukeSubmission:
             # Create a single comma-separated string for all GSV key-value pairs
             gsv_string = ",".join([f"{key}:{value}" for key, value in gsv_combination])
             plugin_info["GraphScopeVariables"] = gsv_string
-            
-            # Remove individual GSV entries to avoid redundancy
-            # Don't add the individual entries that were causing duplication
         
         return plugin_info
     
@@ -1851,6 +2185,20 @@ class NukeSubmission:
                             node_job_info = job_info.copy()
                             node_plugin_info = plugin_info.copy()
                             
+                            # Apply any write node-specific overrides from the WriteNode config
+                            job_overrides = self.write_nodes_config.get_job_info_overrides(write_node)
+                            plugin_overrides = self.write_nodes_config.get_plugin_info_overrides(write_node)
+                            
+                            # Apply job info overrides
+                            for key, value in job_overrides.items():
+                                node_job_info[key] = value
+                                logger.debug(f"Applied job override: {key}={value}")
+                            
+                            # Apply plugin info overrides
+                            for key, value in plugin_overrides.items():
+                                node_plugin_info[key] = value
+                                logger.debug(f"Applied plugin override: {key}={value}")
+                            
                             # Check if this is a movie format and set BatchModeIsMovie if needed
                             # Skip for write_nodes_as_tasks as mentioned in the requirements
                             if not self.write_nodes_as_tasks and self._is_movie_format(write_node):
@@ -1999,6 +2347,23 @@ class NukeSubmission:
                         node_job_info = job_info.copy()
                         node_plugin_info = plugin_info.copy()
                         
+                        # Apply any write node-specific overrides from the WriteNode config
+                        job_overrides = self.write_nodes_config.get_job_info_overrides(write_node)
+                        plugin_overrides = self.write_nodes_config.get_plugin_info_overrides(write_node)
+                        
+                        logger.debug(f"Job info overrides for {write_node}: {job_overrides}")
+                        logger.debug(f"Plugin info overrides for {write_node}: {plugin_overrides}")
+                        
+                        # Apply job info overrides
+                        for key, value in job_overrides.items():
+                            node_job_info[key] = value
+                            logger.debug(f"Applied job override: {key}={value}")
+                        
+                        # Apply plugin info overrides
+                        for key, value in plugin_overrides.items():
+                            node_plugin_info[key] = value
+                            logger.debug(f"Applied plugin override: {key}={value}")
+                        
                         # Check if this is a movie format and set BatchModeIsMovie if needed
                         # Skip for write_nodes_as_tasks as mentioned in the requirements
                         if not self.write_nodes_as_tasks and self._is_movie_format(write_node):
@@ -2074,6 +2439,21 @@ class NukeSubmission:
                 else:
                     # Regular submission without separate jobs/tasks
                     try:
+                        # For single write node case, apply its overrides if any
+                        if self.write_nodes and len(self.write_nodes) == 1:
+                            write_node = self.write_nodes[0]
+                            
+                            # Get job and plugin info overrides
+                            job_overrides = self.write_nodes_config.get_job_info_overrides(write_node)
+                            plugin_overrides = self.write_nodes_config.get_plugin_info_overrides(write_node)
+                            
+                            # Apply overrides
+                            for key, value in job_overrides.items():
+                                job_info[key] = value
+                            
+                            for key, value in plugin_overrides.items():
+                                plugin_info[key] = value
+                        
                         job_id = deadline.submit_job(job_info, plugin_info)
                         
                         # For standard submission, use render order 0
@@ -2172,7 +2552,44 @@ def submit_nuke_script(script_path: str, **kwargs) -> Dict[int, List[str]]:
           - use_profiler: Whether to use the performance profiler
           - profile_dir: Directory for performance profile files
           - use_proxy: Whether to use proxy mode for rendering
-          - write_nodes: List of write nodes to render
+          - write_nodes: Write nodes to render. Can be provided in multiple formats:
+                       - Single string: The name of a write node
+                       - List of strings: Multiple write node names
+                       - Dictionary: Write node name with overrides, must contain 'write_node' key
+                       - List of dictionaries: Multiple write nodes with their individual overrides
+                         
+                         The dictionary format allows overriding job and plugin info parameters
+                         on a per-write-node basis. You can use either direct Deadline parameter
+                         names or nk2dl parameter names (which will be translated).
+                         
+                         Examples:
+                         ```python
+                         # Simple list of write nodes (original format)
+                         write_nodes = ['Write1', 'Write2']
+                         
+                         # Single write node with overrides
+                         write_nodes = {
+                             'write_node': 'Write1',   # Required key
+                             'priority': 90,           # Override job priority
+                             'use_gpu': True           # Enable GPU rendering
+                         }
+                         
+                         # Multiple write nodes with individual settings
+                         write_nodes = [
+                             {
+                                 'write_node': 'Write1',
+                                 'priority': 90,       # Higher priority
+                                 'chunk_size': 5       # Smaller chunks
+                             },
+                             {
+                                 'write_node': 'Write2',
+                                 'priority': 50,       # Lower priority
+                                 'ram_use': 16000,     # More RAM
+                                 'threads': 16         # More threads
+                             },
+                             'Write3'  # Regular write node without overrides
+                         ]
+                         ```
           - render_mode: Render mode (full, proxy)
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
