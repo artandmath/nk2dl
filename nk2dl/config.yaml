@@ -39,7 +39,7 @@ submission:
   batch_mode: true
   use_gpu: false
   performance_profiler: false
-  performance_profiler_dir: ""
+  performance_profiler_path: ""
   continue_on_error: false
   reload_plugins: false
   use_proxy: false

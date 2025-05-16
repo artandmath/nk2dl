@@ -197,9 +197,9 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
     if hasattr(args, "ReloadBetweenTasks") and args.ReloadBetweenTasks:
         kwargs["reload_plugins"] = True
     if hasattr(args, "PerformanceProfiler") and args.PerformanceProfiler:
-        kwargs["use_profiler"] = True
-    if hasattr(args, "XMLDirectory") and args.XMLDirectory is not None:
-        kwargs["profile_dir"] = args.XMLDirectory
+        kwargs["performance_profiler"] = True
+    if hasattr(args, "PerformanceProfilerPath") and args.PerformanceProfilerPath is not None:
+        kwargs["performance_profiler_path"] = args.PerformanceProfilerPath
     if hasattr(args, "Proxy") and args.Proxy:
         kwargs["use_proxy"] = True
     if hasattr(args, "Views") and args.Views is not None:

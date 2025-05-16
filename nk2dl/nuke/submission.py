@@ -77,7 +77,7 @@ class NukeSubmission:
                 continue_on_error: bool = False,
                 reload_plugins: bool = False,
                 performance_profiler: bool = False,
-                performance_profiler_dir: Optional[str] = None,
+                performance_profiler_path: Optional[str] = None,
                 use_proxy: bool = False,
                 write_nodes: Optional[List[str]] = None,
                 render_mode: str = "full",
@@ -290,7 +290,7 @@ class NukeSubmission:
         self.continue_on_error = continue_on_error if isinstance(continue_on_error, bool) else config.get('submission.continue_on_error', False)
         self.reload_plugins = reload_plugins if isinstance(reload_plugins, bool) else config.get('submission.reload_plugins', False)
         self.performance_profiler = performance_profiler if isinstance(performance_profiler, bool) else config.get('submission.performance_profiler', False)
-        self.performance_profiler_dir = performance_profiler_dir if performance_profiler_dir is not None else config.get('submission.performance_profiler_dir')
+        self.performance_profiler_path = performance_profiler_path if performance_profiler_path is not None else config.get('submission.performance_profiler_path')
         self.use_proxy = use_proxy if isinstance(use_proxy, bool) else config.get('submission.use_proxy', False)
         self.write_nodes = write_nodes
         self.render_mode = render_mode if render_mode else config.get('submission.render_mode', 'full')
@@ -1241,8 +1241,8 @@ class NukeSubmission:
             plugin_info["ReloadPlugins"] = "1"
         if self.performance_profiler:
             plugin_info["PerformanceProfiler"] = "1"
-            if self.performance_profiler_dir:
-                plugin_info["PerformanceProfilerDir"] = self.performance_profiler_dir
+            if self.performance_profiler_path:
+                plugin_info["PerformanceProfilerDir"] = self.performance_profiler_path
         if self.use_proxy:
             plugin_info["UseProxy"] = "1"
         

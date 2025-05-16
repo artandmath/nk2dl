@@ -271,10 +271,10 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Use performance profiler"
     )
     nuke_group.add_argument(
-        "--XMLDirectory", "--XMLDir",
+        "--PerformanceProfilerPath", "--XMLDirectory", "--XMLDir",
         metavar="PATH",
-        dest="XMLDirectory",
-        help="Directory to save performance profile XML files"
+        dest="PerformanceProfilerPath",
+        help="Directory to save performance profile files"
     )
     nuke_group.add_argument(
         "--Proxy", 

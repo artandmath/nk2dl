@@ -22,7 +22,7 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | StackSize | - | stack_size | stackSize |
 | Views | - | views | views |
 | PerformanceProfiler | - | performance_profiler | performanceProfiler |
-| PerformanceProfilerDir | - | performance_profiler_dir | performanceProfilerPath |
+| PerformanceProfilerDir | - | performance_profiler_path | performanceProfilerPath |
 | ReloadPlugins | - | reload_plugins | reloadPlugin |
 | WriteNodesAsSeparateJobs | - | write_nodes_as_separate_jobs | separateJobs |
 | WriteNode | - | write_nodes | write_nodes |

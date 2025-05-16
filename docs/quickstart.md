@@ -200,5 +200,5 @@ job_ids = submit_nuke_script(
     environment_keys=["NUKE_PATH", "PATH"],
     environment={"PROJECT_ROOT": "/path/to/project"},
     performance_profiler=True,
-    performance_profiler_dir="/path/to/profiles"
+    performance_profiler_path="/path/to/profiles"
 )

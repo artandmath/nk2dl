@@ -79,7 +79,7 @@ job_ids = submit_nuke_script(
 | `continue_on_error` | bool | `False` | Continue rendering on error |
 | `reload_plugins` | bool | `False` | Reload plugins between tasks |
 | `performance_profiler` | bool | `False` | Use the profiler |
-| `performance_profiler_dir` | str | `None` | Directory for profile files |
+| `performance_profiler_path` | str | `None` | Directory for profile files |
 | `use_proxy` | bool | `False` | Use proxy mode for rendering |
 | `views` | list | `None` | List of view names to render |
 | `write_nodes` | list | `None` | List of write nodes to render |

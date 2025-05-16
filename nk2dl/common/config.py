@@ -91,7 +91,7 @@ class Config:
             'batch_mode': True,
             'use_gpu': False,
             'performance_profiler': False,
-            'performance_profiler_dir': '',
+            'performance_profiler_path': '',
             'continue_on_error': False,
             'reload_plugins': False,
             'use_proxy': False,
