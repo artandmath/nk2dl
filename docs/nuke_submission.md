@@ -398,13 +398,23 @@ submit_nuke_script(
 
 ## Job Return Values
 
-The `submit_nuke_script` function returns a dictionary of job IDs:
+The `submit_nuke_script` function returns a list of dictionaries, with each dictionary containing detailed information about a submitted job:
 
 ```python
-job_ids = submit_nuke_script("/path/to/script.nk", frames="1-100")
-print(job_ids)  # {0: ['12345']}
+jobs = submit_nuke_script("/path/to/script.nk", frames="1-100")
+for job in jobs:
+    print(f"Job ID: {job['job_id']}")
+    print(f"Render Order: {job['render_order']}")
 ```
 
-For `render_order_dependencies`, the dictionary keys are render order values:
+### Return Dictionary Structure
 
-```
+Each job dictionary in the returned list contains:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `job_id` | str | The Deadline job ID |
+| `render_order` | int | The render order of the write node (0 if not fetched) |
+| `plugin_info` | dict | The complete plugin info used for submission |
+| `job_info` | dict | The complete job info used for submission |
+| `deadline_return` | Any | The raw return from the Deadline submission |
