@@ -82,7 +82,7 @@ job_ids = submit_nuke_script(
 | `performance_profiler_path` | str | `None` | Directory for profile files |
 | `use_proxy` | bool | `False` | Use proxy mode for rendering |
 | `views` | list | `None` | List of view names to render |
-| `write_nodes` | list | `None` | List of write nodes to render |
+| `write_nodes` | list/dict | `None` | Write nodes to render. Can be a simple list of names, a dict with overrides, or a list of dicts for multiple nodes with individual overrides |
 | `render_mode` | str | `"full"` | Render mode (full, proxy) |
 | `write_nodes_as_tasks` | bool | `False` | Submit write nodes as separate tasks |
 | `write_nodes_as_separate_jobs` | bool | `False` | Submit write nodes as separate jobs |
@@ -152,6 +152,78 @@ submit_nuke_script(
     write_nodes=["Write1", "Write2", "Write3"]
 )
 ```
+
+### Write Node Overrides
+
+The `write_nodes` parameter now supports advanced configuration with per-node overrides:
+
+```python
+# Single write node with overrides
+submit_nuke_script(
+    "/path/to/script.nk",
+    write_nodes={
+        'write_node': 'Write1',   # Required key
+        'priority': 90,           # Override job priority
+        'use_gpu': True           # Enable GPU rendering
+    }
+)
+
+# Multiple write nodes with individual settings
+submit_nuke_script(
+    "/path/to/script.nk",
+    write_nodes=[
+        {
+            'write_node': 'Write1',
+            'priority': 90,       # Higher priority
+            'chunk_size': 5       # Smaller chunks
+        },
+        {
+            'write_node': 'Write2',
+            'priority': 50,       # Lower priority
+            'ram_use': 16000,     # More RAM
+            'threads': 16         # More threads
+        },
+        'Write3'  # Regular write node without overrides
+    ]
+)
+```
+
+#### Override Parameters
+
+You can use both nk2dl parameter names or direct Deadline job/plugin info keys:
+
+- **nk2dl parameters** (automatically translated to Deadline keys):
+  ```python
+  write_nodes={
+      'write_node': 'Write1',
+      'priority': 90,           # Translated to 'Priority'
+      'chunk_size': 5,          # Translated to 'ChunkSize'
+      'use_gpu': True,          # Translated to 'UseGpu': '1'
+      'ram_use': 16000          # Translated to 'RamUse': '16000'
+  }
+  ```
+
+- **Direct Deadline keys**:
+  ```python
+  write_nodes={
+      'write_node': 'Write1',
+      'Priority': 90,           # Direct Deadline job info parameter
+      'ChunkSize': 5,           # Direct Deadline job info parameter
+      'UseGpu': '1',            # Direct Deadline plugin info parameter
+      'RamUse': '16000'         # Direct Deadline plugin info parameter
+  }
+  ```
+
+- **Mixed approach** (both nk2dl and Deadline parameters):
+  ```python
+  write_nodes={
+      'write_node': 'Write1',
+      'priority': 90,           # nk2dl parameter
+      'ChunkSize': 5,           # Direct Deadline parameter
+      'use_gpu': True,          # nk2dl parameter
+      'RamUse': '16000'         # Direct Deadline parameter
+  }
+  ```
 
 ### Write Nodes as Separate Tasks
 

@@ -65,17 +65,25 @@ def configure_logging(level: str = None) -> None:
         level: Logging level to set (INFO, DEBUG, NOTSET)
     """
     if level:
+        # Get the numeric level for easier comparison
+        numeric_level = getattr(logging, level.upper())
+        
         # Update root logger
         root_logger = logging.getLogger()
-        root_logger.setLevel(getattr(logging, level.upper()))
+        root_logger.setLevel(numeric_level)
         
-        # Update nk2dl logger
-        nk2dl_logger = logging.getLogger('nk2dl')
-        nk2dl_logger.setLevel(getattr(logging, level.upper()))
+        # Update all nk2dl loggers - both the base logger and all descendant loggers
+        base_logger = logging.getLogger('nk2dl')
+        base_logger.setLevel(numeric_level)
+        
+        # Find and update all nk2dl descendant loggers that may already exist
+        for logger_name in list(logging.Logger.manager.loggerDict.keys()):
+            if logger_name == 'nk2dl' or logger_name.startswith('nk2dl.'):
+                logging.getLogger(logger_name).setLevel(numeric_level)
         
         # Log the level change
-        logger.debug(f"Logging level set to {level}")
+        logger.debug(f"Logging level set to {level} for all nk2dl loggers")
 
 
 # Create default logger
-logger = setup_logging('nk2dl') 
+logger = setup_logging('nk2dl.common') 

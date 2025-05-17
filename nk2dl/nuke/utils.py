@@ -10,7 +10,10 @@ from typing import Any, Optional, Union
 
 from ..common.config import config
 from ..common.errors import SubmissionError
-from ..common.logging import logger
+from ..common.logging import setup_logging
+
+# Create a module-specific logger
+logger = setup_logging('nk2dl.nuke.utils')
 
 # Global variable to store nuke module when imported
 _nuke_module = None

@@ -13,7 +13,10 @@ from typing import Dict, List, Any, Optional
 import re
 
 from ..common.framerange import FrameRange
-from ..common.logging import logger
+from ..common.logging import setup_logging
+
+# Create a module-specific logger
+logger = setup_logging('nk2dl.nuke.subprocess')
 
 def serialize_kwargs(kwargs: Dict[str, Any]) -> str:
     """Serialize kwargs to a JSON string that can be safely included in Python code."""

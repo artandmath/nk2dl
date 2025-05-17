@@ -12,7 +12,11 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 
 from ..common.config import config
 from ..common.errors import DeadlineError
-from ..common.logging import logger
+from ..common.logging import logger as common_logger
+from ..common.logging import setup_logging
+
+# Create a module-specific logger
+logger = setup_logging('nk2dl.deadline.connection')
 
 # ANSI color codes for terminal output
 class Colors:
@@ -230,7 +234,7 @@ class DeadlineConnection:
             except Exception as e:
                 raise DeadlineError(f"Failed to get groups: {e}")
     
-    def submit_job(self, job_info: Dict[str, Any], plugin_info: Dict[str, Any]) -> str:
+    def submit_job(self, job_info: Dict[str, Any], plugin_info: Dict[str, Any]) -> Dict[str, Any]:
         """Submit a job to Deadline.
         
         Args:
@@ -238,7 +242,10 @@ class DeadlineConnection:
             plugin_info: Plugin-specific information dictionary
             
         Returns:
-            Job ID
+            Dictionary containing:
+                - job_id: The Deadline job ID
+                - raw_response: The raw response from Deadline
+                - connection_type: Either 'web' or 'command_line'
             
         Raises:
             DeadlineError: If job submission fails
@@ -302,7 +309,12 @@ class DeadlineConnection:
                         raise DeadlineError(f"Unexpected job response format: {job_response}")
                 
                 logger.info(f"Job submitted successfully with ID: {job_id}")
-                return job_id  # Return just the string ID
+                # Return a dictionary with job ID, raw response, and connection type
+                return {
+                    "job_id": job_id,
+                    "raw_response": job_response,
+                    "connection_type": "web"
+                }
                 
             except Exception as e:
                 if config.get('deadline.commandline_on_fail', True):
@@ -387,13 +399,22 @@ class DeadlineConnection:
                     logger.debug(f"===== COMMAND LINE RESPONSE START =====\n{output}\n===== COMMAND LINE RESPONSE END =====")
                     
                     # Parse job ID from output
+                    job_id = None
                     for line in output.splitlines():
                         if line.startswith("JobID="):
                             job_id = line[6:].strip()
                             logger.info(f"Job submitted successfully with ID: {job_id}")
-                            return job_id
+                            break
                             
-                    raise DeadlineError("No job ID found in submission output")
+                    if not job_id:
+                        raise DeadlineError("No job ID found in submission output")
+                    
+                    # Return a dictionary with job ID, raw response, and connection type
+                    return {
+                        "job_id": job_id,
+                        "raw_response": output,
+                        "connection_type": "command_line"
+                    }
                     
                 except Exception as e:
                     raise DeadlineError(f"Failed to submit job via command line: {e}")

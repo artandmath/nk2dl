@@ -10,8 +10,11 @@ import json
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Union, Tuple
 
-from ..common.logging import logger
+from ..common.logging import setup_logging
 from ..common.errors import ParserError
+
+# Create a module-specific logger
+logger = setup_logging('nk2dl.nuke.parser')
 
 class NukeKnob:
     """Class representing a Nuke knob."""
