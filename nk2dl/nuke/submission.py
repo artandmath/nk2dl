@@ -534,9 +534,15 @@ class NukeSubmission:
             
             # Environment Variables parameters
             use_current_environment: Whether to use the current environment variables
-            include_environment_keys: List of environment variables to include
-            environment: Dictionary of environment variables to add
-            omit_environment_keys: List of environment variables to omit
+            environment_keys: List of environment variables to include.
+                            Can use the special token "{config:extend}" as the first item
+                            to include config values and then extend them with the rest of the list.
+            environment: Dictionary of environment variables to add to jobs.
+                       Can use the special key "{config}" with value "extend"
+                       to include config values and then extend/override them with the rest of the dictionary.
+            omit_environment_keys: List of environment variables to omit from jobs.
+                                 Can use the special token "{config:extend}" as the first item
+                                 to include config values and then extend them with the rest of the list.
         """
 
         self._script_will_close = False
@@ -667,9 +673,11 @@ class NukeSubmission:
         
         # Store environment variables settings
         self.use_current_environment = use_current_environment if isinstance(use_current_environment, bool) else config.get('submission.use_current_environment', False)
-        self.environment_keys = environment_keys if environment_keys is not None else config.get('submission.environment_keys', [])
-        self.environment = environment if environment is not None else config.get('submission.environment', {})
-        self.omit_environment_keys = omit_environment_keys if omit_environment_keys is not None else config.get('submission.omit_environment_keys', [])
+        
+        # Process environment variables with helper functions
+        self.environment = self._process_env_dict(environment, 'submission.environment')
+        self.environment_keys = self._process_env_list(environment_keys, 'submission.environment_keys')
+        self.omit_environment_keys = self._process_env_list(omit_environment_keys, 'submission.omit_environment_keys')
         
         # If GSV is provided, check Nuke version compatibility
         if self.graph_scope_variables:
@@ -2539,6 +2547,67 @@ class NukeSubmission:
             
             raise SubmissionError(f"Failed to submit job: {e}")
 
+    def _process_env_dict(self, env_dict, config_key):
+        """Process environment dictionary with special config token.
+        
+        Args:
+            env_dict: Dictionary of environment variables or None
+            config_key: The config key to get default values from
+            
+        Returns:
+            Processed environment dictionary
+        """
+        # If no dictionary provided, return config values
+        if env_dict is None or not isinstance(env_dict, dict):
+            return config.get(config_key, {})
+            
+        # Check for special config token
+        if "{config}" in env_dict:
+            mode = env_dict.pop("{config}")
+            
+            # If extend mode, combine config with provided values
+            if mode and mode.lower() == "extend":
+                result = config.get(config_key, {}).copy()
+                result.update(env_dict)
+                return result
+                
+        # Default is to use provided dictionary as-is
+        return env_dict
+        
+    def _process_env_list(self, env_list, config_key):
+        """Process environment list with special config token.
+        
+        Args:
+            env_list: List of environment variables or None
+            config_key: The config key to get default values from
+            
+        Returns:
+            Processed environment list
+        """
+        # If no list provided, return config values
+        if env_list is None:
+            return config.get(config_key, [])
+            
+        # Check for special format and token
+        if (isinstance(env_list, list) and env_list and 
+            isinstance(env_list[0], str) and 
+            env_list[0].startswith("{config:")):
+            
+            # Extract mode from token
+            token = env_list[0]
+            mode = token.split(":", 1)[1].rstrip("}")
+            
+            # If extend mode, combine config with provided values
+            if mode.lower() == "extend":
+                result = config.get(config_key, []) + env_list[1:]  # Skip the token
+                return result
+            else:
+                # Remove the token but keep the rest
+                return env_list[1:]
+                
+        # Default is to use provided list as-is
+        return env_list
+
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
     """Submit a Nuke script to Deadline.
@@ -2651,9 +2720,15 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           
           # Environment Variables parameters
           - use_current_environment: Whether to use the current environment variables
-          - environment_keys: List of environment variables to include
-          - environment: Dictionary of environment variables to add to jobs
-          - omit_environment_keys: List of environment variables to omit from jobs
+          - environment_keys: List of environment variables to include.
+                            Can use the special token "{config:extend}" as the first item
+                            to include config values and then extend them with the rest of the list.
+          - environment: Dictionary of environment variables to add to jobs.
+                      Can use the special key "{config}" with value "extend"
+                      to include config values and then extend/override them with the rest of the dictionary.
+          - omit_environment_keys: List of environment variables to omit from jobs.
+                                 Can use the special token "{config:extend}" as the first item
+                                 to include config values and then extend them with the rest of the list.
           
           # Machine List parameters
           - machine_list: List of machine names to allow or deny based on machine_list_is_a_deny_list
