@@ -2182,10 +2182,12 @@ class NukeSubmission:
                                 # For command line responses (strings), split by line
                                 for line in raw_response.splitlines():
                                     logger.debug(f"    {line}")
-                            else:
+                            elif isinstance(raw_response, dict):
                                 # For web service responses (dictionaries), output the formatted JSON
                                 logger.debug(f"    {json.dumps(raw_response, indent=2)}")
-                    
+                            else:
+                                logger.debug(f"    Expected string or dict, got {type(raw_response)}")
+                                logger.debug(f"    {raw_response}")
                     # If using separate jobs or dependencies with GSVs
                     elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                         # Get write node frame ranges if use_nodes_frame_list is enabled
