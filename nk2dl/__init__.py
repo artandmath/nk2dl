@@ -1,6 +1,7 @@
 """Nuke to Deadline Submitter (nk2dl)."""
 
 from .common.errors import NK2DLError
+from .api import submit_nuke_script
 
 # CLI entry point
 def cli_main():
