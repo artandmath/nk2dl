@@ -2085,6 +2085,84 @@ class NukeSubmission:
         except Exception as e:
             logger.warning(f"Failed to update project_directory in copied script: {e}")
         
+    def _submit_job(self, job_info, plugin_info, render_order=0, write_node=None, gsv_combination=None):
+        """
+        Submit a job to Deadline, track results, and log details.
+        
+        Args:
+            job_info: The job info dictionary for submission
+            plugin_info: The plugin info dictionary for submission
+            render_order: The render order value (default: 0)
+            write_node: Optional write node name
+            gsv_combination: Optional GSV combination used for this submission
+            
+        Returns:
+            dict: Job tracking information
+            
+        Raises:
+            SubmissionError: If submission fails
+        """
+        try:
+            # Submit the job
+            deadline_response = self.deadline.submit_job(job_info, plugin_info)
+            job_id = deadline_response["job_id"]
+            
+            # Track job ID by render order
+            if render_order not in self.jobs_by_render_order:
+                self.jobs_by_render_order[render_order] = []
+            self.jobs_by_render_order[render_order].append(job_id)
+            
+            # Create job tracking info
+            job_data = {
+                "job_id": job_id,
+                "render_order": render_order,
+                "plugin_info": plugin_info,
+                "job_info": job_info,
+                "deadline_return": deadline_response
+            }
+            
+            # Add to jobs list
+            self.jobs.append(job_data)
+            
+            # Determine appropriate log message
+            if self.write_nodes_as_tasks and len(self.write_nodes) > 1:
+                if gsv_combination:
+                    log_msg = f"GSV job submitted with write nodes as tasks. Job ID: {job_id}"
+                else:
+                    log_msg = f"Job submitted with write nodes as tasks. Job ID: {job_id}"
+            elif write_node:
+                log_msg = f"Successfully submitted job for {write_node}. Job ID: {job_id}"
+            else:
+                log_msg = f"Job submitted successfully. Job ID: {job_id}"
+            
+            # Log submission info
+            logger.info(log_msg)
+            logger.debug(f"Render order: {render_order}")
+            logger.debug(f"Plugin info: {json.dumps(plugin_info, indent=2)}")
+            logger.debug(f"Job info: {json.dumps(job_info, indent=2)}")
+            logger.debug("Deadline return:")
+            logger.debug(f"  job_id: {deadline_response.get('job_id', '')}")
+            logger.debug(f"  connection_type: {deadline_response.get('connection_type', '')}")
+            logger.debug("  raw_response:")
+            
+            # Log raw response formatting
+            raw_response = deadline_response.get('raw_response', '')
+            if raw_response:
+                if isinstance(raw_response, str):
+                    for line in raw_response.splitlines():
+                        logger.debug(f"    {line}")
+                elif isinstance(raw_response, dict):
+                    logger.debug(f"    {json.dumps(raw_response, indent=2)}")
+                else:
+                    logger.debug(f"    Expected string or dict, got {type(raw_response)}")
+                    logger.debug(f"    {raw_response}")
+            
+            return job_data
+            
+        except Exception as e:
+            logger.error(f"Failed to submit job{f' for {write_node}' if write_node else ''}: {e}")
+            raise SubmissionError(f"Failed to submit job: {e}")
+            
     def submit(self) -> List[Dict[str, Any]]:
         """Submit the Nuke script to Deadline.
         
@@ -2100,15 +2178,13 @@ class NukeSubmission:
             SubmissionError: If submission fails
         """
         try:
-            # List of jobs to return
-            jobs = []
-            
-            # Initialize dictionary to track jobs by render order
-            jobs_by_render_order = {}
+            # Initialize tracking structures
+            self.jobs = []
+            self.jobs_by_render_order = {}
             
             # Get Deadline connection
-            deadline = get_connection()
-            logger.info(f"Connected to Deadline: {deadline}")
+            self.deadline = get_connection()
+            logger.info(f"Connected to Deadline: {self.deadline}")
             
             # If write_nodes_as_separate_jobs is True but no write nodes are provided,
             # automatically get all enabled write nodes from the script
@@ -2148,46 +2224,7 @@ class NukeSubmission:
                     # If using write nodes as tasks with GSVs
                     if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
                         # Submit as a single job with all write nodes as tasks
-                        deadline_response = deadline.submit_job(job_info, plugin_info)
-                        job_id = deadline_response["job_id"]
-                        
-                        # For jobs rendering multiple write nodes with different render orders, use key 0
-                        if 0 not in jobs_by_render_order:
-                            jobs_by_render_order[0] = []
-                        jobs_by_render_order[0].append(job_id)
-                        
-                        # Add to jobs list
-                        jobs.append({
-                            "job_id": job_id,
-                            "render_order": 0,
-                            "plugin_info": plugin_info,
-                            "job_info": job_info,
-                            "deadline_return": deadline_response
-                        })
-                        
-                        logger.info(f"GSV job submitted with write nodes as tasks. Job ID: {job_id}")
-                        # Add detailed debug logging
-                        logger.debug(f"Render order: 0")
-                        logger.debug(f"Plugin info: {json.dumps(plugin_info, indent=2)}")
-                        logger.debug(f"Job info: {json.dumps(job_info, indent=2)}")
-                        logger.debug("Deadline return:")
-                        logger.debug(f"  job_id: {deadline_response.get('job_id', '')}")
-                        logger.debug(f"  connection_type: {deadline_response.get('connection_type', '')}")
-                        logger.debug("  raw_response:")
-                        # Log each line of the raw response separately to preserve formatting
-                        raw_response = deadline_response.get('raw_response', '')
-                        if raw_response:
-                            # Handle both string and dictionary responses
-                            if isinstance(raw_response, str):
-                                # For command line responses (strings), split by line
-                                for line in raw_response.splitlines():
-                                    logger.debug(f"    {line}")
-                            elif isinstance(raw_response, dict):
-                                # For web service responses (dictionaries), output the formatted JSON
-                                logger.debug(f"    {json.dumps(raw_response, indent=2)}")
-                            else:
-                                logger.debug(f"    Expected string or dict, got {type(raw_response)}")
-                                logger.debug(f"    {raw_response}")
+                        self._submit_job(job_info, plugin_info, 0, None, gsv_combination)
                     # If using separate jobs or dependencies with GSVs
                     elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                         # Get write node frame ranges if use_nodes_frame_list is enabled
@@ -2288,51 +2325,21 @@ class NukeSubmission:
                                     previous_order = unique_render_orders[current_index - 1]
                                     
                                     # Add all jobs from the previous render order as dependencies
-                                    if previous_order in jobs_by_render_order:
-                                        for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
+                                    if previous_order in self.jobs_by_render_order:
+                                        for i, dep_id in enumerate(self.jobs_by_render_order[previous_order]):
                                             node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
                             
                             # Add environment variables to this job's info
                             self._add_environment_variables_to_job_info(node_job_info)
                             
                             # Submit the job
-                            deadline_response = deadline.submit_job(node_job_info, node_plugin_info)
-                            job_id = deadline_response["job_id"]
-                            
-                            # Track job ID by render order
-                            if render_order not in jobs_by_render_order:
-                                jobs_by_render_order[render_order] = []
-                            jobs_by_render_order[render_order].append(job_id)
-                            
-                            # Add to jobs list
-                            jobs.append({
-                                "job_id": job_id,
-                                "render_order": render_order,
-                                "plugin_info": node_plugin_info,
-                                "job_info": node_job_info,
-                                "deadline_return": deadline_response
-                            })
+                            self._submit_job(node_job_info, node_plugin_info, render_order, write_node, gsv_combination)
                     
                     else:
                         # Regular submission without separate jobs/tasks
-                        deadline_response = deadline.submit_job(job_info, plugin_info)
-                        job_id = deadline_response["job_id"]
-                        
-                        # For standard submission, use render order 0
-                        if 0 not in jobs_by_render_order:
-                            jobs_by_render_order[0] = []
-                        jobs_by_render_order[0].append(job_id)
-                        
-                        # Add to jobs list
-                        jobs.append({
-                            "job_id": job_id,
-                            "render_order": 0,
-                            "plugin_info": plugin_info,
-                            "job_info": job_info,
-                            "deadline_return": deadline_response
-                        })
+                        self._submit_job(job_info, plugin_info, 0, None, gsv_combination)
                 
-                logger.info(f"Submitted jobs with GSV combinations. Jobs by render order: {jobs_by_render_order}")
+                logger.info(f"Submitted jobs with GSV combinations. Jobs by render order: {self.jobs_by_render_order}")
                 
             # Standard submission without GSVs
             else:
@@ -2348,43 +2355,7 @@ class NukeSubmission:
                     # Handle submission with write nodes as tasks
                     # Submit as a single job
                     try:
-                        deadline_response = deadline.submit_job(job_info, plugin_info)
-                        job_id = deadline_response["job_id"]
-                        
-                        # For jobs rendering multiple write nodes with different render orders, use key 0
-                        if 0 not in jobs_by_render_order:
-                            jobs_by_render_order[0] = []
-                        jobs_by_render_order[0].append(job_id)
-                        
-                        # Add to jobs list
-                        jobs.append({
-                            "job_id": job_id,
-                            "render_order": 0,
-                            "plugin_info": plugin_info,
-                            "job_info": job_info,
-                            "deadline_return": deadline_response
-                        })
-                        
-                        logger.info(f"Job submitted with write nodes as tasks. Job ID: {job_id}")
-                        # Add detailed debug logging
-                        logger.debug(f"Render order: 0")
-                        logger.debug(f"Plugin info: {json.dumps(plugin_info, indent=2)}")
-                        logger.debug(f"Job info: {json.dumps(job_info, indent=2)}")
-                        logger.debug("Deadline return:")
-                        logger.debug(f"  job_id: {deadline_response.get('job_id', '')}")
-                        logger.debug(f"  connection_type: {deadline_response.get('connection_type', '')}")
-                        logger.debug("  raw_response:")
-                        # Log each line of the raw response separately to preserve formatting
-                        raw_response = deadline_response.get('raw_response', '')
-                        if raw_response:
-                            # Handle both string and dictionary responses
-                            if isinstance(raw_response, str):
-                                # For command line responses (strings), split by line
-                                for line in raw_response.splitlines():
-                                    logger.debug(f"    {line}")
-                            else:
-                                # For web service responses (dictionaries), output the formatted JSON
-                                logger.debug(f"    {json.dumps(raw_response, indent=2)}")
+                        self._submit_job(job_info, plugin_info, 0, None, None)
                     except Exception as e:
                         logger.error(f"Failed to submit job with write nodes as tasks: {e}")
                         # Re-raise the exception to propagate it to the caller
@@ -2502,8 +2473,8 @@ class NukeSubmission:
                                 previous_order = unique_render_orders[current_index - 1]
                                 
                                 # Add all jobs from the previous render order as dependencies
-                                if previous_order in jobs_by_render_order:
-                                    for i, dep_id in enumerate(jobs_by_render_order[previous_order]):
+                                if previous_order in self.jobs_by_render_order:
+                                    for i, dep_id in enumerate(self.jobs_by_render_order[previous_order]):
                                         node_job_info[f"JobDependency{i + dependency_count}"] = dep_id
                         
                         # Add environment variables to this job's info
@@ -2515,47 +2486,11 @@ class NukeSubmission:
                         
                         # Submit to Deadline
                         try:
-                            deadline_response = deadline.submit_job(node_job_info, node_plugin_info)
-                            job_id = deadline_response["job_id"]
-                            
-                            # Track job ID by render order
-                            if render_order not in jobs_by_render_order:
-                                jobs_by_render_order[render_order] = []
-                            jobs_by_render_order[render_order].append(job_id)
-                            
-                            # Add to jobs list
-                            jobs.append({
-                                "job_id": job_id,
-                                "render_order": render_order,
-                                "plugin_info": node_plugin_info,
-                                "job_info": node_job_info,
-                                "deadline_return": deadline_response
-                            })
-                            
-                            logger.info(f"Successfully submitted job for {write_node}. Job ID: {job_id}")
-                            # Add detailed debug logging
-                            logger.debug(f"Render order: {render_order}")
-                            logger.debug(f"Plugin info: {json.dumps(node_plugin_info, indent=2)}")
-                            logger.debug(f"Job info: {json.dumps(node_job_info, indent=2)}")
-                            logger.debug("Deadline return:")
-                            logger.debug(f"  job_id: {deadline_response.get('job_id', '')}")
-                            logger.debug(f"  connection_type: {deadline_response.get('connection_type', '')}")
-                            logger.debug("  raw_response:")
-                            # Log each line of the raw response separately to preserve formatting
-                            raw_response = deadline_response.get('raw_response', '')
-                            if raw_response:
-                                # Handle both string and dictionary responses
-                                if isinstance(raw_response, str):
-                                    # For command line responses (strings), split by line
-                                    for line in raw_response.splitlines():
-                                        logger.debug(f"    {line}")
-                                else:
-                                    # For web service responses (dictionaries), output the formatted JSON
-                                    logger.debug(f"    {json.dumps(raw_response, indent=2)}")
+                            self._submit_job(node_job_info, node_plugin_info, render_order, write_node, None)
                         except Exception as e:
                             logger.error(f"Failed to submit job for write node {write_node}: {e}")
                     
-                    logger.info(f"Jobs submitted as separate jobs. Jobs by render order: {jobs_by_render_order}")
+                    logger.info(f"Jobs submitted as separate jobs. Jobs by render order: {self.jobs_by_render_order}")
                 else:
                     # Regular submission without separate jobs/tasks
                     try:
@@ -2573,44 +2508,10 @@ class NukeSubmission:
                             
                             for key, value in plugin_overrides.items():
                                 plugin_info[key] = value
+                        else:
+                            write_node = None
                         
-                        deadline_response = deadline.submit_job(job_info, plugin_info)
-                        job_id = deadline_response["job_id"]
-                        
-                        # For standard submission, use render order 0
-                        if 0 not in jobs_by_render_order:
-                            jobs_by_render_order[0] = []
-                        jobs_by_render_order[0].append(job_id)
-                        
-                        # Add to jobs list
-                        jobs.append({
-                            "job_id": job_id,
-                            "render_order": 0,
-                            "plugin_info": plugin_info,
-                            "job_info": job_info,
-                            "deadline_return": deadline_response
-                        })
-                        
-                        logger.info(f"Job submitted successfully. Job ID: {job_id}")
-                        # Add detailed debug logging
-                        logger.debug(f"Render order: 0")
-                        logger.debug(f"Plugin info: {json.dumps(plugin_info, indent=2)}")
-                        logger.debug(f"Job info: {json.dumps(job_info, indent=2)}")
-                        logger.debug("Deadline return:")
-                        logger.debug(f"  job_id: {deadline_response.get('job_id', '')}")
-                        logger.debug(f"  connection_type: {deadline_response.get('connection_type', '')}")
-                        logger.debug("  raw_response:")
-                        # Log each line of the raw response separately to preserve formatting
-                        raw_response = deadline_response.get('raw_response', '')
-                        if raw_response:
-                            # Handle both string and dictionary responses
-                            if isinstance(raw_response, str):
-                                # For command line responses (strings), split by line
-                                for line in raw_response.splitlines():
-                                    logger.debug(f"    {line}")
-                            else:
-                                # For web service responses (dictionaries), output the formatted JSON
-                                logger.debug(f"    {json.dumps(raw_response, indent=2)}")
+                        self._submit_job(job_info, plugin_info, 0, write_node, None)
                     except Exception as e:
                         logger.error(f"Failed to submit regular job: {e}")
                         # Re-raise the exception to propagate it to the caller
@@ -2624,7 +2525,7 @@ class NukeSubmission:
                 self._script_will_close = False
                 logger.info(f"Script {self.script_path} closed after submission")
             
-            return jobs
+            return self.jobs
                     
         except Exception as e:
             # Close the script if we opened it, even if submission failed
