@@ -166,21 +166,29 @@ python ./tests/test_nk2dl.py
 ```yaml
 submission:
   # The following are the defaults if no config is provided
-  script_copy_path: ./.farm/  # relative to script or output directory
-  script_copy_relative_to: OUTPUT  # SCRIPT or OUTPUT
-  script_copy_name: {basename}.{ext} # Available tokens: {basename}, {ext}, {YYYY}, {MM}, {DD}, {hh}, etc.
+  script_copy_path: '{script}/.farm/'  # Path can include tokens {script} or {output}
+  script_copy_name: '{basename}.{ext}' # Available script stem tokens: {basename}, {ss}, {nss}, etc.
 ```
+
+### Available tokens for script_copy_path
+- Script directory tokens: `{script}`, `{nukescript}`, `{scene}`, `{scenefile}`, `{ns}`, `{s}`, `{nk}`, `{scriptname}`, `{script_name}`, `{nuke_script}`
+- Output directory tokens: `{output}`, `{render}`, `{out}`, `{export}`, `{o}`
+- If no tokens are used, the path is treated as relative to the script directory
+
+### Available tokens for script_copy_name
+- Script stem tokens: `{basename}`, `{ss}`, `{nss}`, `{nks}`, `{sstem}`, `{nstem}`, `{nkstem}`, `{scriptstem}`, `{script_stem}`, `{nukescriptstem}`, `{nukescript_stem}`, `{nuke_script_stem}`
+- Extension token: `{ext}` (file extension without the dot)
+- Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
+
 ### Script copy config example - many copies of submitted nukescript
 
 ```yaml
 submission:
-  script_copy0_path: ./.farm/
-  script_copy0_relative_to: OUTPUT
-  script_copy0_name: {basename}.{ext}
+  script_copy0_path: '{output}/.farm/'
+  script_copy0_name: '{basename}.{ext}'
   
-  script_copy1_path: ./archive/
-  script_copy1_relative_to: SCRIPT
-  script_copy1_name: {basename}_{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}
+  script_copy1_path: '{script}/archive/'
+  script_copy1_name: '{basename}_{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}'
 
   #script_copy2_path: etc
 ```

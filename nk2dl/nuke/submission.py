@@ -1996,16 +1996,20 @@ class NukeSubmission:
         
         The configuration options for script copying are:
         - NK2DL_SCRIPT__COPY__PATH: Path template for copying the script
-        - NK2DL_SCRIPT__COPY__RELATIVE__TO: Whether the path is relative to OUTPUT or SCRIPT
         - NK2DL_SCRIPT__COPY__NAME: Filename template for the copied script
         
         For multiple copies:
         - NK2DL_SCRIPT__COPY0__PATH, NK2DL_SCRIPT__COPY1__PATH, etc.
-        - NK2DL_SCRIPT__COPY0__RELATIVE__TO, NK2DL_SCRIPT__COPY1__RELATIVE__TO, etc.
         - NK2DL_SCRIPT__COPY0__NAME, NK2DL_SCRIPT__COPY1__NAME, etc.
         
+        Available tokens for the path template:
+        - Script directory tokens: {script}, {nukescript}, {scene}, {scenefile}, {ns},
+          {s}, {nk}, {scriptname}, {script_name}, {nuke_script}
+        - Output directory tokens: {output}, {render}, {out}, {export}, {o}
+        
         Available tokens for the name template:
-        - {basename}: Filename without extension
+        - Script stem tokens: {basename}, {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem},
+          {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}, {nuke_script_stem}
         - {ext}: File extension without the dot
         - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
         
@@ -2037,7 +2041,6 @@ class NukeSubmission:
         # First check for the single configuration case
         single_config = {
             'path': config.get('submission.script_copy_path', None),
-            'relative_to': config.get('submission.script_copy_relative_to', None),
             'name': config.get('submission.script_copy_name', None),
         }
         
@@ -2055,7 +2058,6 @@ class NukeSubmission:
                     
                 copy_configs.append({
                     'path': path,
-                    'relative_to': config.get(f'submission.script_copy{index}_relative_to', None),
                     'name': config.get(f'submission.script_copy{index}_name', None),
                 })
                 index += 1
@@ -2064,36 +2066,55 @@ class NukeSubmission:
         if not copy_configs:
             logger.debug("No script copy configuration found, using default")
             copy_configs = [{
-                'path': './.farm/',
-                'relative_to': 'SCRIPT',
+                'path': '{output}/farm/',
                 'name': '{basename}.{ext}',
             }]
+        
+        # Get output directory from first write node if we have one
+        output_dir = None
+        if self.output_file_path:
+            output_dir = Path(self.output_file_path)
+        elif self.write_nodes and len(self.write_nodes) == 1:
+            # Get output path from the first write node
+            node = nuke.toNode(self.write_nodes[0])
+            if node and node.Class() == "Write":
+                output_file = self._get_node_pretty_path(node)
+                output_dir = Path(os.path.dirname(output_file))
         
         # Process each copy configuration
         for copy_config in copy_configs:
             try:
                 # Get copy path
-                copy_path = copy_config['path']
-                relative_to = (copy_config.get('relative_to') or 'SCRIPT').upper()
+                path_template = copy_config['path']
                 name_template = copy_config.get('name') or '{basename}.{ext}'
                 
-                # Determine base directory based on relative_to setting
-                if relative_to == 'OUTPUT' and self.output_file_path:
-                    base_dir = Path(self.output_file_path)
-                elif relative_to == 'OUTPUT' and self.write_nodes and len(self.write_nodes) == 1:
-                    # Get output path from the first write node
-                    node = nuke.toNode(self.write_nodes[0])
-                    if node and node.Class() == "Write":
-                        output_file = self._get_node_pretty_path(node)
-                        base_dir = Path(os.path.dirname(output_file))
-                    else:
-                        base_dir = self.script_path.parent
-                else:
-                    # Default to SCRIPT
-                    base_dir = self.script_path.parent
+                # Replace path tokens
+                copy_path = path_template
                 
-                # Create target directory
-                target_dir = base_dir / copy_path
+                # Script path tokens - include all alternatives from elsewhere in the codebase
+                script_tokens = ["{script}", "{nukescript}", "{scene}", "{scenefile}", "{ns}", 
+                                "{s}", "{nk}", "{scriptname}", "{script_name}", "{nuke_script}"]
+                for token in script_tokens:
+                    if token in copy_path:
+                        copy_path = copy_path.replace(token, str(self.script_path.parent))
+                
+                # Output path tokens
+                output_tokens = ["{output}", "{render}", "{out}", "{export}", "{o}"]
+                for token in output_tokens:
+                    if token in copy_path:
+                        if output_dir:
+                            copy_path = copy_path.replace(token, str(output_dir))
+                        else:
+                            # If no output dir is available, fall back to script dir
+                            copy_path = copy_path.replace(token, str(self.script_path.parent))
+                            logger.warning(f"No output directory available, replacing {token} with script directory")
+                
+                # If no tokens were replaced, assume path is relative to script directory
+                if copy_path == path_template:
+                    target_dir = self.script_path.parent / copy_path
+                else:
+                    target_dir = Path(copy_path)
+                
                 target_dir = target_dir.resolve()
                 target_dir.mkdir(parents=True, exist_ok=True)
                 
@@ -2101,8 +2122,18 @@ class NukeSubmission:
                 # Replace date tokens
                 now = datetime.datetime.now()
                 name = name_template
-                name = name.replace('{basename}', self.script_path.stem)
+                
+                # Script stem tokens
+                stem_tokens = ["{basename}", "{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", 
+                               "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
+                for token in stem_tokens:
+                    if token in name:
+                        name = name.replace(token, self.script_path.stem)
+                
+                # Script extension token
                 name = name.replace('{ext}', self.script_path.suffix.lstrip('.'))
+                
+                # Date tokens
                 name = name.replace('{YYYY}', now.strftime('%Y'))
                 name = name.replace('{YY}', now.strftime('%y'))
                 name = name.replace('{MM}', now.strftime('%m'))

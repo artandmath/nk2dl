@@ -148,19 +148,23 @@ submission:
   copy_script: false
   submit_copied_script: false
   
-  # Script copy path (relative to script or output directory)
-  script_copy_path: ./.farm/
-  script_copy_relative_to: OUTPUT  # Can be SCRIPT or OUTPUT
-  script_copy_name: {basename}.{ext}  # Can use tokens: {basename}, {ext}, {YYYY}, {MM}, {DD}, {hh}, etc.
+  # Script copy path with tokens available:
+  # Script dir tokens: {script}, {nukescript}, {scene}, {scenefile}, {ns}, {s}, {nk}, {scriptname}, {script_name}, {nuke_script}
+  # Output dir tokens: {output}, {render}, {out}, {export}, {o}
+  script_copy_path: ./.farm/  # Path with optional tokens for script or output directory
+  
+  # Name tokens:
+  # - Script stem: {basename}, {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, etc.
+  # - Extension: {ext}
+  # - Date/time: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+  script_copy_name: {basename}_{YYYY}{MM}{DD}.{ext}
   
   # Multiple copy locations (optional)
-  script_copy0_path: ./.farm/
-  script_copy0_relative_to: OUTPUT
-  script_copy0_name: {basename}.{ext}
+  script_copy0_path: "{output}/.farm/"  # First copy with output directory token
+  script_copy0_name: "{basename}.{ext}"
   
-  script_copy1_path: ./archive/
-  script_copy1_relative_to: SCRIPT
-  script_copy1_name: {basename}.{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}
+  script_copy1_path: "{script}/archive/"  # Second copy with script directory token
+  script_copy1_name: "{basename}_{YYYY}-{MM}-{DD}.{ext}"
   
   # Environment variables
   use_current_environment: false     # Use current environment variables
@@ -260,13 +264,4 @@ Templates for batch and job names support the following variables:
 | `{script}` | Script name with extension |
 | `{script_stem}` | Script name without extension |
 | `{write}` | Write node name |
-| `{file}` | Output file name (from write node) |
-| `{range}` | Frame range |
-| `{batch}` | Batch name (for job names only) |
-
-Example:
-```yaml
-submission:
-  batch_name_template: "Project_{script_stem}"
-  job_name_template: "{batch} / {write} / {range}"
-```
+| `{file}`

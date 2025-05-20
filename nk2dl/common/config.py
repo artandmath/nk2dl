@@ -104,9 +104,8 @@ class Config:
             'environment_keys': [],
             'environment': {},
             'omit_environment_keys': [],
-            'script_copy_path': '',
-            'script_copy_relative_to': 'SCRIPT',
-            'script_copy_name': '{script_stem}_copy.nk',
+            'script_copy_path': '{script}/.farm/',
+            'script_copy_name': '{basename}_copy.nk',
             
             # Machine list options
             'machine_allow_list': None,

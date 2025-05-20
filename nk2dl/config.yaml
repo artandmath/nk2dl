@@ -56,14 +56,11 @@ submission:
   omit_environment_keys: []
 
   # Script copying options (can define multiple copy locations)
-  script_copy_path: ""  # Leave empty to use temporary directory
-  script_copy_relative_to: "SCRIPT"  # Options: SCRIPT, OUTPUT, ABSOLUTE
-  script_copy_name: "{script_stem}_copy.nk"  # Token-based naming template
+  script_copy_path: "{output}/.farm/"  # Can include tokens: {script}, {output}, etc.
+  script_copy_name: "{basename}.{ext}"  # Can include date tokens and basename/ext
 
   # Alternatively, define multiple copy locations:
-  # script_copy0_path: "/path/to/copies"
-  # script_copy0_relative_to: "SCRIPT"
-  # script_copy0_name: "{script_stem}_copy1.nk"
-  # script_copy1_path: "/another/path"
-  # script_copy1_relative_to: "OUTPUT"
-  # script_copy1_name: "{script_stem}_copy2.nk"
+  # script_copy0_path: "./.farm/"
+  # script_copy0_name: "{basename}.{ext}"
+  # script_copy1_path: "{script}/archive/"
+  # script_copy1_name: "{basename}_{YYYY}-{MM}-{DD}.{ext}"
