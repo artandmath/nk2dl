@@ -39,6 +39,7 @@ job_ids = submit_nuke_script(
 | `submit_writes_alphabetically` | bool | `False` | Sort write nodes alphabetically |
 | `submit_writes_in_render_order` | bool | `False` | Sort write nodes by render order |
 | `submit_script_as_auxiliary_file` | bool | `False` | Submit script as auxiliary file |
+| `submission_is_build_job` | bool | `False` | Submit as a Python script job that calls submit_nuke_script and enters a ready state loop |
 
 ### Optional Job Info Parameters
 
@@ -418,3 +419,26 @@ Each job dictionary in the returned list contains:
 | `plugin_info` | dict | The complete plugin info used for submission |
 | `job_info` | dict | The complete job info used for submission |
 | `deadline_return` | Any | The raw return from the Deadline submission |
+
+## Advanced Submission Features
+
+### Build Job Submission
+
+The `submission_is_build_job` parameter enables a special type of submission that creates a Python script job on Deadline that will in turn submit the Nuke render:
+
+```python
+submit_nuke_script(
+    "/path/to/script.nk",
+    submission_is_build_job=True,  # Submit as a build job
+    write_nodes=["Write1", "Write2"]
+)
+```
+
+This approach offers several advantages:
+- The heavy processing of analyzing the Nuke script happens on the farm rather than your local workstation
+- You can queue up multiple submissions without tying up your local Nuke license
+- It can be faster for complex scripts with many write nodes
+
+After the job completes its submission, it enters a loop that prints "READY FOR INPUT" every 5 seconds. This message is recognized by Deadline to indicate the task is complete.
+
+> **Warning**: Setting `submission_is_build_job=True` when submitting from another build job script may result in infinite job submissions.
