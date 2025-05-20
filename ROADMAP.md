@@ -15,7 +15,7 @@ NK2DL is currently in active development with core CLI functionality established
 - [ ] Production testing of Python module
 - [ ] Feature parity between CLI and Python module
 - [ ] Simplify the install process
-- [ ] Submission offloader (build job tree on a farm process)
+- [X] Submission offloader (build job tree on a farm process)
 - [ ] Basic Nuke panel implementation
 - [ ] Production testing of basic panel
 - [ ] Advanced UI features and support nodes
