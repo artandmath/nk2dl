@@ -9,7 +9,6 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional, Union, Tuple
 import re
 import itertools
-import shutil
 import datetime
 
 from ..common.config import config
@@ -326,7 +325,9 @@ class NukeSubmission:
                 submit_writes_alphabetically: bool = False,
                 submit_writes_in_render_order: bool = False,
                 submit_script_as_auxiliary_file: Optional[bool] = None,
-                
+                submission_is_build_job: bool = False,  # Submit as a Python script job that calls submit_nuke_script
+                    # WARNING: setting submission_is_build_job=True may result in infinite job submissions
+
                 # Script copying and submission parameters
                 copy_script: Optional[bool] = None,
                 submit_copied_script: Optional[bool] = None,
@@ -546,11 +547,12 @@ class NukeSubmission:
         """
 
         self._script_will_close = False
+        self.submission_is_build_job = submission_is_build_job
 
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
         if render_order_dependencies:
             write_nodes_as_separate_jobs = True
-            
+                                    
         # Check if write_nodes_as_tasks and write_nodes_as_separate_jobs are not both True
         if write_nodes_as_tasks and write_nodes_as_separate_jobs:
             raise SubmissionError("Cannot use both write_nodes_as_tasks and write_nodes_as_separate_jobs or render_order_dependencies simultaneously")
@@ -678,6 +680,19 @@ class NukeSubmission:
         self.environment = self._process_env_dict(environment, 'submission.environment')
         self.environment_keys = self._process_env_list(environment_keys, 'submission.environment_keys')
         self.omit_environment_keys = self._process_env_list(omit_environment_keys, 'submission.omit_environment_keys')
+
+        # Set parse_output_paths_to_deadline to True if script_is_open is True
+        # unless explicitly set by the user
+        self.parse_output_paths_to_deadline = parse_output_paths_to_deadline
+        if script_is_open and parse_output_paths_to_deadline is False:
+            self.parse_output_paths_to_deadline = True
+
+        if self.submission_is_build_job:
+            # Exit here if we are submitting as a script job because after this early exit
+            # we may call on the nuke module and slow down the submission process
+            # the intent of submission_is_build_job is to offload the rendering to deadline
+            # and not have nk2dl call on the nuke module to handle parts of the submission
+            return
         
         # If GSV is provided, check Nuke version compatibility
         if self.graph_scope_variables:
@@ -730,13 +745,8 @@ class NukeSubmission:
         if self.graph_scope_variables:
             self._parse_graph_scope_variables()
 
-        # Set parse_output_paths_to_deadline to True if script_is_open is True
-        # unless explicitly set by the user
-        self.parse_output_paths_to_deadline = parse_output_paths_to_deadline
-        if script_is_open and parse_output_paths_to_deadline is False:
-            self.parse_output_paths_to_deadline = True
-        
 
+        
     def _initialize_machine_lists(self, machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list):
         """Initialize machine allow and deny lists based on provided parameters.
         
@@ -1408,14 +1418,15 @@ class NukeSubmission:
         if not self.submit_script_as_auxiliary_file:
             logger.warning("submit_script_as_auxiliary_file is False. Deadline will still copy the Nuke script to the worker as an auxiliary file if path mapping is enabled in the Nuke plugin under the Deadline repository plugin settings.")
         
-        # Add the script as an auxiliary file if requested
+        # Store the path for the auxiliary file if needed
         if self.submit_script_as_auxiliary_file:
             # Determine which script path to use
             script_file_path = str(self.script_path.absolute())
             if self.submit_copied_script and self.copied_script_paths:
                 script_file_path = self.copied_script_paths[0]
-            
-            job_info["AuxiliaryFiles"] = script_file_path
+                
+            # Store the auxiliary file path for later use
+            self.auxiliary_script_path = script_file_path
         
         # Add machine list to job info if specified
         if self.machine_allow_list:
@@ -1456,6 +1467,67 @@ class NukeSubmission:
         
         return job_info
     
+    def _process_env_dict(self, env_dict, config_key):
+        """Process environment dictionary with special config token.
+        
+        Args:
+            env_dict: Dictionary of environment variables or None
+            config_key: The config key to get default values from
+            
+        Returns:
+            Processed environment dictionary
+        """
+        # If no dictionary provided, return config values
+        if env_dict is None or not isinstance(env_dict, dict):
+            return config.get(config_key, {})
+            
+        # Check for special config token
+        if "{config}" in env_dict:
+            mode = env_dict.pop("{config}")
+            
+            # If extend mode, combine config with provided values
+            if mode and mode.lower() == "extend":
+                result = config.get(config_key, {}).copy()
+                result.update(env_dict)
+                return result
+                
+        # Default is to use provided dictionary as-is
+        return env_dict
+        
+    def _process_env_list(self, env_list, config_key):
+        """Process environment list with special config token.
+        
+        Args:
+            env_list: List of environment variables or None
+            config_key: The config key to get default values from
+            
+        Returns:
+            Processed environment list
+        """
+        # If no list provided, return config values
+        if env_list is None:
+            return config.get(config_key, [])
+            
+        # Check for special format and token
+        if (isinstance(env_list, list) and env_list and 
+            isinstance(env_list[0], str) and 
+            env_list[0].startswith("{config:")):
+            
+            # Extract mode from token
+            token = env_list[0]
+            mode = token.split(":", 1)[1].rstrip("}")
+            
+            # If extend mode, combine config with provided values
+            if mode.lower() == "extend":
+                result = config.get(config_key, []) + env_list[1:]  # Skip the token
+                return result
+            else:
+                # Remove the token but keep the rest
+                return env_list[1:]
+                
+        # Default is to use provided list as-is
+        return env_list
+        
     def _add_environment_variables_to_job_info(self, job_info: Dict[str, Any]) -> None:
         """Add environment variables to job info according to specified parameters.
         
@@ -1488,7 +1560,7 @@ class NukeSubmission:
         # Add environment variables to job info in Deadline format
         for i, (key, value) in enumerate(env_vars.items()):
             job_info[f"EnvironmentKeyValue{i}"] = f"{key}={value}"
-    
+
     def _add_output_filenames_to_job_info(self, job_info: Dict[str, Any], gsv_combination=None) -> None:
         """Add OutputFilename# entries to job info.
         
@@ -1559,9 +1631,11 @@ class NukeSubmission:
             "RenderMode": self.render_mode.capitalize()
         }
         
-        # Only add SceneFile if not submitting script as auxiliary file
+        # Handle SceneFile differently based on whether script is an auxiliary file
         if not self.submit_script_as_auxiliary_file:
+            # If not submitting as auxiliary file, add script path to SceneFile
             plugin_info["SceneFile"] = script_file_path
+        # No else clause needed - if script is an auxiliary file, it will be added to job_info as AuxFile0
         
         # Add BatchModeIsMovie flag if needed - single write node that outputs a movie format
         # Note: When this is set, we need to update ChunkSize in job_info, but that's done in submit()
@@ -1940,7 +2014,6 @@ class NukeSubmission:
         """
         import shutil
         import datetime
-        import re
         
         if not self.copy_script:
             logger.debug("Script copying is disabled")
@@ -2093,7 +2166,7 @@ class NukeSubmission:
         except Exception as e:
             logger.warning(f"Failed to update project_directory in copied script: {e}")
         
-    def _submit_job(self, job_info, plugin_info, render_order=0, write_node=None, gsv_combination=None):
+    def _submit_job(self, job_info, plugin_info, render_order=0, write_node=None, gsv_combination=None, auxiliary_files=None):
         """
         Submit a job to Deadline, track results, and log details.
         
@@ -2103,6 +2176,7 @@ class NukeSubmission:
             render_order: The render order value (default: 0)
             write_node: Optional write node name
             gsv_combination: Optional GSV combination used for this submission
+            auxiliary_files: Optional list of auxiliary files to include with the job
             
         Returns:
             dict: Job tracking information
@@ -2111,8 +2185,8 @@ class NukeSubmission:
             SubmissionError: If submission fails
         """
         try:
-            # Submit the job
-            deadline_response = self.deadline.submit_job(job_info, plugin_info)
+            # Submit the job with auxiliary files if provided
+            deadline_response = self.deadline.submit_job(job_info, plugin_info, auxiliary_files)
             job_id = deadline_response["job_id"]
             
             # Track job ID by render order
@@ -2229,10 +2303,15 @@ class NukeSubmission:
                     job_info = self._prepare_job_info(gsv_combination)
                     plugin_info = self._prepare_plugin_info(gsv_combination)
                     
+                    # Prepare auxiliary files if needed
+                    auxiliary_files = None
+                    if hasattr(self, 'auxiliary_script_path'):
+                        auxiliary_files = [self.auxiliary_script_path]
+                    
                     # If using write nodes as tasks with GSVs
                     if self.write_nodes_as_tasks and self.write_nodes and len(self.write_nodes) > 1:
                         # Submit as a single job with all write nodes as tasks
-                        self._submit_job(job_info, plugin_info, 0, None, gsv_combination)
+                        self._submit_job(job_info, plugin_info, 0, None, gsv_combination, auxiliary_files)
                     # If using separate jobs or dependencies with GSVs
                     elif (self.write_nodes_as_separate_jobs or self.render_order_dependencies) and self.write_nodes and len(self.write_nodes) > 1:
                         # Get write node frame ranges if use_nodes_frame_list is enabled
@@ -2492,9 +2571,14 @@ class NukeSubmission:
                         logger.debug(f"Job info for {write_node}: {node_job_info}")
                         logger.debug(f"Plugin info for {write_node}: {node_plugin_info}")
                         
-                        # Submit to Deadline
+                        # Prepare auxiliary files if needed
+                        auxiliary_files = None
+                        if hasattr(self, 'auxiliary_script_path'):
+                            auxiliary_files = [self.auxiliary_script_path]
+                        
+                        # Submit the job
                         try:
-                            self._submit_job(node_job_info, node_plugin_info, render_order, write_node, None)
+                            self._submit_job(node_job_info, node_plugin_info, render_order, write_node, None, auxiliary_files)
                         except Exception as e:
                             logger.error(f"Failed to submit job for write node {write_node}: {e}")
                     
@@ -2519,7 +2603,12 @@ class NukeSubmission:
                         else:
                             write_node = None
                         
-                        self._submit_job(job_info, plugin_info, 0, write_node, None)
+                        # Prepare auxiliary files if needed
+                        auxiliary_files = None
+                        if hasattr(self, 'auxiliary_script_path'):
+                            auxiliary_files = [self.auxiliary_script_path]
+                        
+                        self._submit_job(job_info, plugin_info, 0, write_node, None, auxiliary_files)
                     except Exception as e:
                         logger.error(f"Failed to submit regular job: {e}")
                         # Re-raise the exception to propagate it to the caller
@@ -2547,66 +2636,257 @@ class NukeSubmission:
             
             raise SubmissionError(f"Failed to submit job: {e}")
 
-    def _process_env_dict(self, env_dict, config_key):
-        """Process environment dictionary with special config token.
+    def submit_as_build_job(self) -> List[Dict[str, Any]]:
+        """Create and submit a Python script job that calls submit_nuke_script.
         
-        Args:
-            env_dict: Dictionary of environment variables or None
-            config_key: The config key to get default values from
-            
+        Creates a temporary Python script file that calls submit_nuke_script with
+        all the current instance parameters, then submits it to Deadline as a 
+        Nuke python job. This will create a single job regardless of how many
+        write nodes are specified - the actual write node separation will happen
+        when the script executes on the farm.
+        
         Returns:
-            Processed environment dictionary
+            List of dictionaries with job information, matching the format of regular submission.
+            
+        Raises:
+            SubmissionError: If script job submission fails
         """
-        # If no dictionary provided, return config values
-        if env_dict is None or not isinstance(env_dict, dict):
-            return config.get(config_key, {})
-            
-        # Check for special config token
-        if "{config}" in env_dict:
-            mode = env_dict.pop("{config}")
-            
-            # If extend mode, combine config with provided values
-            if mode and mode.lower() == "extend":
-                result = config.get(config_key, {}).copy()
-                result.update(env_dict)
-                return result
-                
-        # Default is to use provided dictionary as-is
-        return env_dict
+        logger.info(f"Creating script job for Nuke script: {self.script_path}")
         
-    def _process_env_list(self, env_list, config_key):
-        """Process environment list with special config token.
+        # Generate a timestamped filename based on the original script name
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+        script_stem = self.script_path.stem
+        script_basename = self.script_path.name
+        script_file = str(self.script_path.parent / f"{script_stem}_{timestamp}.py")
         
-        Args:
-            env_list: List of environment variables or None
-            config_key: The config key to get default values from
-            
-        Returns:
-            Processed environment list
-        """
-        # If no list provided, return config values
-        if env_list is None:
-            return config.get(config_key, [])
-            
-        # Check for special format and token
-        if (isinstance(env_list, list) and env_list and 
-            isinstance(env_list[0], str) and 
-            env_list[0].startswith("{config:")):
-            
-            # Extract mode from token
-            token = env_list[0]
-            mode = token.split(":", 1)[1].rstrip("}")
-            
-            # If extend mode, combine config with provided values
-            if mode.lower() == "extend":
-                result = config.get(config_key, []) + env_list[1:]  # Skip the token
-                return result
-            else:
-                # Remove the token but keep the rest
-                return env_list[1:]
+        logger.debug(f"Creating script file with timestamp: {script_file}")
+        
+        # Use a regular file context to create the script
+        try:
+            with open(script_file, 'w') as script_file_obj:
+                # Add proper encoding header for Python 3 compatibility
+                script_file_obj.write("#!/usr/bin/env python\n")
+                script_file_obj.write("# -*- coding: utf-8 -*-\n\n")
                 
-        # Default is to use provided list as-is
-        return env_list
+                # Write the import statements
+                script_file_obj.write("from nk2dl import submit_nuke_script\n\n")
+                script_file_obj.write("import time\n\n")
+
+                # Write a main function to ensure proper execution
+                script_file_obj.write("def submit_nuke_script_job():\n")
+                
+                # Create the function call with all parameters
+                script_path_str = str(self.script_path)
+                script_path_str = script_path_str.replace("\\", "/")
+                args_str = [f'    "{script_path_str}"']
+                
+                logger.debug("Generating script arguments for submit_nuke_script")
+                
+                # Map all instance attributes to kwargs for the script
+                # Only add parameters that aren't using default values to keep the script clean
+                if self.script_is_open:
+                    args_str.append(f"    script_is_open=False")
+                if self.use_parser_instead_of_nuke:
+                    args_str.append(f"    use_parser_instead_of_nuke={self.use_parser_instead_of_nuke}")
+                if self.submit_writes_alphabetically:
+                    args_str.append(f"    submit_writes_alphabetically={self.submit_writes_alphabetically}")
+                if self.submit_writes_in_render_order:
+                    args_str.append(f"    submit_writes_in_render_order={self.submit_writes_in_render_order}")
+                if self.submit_script_as_auxiliary_file is not None:
+                    args_str.append(f"    submit_script_as_auxiliary_file={self.submit_script_as_auxiliary_file}")
+                if self.copy_script is not None:
+                    args_str.append(f"    copy_script={self.copy_script}")
+                if self.submit_copied_script is not None:
+                    args_str.append(f"    submit_copied_script={self.submit_copied_script}")
+                if self.machine_allow_list:
+                    args_str.append(f"    machine_allow_list={repr(self.machine_allow_list)}")
+                if self.machine_deny_list:
+                    args_str.append(f"    machine_deny_list={repr(self.machine_deny_list)}")
+                if self.machine_limit is not None:
+                    args_str.append(f"    machine_limit={self.machine_limit}")
+                if self.job_name_template != config.get('submission.job_name_template', "{batch} / {write} / {file}"):
+                    args_str.append(f'    job_name="{self.job_name_template}"')
+                if self.batch_name_template != config.get('submission.batch_name_template', "{script_stem}"):
+                    args_str.append(f'    batch_name="{self.batch_name_template}"')
+                if self.priority != config.get('submission.priority', 50):
+                    args_str.append(f"    priority={self.priority}")
+                if self.pool != config.get('submission.pool', 'nuke'):
+                    args_str.append(f'    pool="{self.pool}"')
+                if self.group != config.get('submission.group', 'none'):
+                    args_str.append(f'    group="{self.group}"')
+                if self.chunk_size != config.get('submission.chunk_size', 10):
+                    args_str.append(f"    chunk_size={self.chunk_size}")
+                if self.department is not None:
+                    args_str.append(f'    department="{self.department}"')
+                if self.comment_template:
+                    args_str.append(f'    comment="{self.comment_template}"')
+                if self.concurrent_tasks != config.get('submission.concurrent_tasks', 1):
+                    args_str.append(f"    concurrent_tasks={self.concurrent_tasks}")
+                if self.extra_info:
+                    args_str.append(f"    extra_info={repr(self.extra_info)}")
+                if self.frames:
+                    args_str.append(f'    frames="{self.frames}"')
+                if self.job_dependencies:
+                    args_str.append(f'    job_dependencies="{self.job_dependencies}"')
+                if self.on_job_complete:
+                    args_str.append(f'    on_job_complete="{self.on_job_complete}"')
+                if self.submit_suspended:
+                    args_str.append(f"    submit_suspended={self.submit_suspended}")
+                if self.limit_groups:
+                    args_str.append(f'    limit_groups="{self.limit_groups}"')
+                if self.task_timeout is not None:
+                    args_str.append(f"    task_timeout={self.task_timeout}")
+                if self.enable_auto_timeout:
+                    args_str.append(f"    enable_auto_timeout={self.enable_auto_timeout}")
+                if self.limit_worker_tasks:
+                    args_str.append(f"    limit_worker_tasks={self.limit_worker_tasks}")
+                if self.output_file_path:
+                    args_str.append(f'    output_file_path="{self.output_file_path}"')
+                if self.use_nuke_x:
+                    args_str.append(f"    use_nuke_x={self.use_nuke_x}")
+                if not self.batch_mode:  # Default is True, so only include if False
+                    args_str.append(f"    batch_mode={self.batch_mode}")
+                if self.threads is not None:
+                    args_str.append(f"    threads={self.threads}")
+                if self.use_gpu:
+                    args_str.append(f"    use_gpu={self.use_gpu}")
+                if self.gpu_override:
+                    args_str.append(f'    gpu_override="{self.gpu_override}"')
+                if self.ram_use is not None:
+                    args_str.append(f"    ram_use={self.ram_use}")
+                if not self.enforce_render_order:  # Default is True, so only include if False
+                    args_str.append(f"    enforce_render_order={self.enforce_render_order}")
+                if self.stack_size is not None:
+                    args_str.append(f"    stack_size={self.stack_size}")
+                if self.continue_on_error:
+                    args_str.append(f"    continue_on_error={self.continue_on_error}")
+                if self.reload_plugins:
+                    args_str.append(f"    reload_plugins={self.reload_plugins}")
+                if self.performance_profiler:
+                    args_str.append(f"    performance_profiler={self.performance_profiler}")
+                if self.performance_profiler_path:
+                    args_str.append(f'    performance_profiler_path="{self.performance_profiler_path}"')
+                if self.use_proxy:
+                    args_str.append(f"    use_proxy={self.use_proxy}")
+                if self.write_nodes:
+                    args_str.append(f"    write_nodes={repr(self.write_nodes)}")
+                if self.render_mode != config.get('submission.render_mode', 'full'):
+                    args_str.append(f'    render_mode="{self.render_mode}"')
+                if self.write_nodes_as_tasks:
+                    args_str.append(f"    write_nodes_as_tasks={self.write_nodes_as_tasks}")
+                if self.write_nodes_as_separate_jobs:
+                    args_str.append(f"    write_nodes_as_separate_jobs={self.write_nodes_as_separate_jobs}")
+                if self.render_order_dependencies:
+                    args_str.append(f"    render_order_dependencies={self.render_order_dependencies}")
+                if self.use_node_frame_list:
+                    args_str.append(f"    use_node_frame_list={self.use_node_frame_list}")
+                if self.views:
+                    args_str.append(f"    views={repr(self.views)}")
+                if self.graph_scope_variables:
+                    args_str.append(f"    graph_scope_variables={repr(self.graph_scope_variables)}")
+                if self.use_current_environment:
+                    args_str.append(f"    use_current_environment={self.use_current_environment}")
+                if self.environment_keys:
+                    args_str.append(f"    environment_keys={repr(self.environment_keys)}")
+                if self.environment:
+                    args_str.append(f"    environment={repr(self.environment)}")
+                if self.omit_environment_keys:
+                    args_str.append(f"    omit_environment_keys={repr(self.omit_environment_keys)}")
+                
+                # Write the function call with proper indentation
+                script_file_obj.write(f"    results = submit_nuke_script(\n")
+                script_file_obj.write(",\n".join(args_str))
+                script_file_obj.write("\n    )\n")
+                script_file_obj.write("    return results\n\n")
+                
+                # Add standard Python entry point
+                script_file_obj.write("if __name__ == \"__main__\":\n")
+                script_file_obj.write("    submit_nuke_script_job()\n")
+                script_file_obj.write("    # Enter loop printing READY FOR INPUT every 5 seconds\n")
+                script_file_obj.write("    while True:\n")
+                script_file_obj.write("        print(\"READY FOR INPUT\")\n")
+                script_file_obj.write("        time.sleep(5)\n")
+
+                logger.debug(f"Python script content generated with {len(args_str)} parameters")
+            
+            logger.info(f"Created script job Python file: {script_file}")
+            
+            # Get Deadline connection
+            deadline = get_connection()
+            
+            # Prepare job and plugin info
+            job_info = {
+                'Plugin': 'Nuke',
+                'Name': self.job_name if hasattr(self, 'job_name') else os.path.basename(str(self.script_path)),
+                'Frames': '1',
+                'ChunkSize': '1'
+            }
+            
+            # Add other job info parameters if provided
+            if self.pool:
+                job_info['Pool'] = self.pool
+            if self.group:
+                job_info['Group'] = self.group
+            if self.priority:
+                job_info['Priority'] = self.priority
+            if self.department:
+                job_info['Department'] = self.department
+            if self.comment:
+                job_info['Comment'] = f"NK2DL build job for: {script_basename}"
+            if self.batch_name:
+                job_info['BatchName'] = self.batch_name
+            if self.concurrent_tasks:
+                job_info['ConcurrentTasks'] = self.concurrent_tasks
+            if self.limit_groups:
+                job_info['LimitGroups'] = self.limit_groups
+            if self.job_dependencies:
+                job_info['JobDependencies'] = self.job_dependencies
+            if self.on_job_complete:
+                job_info['OnJobComplete'] = self.on_job_complete
+            
+            plugin_info = {
+                'Version': nuke_utils.nuke_version(self.nuke_version),
+                'BuildJobsFilename': os.path.abspath(script_file),  # Make sure the path is absolute
+                'SingleFramesOnly': 'True'
+            }
+            
+            logger.debug(f"Submitting script job with job_info: {json.dumps(job_info, indent=2)}")
+            logger.debug(f"Plugin info: {json.dumps(plugin_info, indent=2)}")
+            
+            # Collect auxiliary files but don't set them in job_info
+            script_aux_files = [os.path.abspath(script_file)]
+            
+            # Also add the original Nuke script as an auxiliary file if requested
+            if self.submit_script_as_auxiliary_file:
+                script_file_path = str(self.script_path.absolute())
+                if self.submit_copied_script and self.copied_script_paths:
+                    script_file_path = os.path.abspath(self.copied_script_paths[0])
+                
+                # Add to the list of auxiliary files
+                script_aux_files.append(script_file_path)
+            
+            # Store the auxiliary files for direct submission
+            auxiliary_files = script_aux_files
+            
+            # Submit the job with auxiliary files
+            response = deadline.submit_job(job_info, plugin_info, auxiliary_files)
+            job_id = response['job_id']
+            
+            logger.info(f"Successfully submitted script job with ID: {job_id}")
+            logger.debug(f"Script job will handle write nodes: {self.write_nodes}")
+            
+            # Format the return value to match the expected format
+            return [{
+                'job_id': job_id,
+                'render_order': 0,
+                'plugin_info': plugin_info,
+                'job_info': job_info,
+                'deadline_return': response
+            }]
+            
+        except Exception as e:
+            logger.error(f"Failed to submit script job: {e}", exc_info=True)
+            raise SubmissionError(f"Failed to submit script job: {e}")
 
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
@@ -2624,6 +2904,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
           - copy_script: Whether to make copies of the script before submission
           - submit_copied_script: Whether to use the copied script path in the submission
+          - submission_is_build_job: Whether to submit as a Python script job that calls submit_nuke_script
+          - build_jobs_filename: Filename for the build jobs Python script
           - graph_scope_variables: List of graph scope variables in either flat format:
             ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
             Or nested format:
@@ -2745,6 +3027,12 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
             - job_info (dict): The job info used for submission
             - deadline_return (Any): The raw return from the Deadline submission
     """
+
+    if kwargs.get('submission_is_build_job', False):
+        # WARNING: setting default to True will result in infinite job submissions
+        submission = NukeSubmission(script_path=script_path, **kwargs)
+        return submission.submit_as_build_job()
+
     # Extract parameters needed for determining script path
     script_is_open = kwargs.get('script_is_open', False)
     use_parser_instead_of_nuke = kwargs.get('use_parser_instead_of_nuke', False)

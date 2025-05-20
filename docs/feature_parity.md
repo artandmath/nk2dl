@@ -34,6 +34,7 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | OutputFilePath | - | output_file_path | - |
 | ScriptJob | - | - | scriptJob |
 | ScriptFilename | - | - | scriptFilename |
+| BuildJobsFilename | *if submission_is_build_job=True* |  |  |
 | - | Name | job_name | jobName |
 | - | Plugin | "Nuke" | "Nuke" |
 | - | Frames | frames | frameList |

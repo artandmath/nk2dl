@@ -234,12 +234,13 @@ class DeadlineConnection:
             except Exception as e:
                 raise DeadlineError(f"Failed to get groups: {e}")
     
-    def submit_job(self, job_info: Dict[str, Any], plugin_info: Dict[str, Any]) -> Dict[str, Any]:
+    def submit_job(self, job_info: Dict[str, Any], plugin_info: Dict[str, Any], auxiliary_files: Optional[List[str]] = None) -> Dict[str, Any]:
         """Submit a job to Deadline.
         
         Args:
             job_info: Job information dictionary
             plugin_info: Plugin-specific information dictionary
+            auxiliary_files: Optional list of auxiliary files to include with the job
             
         Returns:
             Dictionary containing:
@@ -274,14 +275,26 @@ class DeadlineConnection:
                 # Create the payload as required by the Deadline REST API
                 payload = {
                     "JobInfo": job_info_str,
-                    "PluginInfo": plugin_info_str
+                    "PluginInfo": plugin_info_str,
+                    "AuxFiles": []  # Initialize empty array for auxiliary files
                 }
+                
+                # Use provided auxiliary files if any
+                if auxiliary_files:
+                    # Ensure all files are strings
+                    aux_files = [str(file) for file in auxiliary_files]
+                    payload["AuxFiles"] = aux_files
                 
                 # Log the JSON payload for debugging
                 logger.info(f"Submitting job JSON payload via deadline web service:\n{json.dumps(payload, indent=2)}")
                 
                 # Submit job with correct arguments to the API
-                job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
+                if payload["AuxFiles"]:
+                    # If we have auxiliary files, pass them to the API
+                    job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str, payload["AuxFiles"])
+                else:
+                    # Otherwise, use the standard call without auxiliary files
+                    job_response = self._web_client.Jobs.SubmitJob(job_info_str, plugin_info_str)
                 
                 if isinstance(job_response, str) and job_response.startswith("Error:"):
                     raise DeadlineError(f"Failed to submit job: {job_response}")
@@ -317,15 +330,34 @@ class DeadlineConnection:
                 }
                 
             except Exception as e:
+                error_message = str(e)
+                # Check for auxiliary file not found error
+                if "Error: could not find Auxiliary submission file:" in error_message:
+                    file_access_warning = (
+                        "The Deadline Web Service cannot access the auxiliary files. "
+                        "Ensure the Deadline Web Service has the same file access rights as your machine. "
+                        "Network drives must be mounted and accessible on the Deadline Web Service server."
+                    )
+                    logger.warning(colored_text(file_access_warning, Colors.YELLOW))
+                
                 if config.get('deadline.commandline_on_fail', True):
                     fallback_msg = f"Failed to submit job via web service: {e}. Falling back to command line."
-                    logger.warning(colored_text(fallback_msg, Colors.RED))
+                    logger.warning(colored_text(fallback_msg, Colors.YELLOW))
                     self._setup_command_line()
                     self.use_web_service = False
                     self._init_command_line()
-                    return self.submit_job(job_info, plugin_info)  # Retry with command line
+                    # Need to also pass auxiliary_files when retrying
+                    return self.submit_job(job_info, plugin_info, auxiliary_files)  # Retry with command line
                 else:
-                    raise DeadlineError(f"Failed to submit job via web service: {e}")
+                    if "Error: could not find Auxiliary submission file:" in error_message:
+                        # Add file access info to the error message if not already warned
+                        raise DeadlineError(
+                            f"Failed to submit job via web service: {e}. "
+                            "The Deadline Web Service cannot access the auxiliary files. "
+                            "Ensure the Deadline Web Service has the same file access rights as your machine."
+                        )
+                    else:
+                        raise DeadlineError(f"Failed to submit job via web service: {e}")
         else:
             # Command line submission using files
             logger.info(f"Submitting job via deadline command line")
@@ -362,14 +394,12 @@ class DeadlineConnection:
                     args = command_parts
                 else:
                     args = [self._command_path, job_info_path, plugin_info_path]
-                
-                # Add auxiliary files if specified in job_info
-                if "AuxiliaryFiles" in job_info:
-                    aux_files = job_info["AuxiliaryFiles"]
-                    if isinstance(aux_files, list):
-                        args.extend(aux_files)
-                    else:
-                        args.append(aux_files)
+
+                # Use provided auxiliary files if any
+                if auxiliary_files:
+                    # Ensure all files are strings
+                    aux_files = [str(file) for file in auxiliary_files]
+                    args.extend(aux_files)
                 
                 startupinfo = None
                 if os.name == 'nt':
