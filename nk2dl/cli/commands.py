@@ -161,6 +161,16 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["submit_suspended"] = True
     if hasattr(args, "SubmitNukeScript") and args.SubmitNukeScript:
         kwargs["submit_script"] = True
+    
+    # Script hook options
+    if hasattr(args, "PreJobScript") and args.PreJobScript is not None:
+        kwargs["pre_job_script"] = args.PreJobScript
+    if hasattr(args, "PostJobScript") and args.PostJobScript is not None:
+        kwargs["post_job_script"] = args.PostJobScript
+    if hasattr(args, "PreTaskScript") and args.PreTaskScript is not None:
+        kwargs["pre_task_script"] = args.PreTaskScript
+    if hasattr(args, "PostTaskScript") and args.PostTaskScript is not None:
+        kwargs["post_task_script"] = args.PostTaskScript
         
     # Write node options
     if hasattr(args, "WriteNodes") and args.WriteNodes is not None:

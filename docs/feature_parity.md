@@ -58,6 +58,10 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | TaskTimeoutSeconds | task_timeout | taskTimeout |
 | - | EnableAutoTimeout | enable_auto_timeout | autoTaskTimeout |
 | - | LimitConcurrentTasks | limit_worker_tasks | limitConcurrentTasks |
+| - | PreJobScript | pre_job_script | - |
+| - | PostJobScript | post_job_script | - |
+| - | PreTaskScript | pre_task_script | - |
+| - | PostTaskScript | post_task_script | - |
 | - | UseNodeFrameList | use_node_frame_list | useNodeRange |
 | - | - | render_order_dependencies | separateJobDependencies |
 | - | - | write_nodes_as_tasks | separateTasks |

@@ -10,7 +10,7 @@ NK2DL is currently in active development with core CLI functionality established
 
 - [ ] Feature parity with Thinkbox submitter for the NK2DL Python module
 - [X] Support for submitting environment variables with jobs (implemented in v0.1.4-alpha)
-- [ ] Implement pre and post submit hooks
+- [X] Implement pre and post submit hooks
 - [ ] Update tests for core functionality
 - [ ] Production testing of Python module
 - [ ] Feature parity between CLI and Python module

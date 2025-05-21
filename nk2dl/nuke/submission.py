@@ -92,6 +92,10 @@ class WriteNode:
         'enable_auto_timeout': 'EnableAutoTimeout',
         'limit_worker_tasks': 'LimitConcurrentTasks',
         'batch_name': 'BatchName',
+        'pre_job_script': 'PreJobScript',
+        'post_job_script': 'PostJobScript',
+        'pre_task_script': 'PreTaskScript',
+        'post_task_script': 'PostTaskScript',
         
         # Plugin Info parameters
         'nuke_version': 'Version',
@@ -372,6 +376,10 @@ class NukeSubmission:
                 task_timeout: Optional[int] = None,
                 enable_auto_timeout: bool = False,
                 limit_worker_tasks: bool = False,
+                pre_job_script: Optional[str] = None,
+                post_job_script: Optional[str] = None,
+                pre_task_script: Optional[str] = None,
+                post_task_script: Optional[str] = None,
                 
                 # Plugin Info parameters
                 output_file_path: str = "",
@@ -472,6 +480,10 @@ class NukeSubmission:
             task_timeout: Optional task timeout in seconds
             enable_auto_timeout: Whether to enable auto timeout
             limit_worker_tasks: Whether to limit concurrent tasks
+            pre_job_script: Path to a script to run before the job starts. Can include tokens like {script}.
+            post_job_script: Path to a script to run after the job completes. Can include tokens like {script}.
+            pre_task_script: Path to a script to run before each task starts. Can include tokens like {script}.
+            post_task_script: Path to a script to run after each task completes. Can include tokens like {script}.
             
             # Plugin Info parameters
             output_file_path: Output directory for rendered files
@@ -653,6 +665,12 @@ class NukeSubmission:
         self.task_timeout = task_timeout if task_timeout is not None else config.get('submission.task_timeout')
         self.enable_auto_timeout = enable_auto_timeout if isinstance(enable_auto_timeout, bool) else config.get('submission.enable_auto_timeout', False)
         self.limit_worker_tasks = limit_worker_tasks if isinstance(limit_worker_tasks, bool) else config.get('submission.limit_worker_tasks', False)
+        
+        # Script hook parameters
+        self.pre_job_script = pre_job_script if pre_job_script is not None else config.get('submission.pre_job_script')
+        self.post_job_script = post_job_script if post_job_script is not None else config.get('submission.post_job_script')
+        self.pre_task_script = pre_task_script if pre_task_script is not None else config.get('submission.pre_task_script')
+        self.post_task_script = post_task_script if post_task_script is not None else config.get('submission.post_task_script')
         
         # Nuke-specific options
         self.use_nuke_x = use_nuke_x if isinstance(use_nuke_x, bool) else config.get('submission.use_nuke_x', False)
@@ -1492,6 +1510,20 @@ class NukeSubmission:
         # Add limit concurrent tasks if enabled
         if self.limit_worker_tasks:
             job_info["LimitConcurrentTasks"] = "true"
+        
+        # Add script hooks if specified
+        if self.pre_job_script:
+            # Replace tokens in the script path if needed
+            job_info["PreJobScript"] = self._replace_tokens(self.pre_job_script)
+            
+        if self.post_job_script:
+            job_info["PostJobScript"] = self._replace_tokens(self.post_job_script)
+            
+        if self.pre_task_script:
+            job_info["PreTaskScript"] = self._replace_tokens(self.pre_task_script)
+            
+        if self.post_task_script:
+            job_info["PostTaskScript"] = self._replace_tokens(self.post_task_script)
         
         # Add environment variables to job info
         self._add_environment_variables_to_job_info(job_info)
@@ -2983,6 +3015,14 @@ class NukeSubmission:
                     args_str.append(f"    enable_auto_timeout={self.enable_auto_timeout}")
                 if self.limit_worker_tasks:
                     args_str.append(f"    limit_worker_tasks={self.limit_worker_tasks}")
+                if self.pre_job_script:
+                    args_str.append(f'    pre_job_script="{self.pre_job_script}"')
+                if self.post_job_script:
+                    args_str.append(f'    post_job_script="{self.post_job_script}"')
+                if self.pre_task_script:
+                    args_str.append(f'    pre_task_script="{self.pre_task_script}"')
+                if self.post_task_script:
+                    args_str.append(f'    post_task_script="{self.post_task_script}"')
                 if self.output_file_path:
                     args_str.append(f'    output_file_path="{self.output_file_path}"')
                 if self.use_nuke_x:
@@ -3198,6 +3238,10 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - task_timeout: Optional task timeout in seconds
           - enable_auto_timeout: Whether to enable auto timeout
           - limit_worker_tasks: Whether to limit concurrent tasks
+          - pre_job_script: Path to a script to run before the job starts. Can include tokens like {script}.
+          - post_job_script: Path to a script to run after the job completes. Can include tokens like {script}.
+          - pre_task_script: Path to a script to run before each task starts. Can include tokens like {script}.
+          - post_task_script: Path to a script to run after each task completes. Can include tokens like {script}.
           
           # Plugin Info parameters
           - output_file_path: Output directory for rendered files

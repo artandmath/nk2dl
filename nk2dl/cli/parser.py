@@ -174,6 +174,26 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Action to take when the job completes"
     )
     dependency_group.add_argument(
+        "--PreJobScript", 
+        metavar="SCRIPT_PATH",
+        help="Path to a script to run before the job starts"
+    )
+    dependency_group.add_argument(
+        "--PostJobScript", 
+        metavar="SCRIPT_PATH",
+        help="Path to a script to run after the job completes"
+    )
+    dependency_group.add_argument(
+        "--PreTaskScript", 
+        metavar="SCRIPT_PATH",
+        help="Path to a script to run before each task starts"
+    )
+    dependency_group.add_argument(
+        "--PostTaskScript", 
+        metavar="SCRIPT_PATH",
+        help="Path to a script to run after each task completes"
+    )
+    dependency_group.add_argument(
         "--SubmitNukeScript", 
         action="store_true",
         help="Submit the Nuke script as an auxiliary file"

@@ -117,6 +117,12 @@ class Config:
             'machine_deny_list': None,
             'machine_limit': None,
             
+            # Script hook options
+            'pre_job_script': None,
+            'post_job_script': None,
+            'pre_task_script': None,
+            'post_task_script': None,
+            
             # Environment variables
             'department': '',
         }
