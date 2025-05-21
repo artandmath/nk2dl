@@ -8,6 +8,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Optional
+import os
 
 from .config import config
 
@@ -26,8 +27,35 @@ def setup_logging(name: Optional[str] = None) -> logging.Logger:
     if not logger.handlers:
         # Get logging config
         log_level = config.get('logging.level', 'INFO')
-        log_format = config.get('logging.format', 
-                              '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
+        # Check if running in a build job via environment variable
+        in_build_job = os.environ.get('NK2DL_IN_BUILD_JOB', 'false').lower() == 'true'
+        
+        # Create a basic formatter for initial debug message
+        basic_formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')
+        
+        # Create a temporary handler to log build job status
+        temp_handler = logging.StreamHandler(sys.stdout)
+        temp_handler.setFormatter(basic_formatter)
+        logger.addHandler(temp_handler)
+        numeric_level = getattr(logging, log_level.upper())
+        logger.setLevel(numeric_level)
+        
+        # Log build job environment status for debugging
+        if name and name.startswith('nk2dl'):
+            logger.debug(f"NK2DL_IN_BUILD_JOB environment variable: '{os.environ.get('NK2DL_IN_BUILD_JOB', 'not set')}', in_build_job={in_build_job}")
+        
+        # Remove the temporary handler after logging
+        logger.removeHandler(temp_handler)
+        
+        # Use simplified format without timestamps when running in a build job
+        if in_build_job:
+            log_format = '%(name)s - %(levelname)s - %(message)s'
+        else:
+            # Regular format with timestamps
+            log_format = config.get('logging.format', 
+                                  '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        
         log_file = config.get('logging.file')
         
         # Create formatter

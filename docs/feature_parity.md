@@ -70,6 +70,8 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | - | *no plans to implement* | draftEntity |
 | - | - | use_parser_instead_of_nuke | - |
 | - | - | copy_script | - |
+| - | - | copy_script_path | - |
+| - | - | copy_script_name | - |
 | - | - | submit_copied_script | - |
 | - | - | script_is_current | - |
 | - | - | submit_script_as_auxiliary_file | - |

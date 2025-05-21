@@ -112,7 +112,11 @@ def execute_submission_script(script_path: str, use_parser_instead_of_nuke: bool
     else:
         env["PYTHONPATH"] = module_dir
     
+    # Ensure the subprocess knows it's not a build job
+    env["NK2DL_IN_BUILD_JOB"] = "false"
+    
     logger.info(f"Using PYTHONPATH: {env.get('PYTHONPATH')}")
+    logger.debug(f"Environment: NK2DL_IN_BUILD_JOB={env.get('NK2DL_IN_BUILD_JOB', 'not set')}")
     
     # Run subprocess with stdout and stderr set to PIPE but not capture_output
     # This allows us to read and display output in real-time

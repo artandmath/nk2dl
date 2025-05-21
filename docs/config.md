@@ -166,6 +166,18 @@ submission:
   script_copy1_path: "{script}/archive/"  # Second copy with script directory token
   script_copy1_name: "{basename}_{YYYY}-{MM}-{DD}.{ext}"
   
+  # Build job options
+  # Whether to automatically delete the build job script after execution
+  delete_build_job: true
+  
+  # Build job script path with tokens available: {script}, {output}
+  build_job_script_path: null  # Default is script directory
+  
+  # Build job script name with tokens available:
+  # - Script stem: {basename}, {stem}
+  # - Date/time: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+  build_job_script_name: "{basename}_{YYYY}{MM}{DD}_{hh}{mm}{ss}.py"
+  
   # Environment variables
   use_current_environment: false     # Use current environment variables
   environment_keys: []              # List of environment variables to include (if not using all)

@@ -104,6 +104,8 @@ job_ids = submit_nuke_script(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `copy_script` | bool | Config | Copy script before submission |
+| `copy_script_path` | str/list/dict | Config | Path template(s) for script copying; can be string, list of strings, or dict with integer keys |
+| `copy_script_name` | str/list/dict | Config | Filename template(s) for copied script; can be string, list of strings, or dict with integer keys |
 | `submit_copied_script` | bool | Config | Submit copied script path |
 
 ## Script Copying
@@ -113,12 +115,42 @@ nk2dl provides options to copy scripts before submission:
 ```python
 from nk2dl import submit_nuke_script
 
+# Basic copying with defaults
 submit_nuke_script(
     "/path/to/script.nk",
     copy_script=True,  # Make a copy of the script
     submit_copied_script=True  # Submit the copied script
 )
+
+# Specify custom location for the copy
+submit_nuke_script(
+    "/path/to/script.nk",
+    copy_script=True,
+    copy_script_path="{output}/farm/", 
+    copy_script_name="{basename}_{YYYY}-{MM}-{DD}.{ext}",
+    submit_copied_script=True
+)
+
+# Create multiple copies in different locations
+submit_nuke_script(
+    "/path/to/script.nk",
+    copy_script=True,
+    copy_script_path=["{output}/farm/", "{script}/archive/"],
+    copy_script_name=["{basename}.{ext}", "{basename}_{YYYY}-{MM}-{DD}.{ext}"],
+    submit_copied_script=True
+)
 ```
+
+### Available Script Copy Tokens
+
+For `copy_script_path`:
+- Script directory tokens: `{script}`, `{nukescript}`, `{scene}`, `{scenefile}`, `{ns}`, `{s}`, `{nk}`, `{scriptname}`, `{script_name}`, `{nuke_script}`
+- Output directory tokens: `{output}`, `{render}`, `{out}`, `{export}`, `{o}`
+
+For `copy_script_name`:
+- Script stem tokens: `{basename}`, `{ss}`, `{nss}`, `{nks}`, `{sstem}`, `{nstem}`, `{nkstem}`, `{scriptstem}`, `{script_stem}`, `{nukescriptstem}`, `{nukescript_stem}`, `{nuke_script_stem}`
+- Extension token: `{ext}` (file extension without the dot)
+- Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
 
 ## Frame Ranges
 

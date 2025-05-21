@@ -110,6 +110,15 @@ The `submit` command supports the following options:
 |--------|-------------|
 | `--OnJobComplete` | Action to take when job completes (choices: Nothing, Archive, Delete) |
 
+### Script copying options
+
+| Option | Description |
+|--------|-------------|
+| `--CopyScript` | Copy script before submission |
+| `--CopyScriptPath PATH` | Path template for copying script |
+| `--CopyScriptName NAME` | Filename template for copied script |
+| `--SubmitCopiedScript` | Submit the copied script |
+
 ## Examples
 
 ```bash

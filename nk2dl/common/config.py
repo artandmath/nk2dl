@@ -104,8 +104,13 @@ class Config:
             'environment_keys': [],
             'environment': {},
             'omit_environment_keys': [],
-            'script_copy_path': '{script}/.farm/',
+            'script_copy_path': '{output}/.farm/',
             'script_copy_name': '{basename}_copy.nk',
+            
+            # Build job settings
+            'delete_build_job': True,
+            'build_job_script_path': '{script}/..',
+            'build_job_script_name': '{basename}_{YYYY}{MM}{DD}_{hh}{mm}{ss}.py',
             
             # Machine list options
             'machine_allow_list': None,

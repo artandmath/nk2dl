@@ -202,3 +202,28 @@ job_ids = submit_nuke_script(
     performance_profiler=True,
     performance_profiler_path="/path/to/profiles"
 )
+
+## Script Copying
+Control how scripts are copied before submission:
+
+```python
+# Enable script copying with default paths
+submit_nuke_script("path/to/script.nk", copy_script=True)
+
+# Specify custom path and name for the copy
+submit_nuke_script(
+    "path/to/script.nk",
+    copy_script=True,
+    copy_script_path="{output}/farm/",
+    copy_script_name="{basename}_{YYYY}-{MM}-{DD}.{ext}",
+    submit_copied_script=True  # Submit the copied script instead of original
+)
+
+# Create multiple copies in different locations
+submit_nuke_script(
+    "path/to/script.nk",
+    copy_script=True,
+    copy_script_path=["{output}/farm/", "{script}/archive/"],
+    copy_script_name=["{basename}.{ext}", "{basename}_{YYYY}-{MM}-{DD}.{ext}"]
+)
+```

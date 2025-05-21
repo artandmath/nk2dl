@@ -161,6 +161,31 @@ python ./tests/test_nk2dl.py
 - `nk2dl` has a feature that will create a backup copy(s) of the submitted script. `nk2dl` will resolve the project root on the copy(s) before submission and can submit the resolved copy.
 - The example python script includes a demonstation of how to use the script copy features. 
 - To set up script copying, use one of the following config options:
+## Script Copy functions
+- The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
+- `nk2dl` has a feature that will create a backup copy(s) of the submitted script. `nk2dl` will resolve the project root on the copy(s) before submission and can submit the resolved copy.
+- The example python script includes a demonstation of how to use the script copy features. 
+- To set up script copying, you can:
+  - Use the `copy_script_path` and `copy_script_name` parameters directly in the function call
+  - Or use one of the following config options:
+
+### Direct parameter usage example
+```python
+submit_nuke_script(
+    "/path/to/script.nk",
+    copy_script=True,
+    copy_script_path="{output}/farm/",
+    copy_script_name="{basename}_{YYYY}-{MM}-{DD}.{ext}"
+)
+
+# For multiple copies, provide lists:
+submit_nuke_script(
+    "/path/to/script.nk",
+    copy_script=True,
+    copy_script_path=["{output}/farm/", "{script}/archive/"],
+    copy_script_name=["{basename}.{ext}", "{basename}_{YYYY}-{MM}-{DD}.{ext}"]
+)
+```
 
 ### Script copy config example - one copy of submitted nukescript
 ```yaml

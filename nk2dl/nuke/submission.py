@@ -10,6 +10,8 @@ from typing import Dict, Any, List, Optional, Union, Tuple
 import re
 import itertools
 import datetime
+import logging
+import sys
 
 from ..common.config import config
 from ..common.errors import SubmissionError
@@ -325,12 +327,24 @@ class NukeSubmission:
                 submit_writes_alphabetically: bool = False,
                 submit_writes_in_render_order: bool = False,
                 submit_script_as_auxiliary_file: Optional[bool] = None,
-                submission_is_build_job: bool = False,  # Submit as a Python script job that calls submit_nuke_script
-                    # WARNING: setting submission_is_build_job=True may result in infinite job submissions
+
+                # Build job parameters, submit as a Python script job that calls submit_nuke_script
+                # WARNING: setting submission_is_build_job=True as the default will result in infinite job submissions
+                submission_is_build_job: bool = False,
+                build_job_script_path: Optional[str] = None,
+                build_job_script_name: Optional[str] = None,
+                delete_build_job: Optional[bool] = None,
 
                 # Script copying and submission parameters
                 copy_script: Optional[bool] = None,
+                copy_script_path: Optional[Union[str, List[str], Dict[int, str]]] = None,
+                copy_script_name: Optional[Union[str, List[str], Dict[int, str]]] = None,
                 submit_copied_script: Optional[bool] = None,
+
+                # ScriptJob parameters
+                script_job_script_path: Optional[str] = None,
+                script_job_script_name: Optional[str] = None,
+                script_job_script_args: Optional[List[str]] = None,
                 
                 # Machine list parameters
                 machine_list: Optional[List[str]] = None,
@@ -419,6 +433,14 @@ class NukeSubmission:
             
             # Script copying and submission parameters
             copy_script: Whether to copy the script before submission
+            copy_script_path: Optional path template(s) for copying the script. Can be:
+                            - String: Single path template
+                            - List: Multiple path templates
+                            - Dict: With integer keys for multiple path templates
+            copy_script_name: Optional filename template(s) for the copied script. Can be:
+                            - String: Single filename template
+                            - List: Multiple filename templates (must match length of copy_script_path if also a list)
+                            - Dict: With integer keys for multiple filename templates
             submit_copied_script: Whether to submit the copied script
             submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
             
@@ -461,7 +483,7 @@ class NukeSubmission:
                           - Int: 15 (converts to "15.0")
                           If None, uses config or current Nuke version
             use_nuke_x: Whether to use NukeX for rendering
-            use_batch_mode: Whether to use batch mode
+            batch_mode: Whether to use batch mode
             render_threads: Number of render threads
             use_gpu: Whether to use GPU for rendering
             gpu_override: Specific GPU to use
@@ -548,6 +570,11 @@ class NukeSubmission:
 
         self._script_will_close = False
         self.submission_is_build_job = submission_is_build_job
+
+        # Initialize build job settings
+        self.build_job_script_path = build_job_script_path if build_job_script_path is not None else config.get('submission.build_job_script_path', None)
+        self.build_job_script_name = build_job_script_name if build_job_script_name is not None else config.get('submission.build_job_script_name', None)
+        self.delete_build_job = delete_build_job if delete_build_job is not None else config.get('submission.delete_build_job', True)
 
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
         if render_order_dependencies:
@@ -659,6 +686,10 @@ class NukeSubmission:
         self.submit_copied_script = submit_copied_script if submit_copied_script is not None else config.get('submission.submit_copied_script', False)
         self.submit_script_as_auxiliary_file = submit_script_as_auxiliary_file if submit_script_as_auxiliary_file is not None else config.get('submission.submit_script_as_auxiliary_file', False)
         self.copied_script_paths = []
+        
+        # Store copy script path and name options
+        self.copy_script_path = copy_script_path
+        self.copy_script_name = copy_script_name
         
         # Initialize machine list parameters
         self.machine_allow_list, self.machine_deny_list = self._initialize_machine_lists(machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list)
@@ -1995,10 +2026,18 @@ class NukeSubmission:
         """Copy the Nuke script to the specified location(s) based on config.
         
         The configuration options for script copying are:
+        - copy_script_path: Path template for copying the script (directly from constructor)
+        - copy_script_name: Filename template for the copied script (directly from constructor)
+        
+        For multiple copies, these can be lists or dictionaries with integer keys:
+        - copy_script_path = ["path1", "path2"]
+        - copy_script_name = ["name1", "name2"]
+        
+        Or from config:
         - NK2DL_SCRIPT__COPY__PATH: Path template for copying the script
         - NK2DL_SCRIPT__COPY__NAME: Filename template for the copied script
         
-        For multiple copies:
+        For multiple copies in config:
         - NK2DL_SCRIPT__COPY0__PATH, NK2DL_SCRIPT__COPY1__PATH, etc.
         - NK2DL_SCRIPT__COPY0__NAME, NK2DL_SCRIPT__COPY1__NAME, etc.
         
@@ -2037,38 +2076,111 @@ class NukeSubmission:
 
         copied_paths = []
         
-        # Get copy configurations from config
-        # First check for the single configuration case
-        single_config = {
-            'path': config.get('submission.script_copy_path', None),
-            'name': config.get('submission.script_copy_name', None),
-        }
+        # Process various input formats for copy_script_path and copy_script_name
+        copy_configs = []
         
-        # If single config exists, use it
-        if single_config['path'] is not None:
-            copy_configs = [single_config]
-        else:
-            # Otherwise, look for indexed configurations (copy0, copy1, ...)
-            copy_configs = []
-            index = 0
-            while True:
-                path = config.get(f'submission.script_copy{index}_path', None)
-                if path is None:
-                    break
-                    
-                copy_configs.append({
-                    'path': path,
-                    'name': config.get(f'submission.script_copy{index}_name', None),
-                })
-                index += 1
+        # Case 1: Both are provided as strings
+        if isinstance(self.copy_script_path, str) and (self.copy_script_name is None or isinstance(self.copy_script_name, str)):
+            copy_configs.append({
+                'path': self.copy_script_path,
+                'name': self.copy_script_name,
+            })
         
-        # If no configurations found, use default
+        # Case 2: copy_script_path is a list
+        elif isinstance(self.copy_script_path, list):
+            if self.copy_script_name is None:
+                # Only paths provided
+                for path in self.copy_script_path:
+                    copy_configs.append({
+                        'path': path,
+                        'name': None,
+                    })
+            elif isinstance(self.copy_script_name, list):
+                # Both paths and names are lists
+                # Check that they have the same length
+                if len(self.copy_script_path) != len(self.copy_script_name):
+                    logger.warning(f"copy_script_path and copy_script_name lists have different lengths: {len(self.copy_script_path)} vs {len(self.copy_script_name)}. Using the shorter length.")
+                    min_len = min(len(self.copy_script_path), len(self.copy_script_name))
+                    for i in range(min_len):
+                        copy_configs.append({
+                            'path': self.copy_script_path[i],
+                            'name': self.copy_script_name[i],
+                        })
+                else:
+                    # Same length, process normally
+                    for i in range(len(self.copy_script_path)):
+                        copy_configs.append({
+                            'path': self.copy_script_path[i],
+                            'name': self.copy_script_name[i],
+                        })
+            else:
+                # Paths is a list but name is a single string
+                for path in self.copy_script_path:
+                    copy_configs.append({
+                        'path': path,
+                        'name': self.copy_script_name,
+                    })
+        
+        # Case 3: copy_script_path is a dictionary
+        elif isinstance(self.copy_script_path, dict):
+            if self.copy_script_name is None:
+                # Only paths provided as dict
+                for idx, path in self.copy_script_path.items():
+                    copy_configs.append({
+                        'path': path,
+                        'name': None,
+                    })
+            elif isinstance(self.copy_script_name, dict):
+                # Both are dicts, merge by keys
+                all_keys = sorted(set(self.copy_script_path.keys()) | set(self.copy_script_name.keys()))
+                for idx in all_keys:
+                    path = self.copy_script_path.get(idx)
+                    name = self.copy_script_name.get(idx)
+                    if path is not None:  # Only add if we have a path
+                        copy_configs.append({
+                            'path': path,
+                            'name': name,
+                        })
+            else:
+                # Paths is a dict but name is a single string
+                for idx, path in self.copy_script_path.items():
+                    copy_configs.append({
+                        'path': path,
+                        'name': self.copy_script_name,
+                    })
+        
+        # If no direct parameters provided, fall back to config
         if not copy_configs:
-            logger.debug("No script copy configuration found, using default")
-            copy_configs = [{
-                'path': '{output}/farm/',
-                'name': '{basename}.{ext}',
-            }]
+            # First check for the single configuration case from config
+            single_config = {
+                'path': config.get('submission.script_copy_path', None),
+                'name': config.get('submission.script_copy_name', None),
+            }
+            
+            # If single config exists, use it
+            if single_config['path'] is not None:
+                copy_configs = [single_config]
+            else:
+                # Otherwise, look for indexed configurations (copy0, copy1, ...)
+                index = 0
+                while True:
+                    path = config.get(f'submission.script_copy{index}_path', None)
+                    if path is None:
+                        break
+                        
+                    copy_configs.append({
+                        'path': path,
+                        'name': config.get(f'submission.script_copy{index}_name', None),
+                    })
+                    index += 1
+            
+            # If still no configurations found, use default
+            if not copy_configs:
+                logger.debug("No script copy configuration found, using default")
+                copy_configs = [{
+                    'path': '{output}/farm/',
+                    'name': '{basename}.{ext}',
+                }]
         
         # Get output directory from first write node if we have one
         output_dir = None
@@ -2684,13 +2796,49 @@ class NukeSubmission:
         """
         logger.info(f"Creating script job for Nuke script: {self.script_path}")
         
-        # Generate a timestamped filename based on the original script name
+        # Generate script path and name based on configuration or defaults
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         script_stem = self.script_path.stem
         script_basename = self.script_path.name
-        script_file = str(self.script_path.parent / f"{script_stem}_{timestamp}.py")
         
-        logger.debug(f"Creating script file with timestamp: {script_file}")
+        # Determine script directory and name
+        if self.build_job_script_path:
+            # Replace tokens in path
+            script_dir = self.build_job_script_path
+            # Replace tokens with their values
+            script_dir = script_dir.replace("{script}", str(self.script_path.parent))
+            script_dir = script_dir.replace("{output}", str(self.script_path.parent))  # Default to script dir if no output dir
+            
+            # Create directory if it doesn't exist
+            os.makedirs(os.path.dirname(script_dir), exist_ok=True)
+        else:
+            # Default to script directory
+            script_dir = str(self.script_path.parent)
+            
+        # Determine script name
+        if self.build_job_script_name:
+            # Replace tokens in name
+            script_name = self.build_job_script_name
+            # Replace stem tokens
+            script_name = script_name.replace("{basename}", script_stem)
+            script_name = script_name.replace("{stem}", script_stem)
+            # Replace date tokens
+            now = datetime.datetime.now()
+            script_name = script_name.replace('{YYYY}', now.strftime('%Y'))
+            script_name = script_name.replace('{YY}', now.strftime('%y'))
+            script_name = script_name.replace('{MM}', now.strftime('%m'))
+            script_name = script_name.replace('{DD}', now.strftime('%d'))
+            script_name = script_name.replace('{hh}', now.strftime('%H'))
+            script_name = script_name.replace('{mm}', now.strftime('%M'))
+            script_name = script_name.replace('{ss}', now.strftime('%S'))
+        else:
+            # Default script name with timestamp
+            script_name = f"{script_stem}_{timestamp}.py"
+            
+        # Combine directory and name
+        script_file = os.path.join(script_dir, script_name)
+        
+        logger.debug(f"Creating build job script file at: {script_file}")
         
         # Use a regular file context to create the script
         try:
@@ -2699,12 +2847,73 @@ class NukeSubmission:
                 script_file_obj.write("#!/usr/bin/env python\n")
                 script_file_obj.write("# -*- coding: utf-8 -*-\n\n")
                 
+                # Set environment variable to signal we're in a build job
+                script_file_obj.write("# Set environment variable to signal we're in a build job to other nk2dl modules\n")
+                script_file_obj.write("import os\n")
+                script_file_obj.write("os.environ['NK2DL_IN_BUILD_JOB'] = 'true'\n\n")
+                script_file_obj.write("# Debug the environment variables\n")
+                script_file_obj.write("import sys\n")
+                script_file_obj.write("import time\n")
+                script_file_obj.write("import logging\n")
+                
+
                 # Write the import statements
-                script_file_obj.write("from nk2dl import submit_nuke_script\n\n")
-                script_file_obj.write("import time\n\n")
+                script_file_obj.write("from nk2dl import submit_nuke_script\n")
+                
+                # Add logging setup
+                script_file_obj.write("# Set up logging\n")
+                script_file_obj.write("logger = logging.getLogger('nk2dl.submission.submit_as_build_job')\n")
+                script_file_obj.write("logger.setLevel(logging.INFO)\n")
+                script_file_obj.write("# Prevent propagation to root logger to avoid double logging\n")
+                script_file_obj.write("logger.propagate = False\n")
+                script_file_obj.write("handler = logging.StreamHandler(sys.stdout)\n")
+                script_file_obj.write("# Use a simpler formatter without timestamp when running inside another logger like Deadline\n")
+                script_file_obj.write("formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')\n")
+                script_file_obj.write("handler.setFormatter(formatter)\n")
+                script_file_obj.write("logger.addHandler(handler)\n\n")
+                
+                # Add verification of build job environment variable
+                script_file_obj.write("# Verify the build job environment variable is set correctly\n")
+                script_file_obj.write("build_job_env = os.environ.get('NK2DL_IN_BUILD_JOB', 'not set')\n")
+                script_file_obj.write("logger.info(f\"NK2DL_IN_BUILD_JOB environment variable is '{build_job_env}'\")\n\n")
+                
+                # Log script location
+                script_file_obj.write("# Log script location\n")
+                script_file_obj.write("logger.info(f\"Build job script started: {os.path.abspath(__file__)}\")\n\n")
+
+                # Add cleanup logic if delete_build_job is True
+                if self.delete_build_job:
+                    # Don't need to import os again
+                    script_file_obj.write("import atexit\n\n")
+                    script_file_obj.write(f"# Global variable to store submission results\n")
+                    script_file_obj.write(f"results = None\n\n")
+                    script_file_obj.write(f"# Self-cleaning script\n")
+                    script_file_obj.write(f"def _cleanup():\n")
+                    script_file_obj.write(f"    try:\n")
+                    script_file_obj.write(f"        if os.path.exists(__file__):\n")
+                    script_file_obj.write(f"            os.remove(__file__)\n")
+                    script_file_obj.write(f"            logger.info(f\"Removed temporary build job script file: {{__file__}}\")\n")
+                    script_file_obj.write(f"        # Here we can access the global results variable if needed\n")
+                    script_file_obj.write(f"        if results is not None:\n")
+                    script_file_obj.write(f"            job_ids = [job.get('job_id', 'unknown') for job in results]\n")
+                    script_file_obj.write(f"            logger.info(f\"Submitted jobs: {{job_ids}}\")\n")
+                    script_file_obj.write(f"    except Exception as e:\n")
+                    script_file_obj.write(f"        logger.error(f\"Failed to remove temporary build job script file {{__file__}}: {{e}}\")\n\n")
+                    script_file_obj.write(f"atexit.register(_cleanup)\n\n")
 
                 # Write a main function to ensure proper execution
-                script_file_obj.write("def submit_nuke_script_job():\n")
+                script_file_obj.write("def main():\n")
+                
+                # Declare results as global before fetching them
+                script_file_obj.write("    # Declare global variable for results\n")
+                script_file_obj.write("    global results\n\n")
+                
+                # Log start of submission process
+                script_file_obj.write("    logger.info(\"Starting Nuke script submission\")\n")
+                
+                # Properly escape the path to avoid \n being interpreted as newline
+                script_path_escaped = str(self.script_path).replace('\\', '\\\\')
+                script_file_obj.write(f"    logger.info(\"Submitting script: {script_path_escaped}\")\n\n")
                 
                 # Create the function call with all parameters
                 script_path_str = str(self.script_path)
@@ -2715,8 +2924,7 @@ class NukeSubmission:
                 
                 # Map all instance attributes to kwargs for the script
                 # Only add parameters that aren't using default values to keep the script clean
-                if self.script_is_open:
-                    args_str.append(f"    script_is_open=False")
+                args_str.append(f"    script_is_open=False")
                 if self.use_parser_instead_of_nuke:
                     args_str.append(f"    use_parser_instead_of_nuke={self.use_parser_instead_of_nuke}")
                 if self.submit_writes_alphabetically:
@@ -2727,6 +2935,10 @@ class NukeSubmission:
                     args_str.append(f"    submit_script_as_auxiliary_file={self.submit_script_as_auxiliary_file}")
                 if self.copy_script is not None:
                     args_str.append(f"    copy_script={self.copy_script}")
+                if self.copy_script_path is not None:
+                    args_str.append(f"    copy_script_path={repr(self.copy_script_path)}")
+                if self.copy_script_name is not None:
+                    args_str.append(f"    copy_script_name={repr(self.copy_script_name)}")
                 if self.submit_copied_script is not None:
                     args_str.append(f"    submit_copied_script={self.submit_copied_script}")
                 if self.machine_allow_list:
@@ -2827,16 +3039,31 @@ class NukeSubmission:
                 # Write the function call with proper indentation
                 script_file_obj.write(f"    results = submit_nuke_script(\n")
                 script_file_obj.write(",\n".join(args_str))
-                script_file_obj.write("\n    )\n")
-                script_file_obj.write("    return results\n\n")
+                script_file_obj.write("\n    )\n\n")
                 
-                # Add standard Python entry point
-                script_file_obj.write("if __name__ == \"__main__\":\n")
-                script_file_obj.write("    submit_nuke_script_job()\n")
+                # Log submission results
+                script_file_obj.write("    job_ids = [job.get('job_id', 'unknown') for job in results]\n")
+                script_file_obj.write("    logger.info(f\"Successfully submitted {len(results)} jobs with IDs: {job_ids}\")\n\n")
+                
                 script_file_obj.write("    # Enter loop printing READY FOR INPUT every 5 seconds\n")
+                script_file_obj.write("    # Deadline will read this and exit the process\n")
+                script_file_obj.write("    logger.info(\"Entering monitoring loop - will be terminated by Deadline\")\n")
+                script_file_obj.write("    loop_count = 0\n")
                 script_file_obj.write("    while True:\n")
                 script_file_obj.write("        print(\"READY FOR INPUT\")\n")
-                script_file_obj.write("        time.sleep(5)\n")
+                script_file_obj.write("        # Log every 12 cycles (approximately once per minute at 5 seconds per cycle)\n")
+                script_file_obj.write("        loop_count += 1\n")
+                script_file_obj.write("        if loop_count % 12 == 0:\n")
+                script_file_obj.write("            logger.info(f\"Build job still running - {loop_count // 12} minute(s) elapsed\")\n")
+                script_file_obj.write("        time.sleep(5)\n\n")
+
+                script_file_obj.write("if __name__ == \"__main__\":\n")
+                script_file_obj.write("    try:\n")
+                script_file_obj.write("        logger.info(\"Build job script execution starting\")\n")
+                script_file_obj.write("        main()\n")
+                script_file_obj.write("    except Exception as e:\n")
+                script_file_obj.write("        logger.error(f\"Error in build job script: {e}\", exc_info=True)\n")
+                script_file_obj.write("        raise\n\n")
 
                 logger.debug(f"Python script content generated with {len(args_str)} parameters")
             
@@ -2904,7 +3131,7 @@ class NukeSubmission:
             job_id = response['job_id']
             
             logger.info(f"Successfully submitted script job with ID: {job_id}")
-            logger.debug(f"Script job will handle write nodes: {self.write_nodes}")
+            logger.debug(f"Build job will handle write nodes: {self.write_nodes}")
             
             # Format the return value to match the expected format
             return [{
@@ -2934,9 +3161,19 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - submit_writes_in_render_order: Whether to sort write nodes by render order
           - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
           - copy_script: Whether to make copies of the script before submission
+          - copy_script_path: Optional path template(s) for copying the script. Can be:
+                            - String: Single path template
+                            - List: Multiple path templates 
+                            - Dict: With integer keys for multiple path templates
+          - copy_script_name: Optional filename template(s) for the copied script. Can be:
+                            - String: Single filename template
+                            - List: Multiple filename templates
+                            - Dict: With integer keys for multiple filename templates
           - submit_copied_script: Whether to use the copied script path in the submission
           - submission_is_build_job: Whether to submit as a Python script job that calls submit_nuke_script
-          - build_jobs_filename: Filename for the build jobs Python script
+          - build_job_script_path: Path template for the build job script file
+          - build_job_script_name: Name template for the build job script file
+          - delete_build_job: Whether to automatically delete the build job script after execution (default: True)
           - graph_scope_variables: List of graph scope variables in either flat format:
             ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
             Or nested format:
@@ -2972,7 +3209,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                           - Int: 15 (converts to "15.0")
                           If None, uses config or current Nuke version
           - use_nuke_x: Whether to use NukeX for rendering
-          - use_batch_mode: Whether to use batch mode
+          - batch_mode: Whether to use batch mode
           - render_threads: Number of render threads
           - use_gpu: Whether to use GPU for rendering
           - gpu_override: Specific GPU to use
@@ -3075,19 +3312,21 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
     
     # Check if we're running inside the Nuke GUI
     running_in_nuke_gui = False
+    in_build_job = os.environ.get('NK2DL_IN_BUILD_JOB', 'false').lower() == 'true'
+    
     try:
         import psutil
-        import os
         current_process = psutil.Process(os.getpid())
         parent_process_name = current_process.name()
         running_in_nuke_gui = "Nuke" in parent_process_name
-        logger.debug(f"Parent process name: {parent_process_name}, running in Nuke GUI: {running_in_nuke_gui}")
+        logger.debug(f"Parent process name: {parent_process_name}, running in Nuke GUI: {running_in_nuke_gui}, in_build_job: {in_build_job}")
     except Exception as e:
         logger.warning(f"Failed to check if running in Nuke GUI: {e}")
 
     # Only launch subprocess if script parsing is needed AND we're in the Nuke GUI AND script not open in current session
+    # AND we're not in a build job
     launch_subprocess = False
-    if requires_parsing and running_in_nuke_gui and not script_is_open:
+    if requires_parsing and running_in_nuke_gui and not script_is_open and not in_build_job:
         launch_subprocess = True
         
     if not running_in_nuke_gui or launch_subprocess:
@@ -3103,8 +3342,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
         from .subprocess import submit_script_via_subprocess
         return submit_script_via_subprocess(script_path, use_parser_instead_of_nuke, **kwargs)
     
-    if not running_in_nuke_gui:
-        logger.info(f"Not running in Nuke GUI. Proceeding with submission within the current process for {script_path}")
+    if not running_in_nuke_gui or in_build_job:
+        logger.info(f"Not running in Nuke GUI{'.' if not running_in_nuke_gui else ' or running in build job mode.'} Proceeding with submission within the current process for {script_path}")
         # Set script_is_open to False to ensure the script is loaded if it needs to be parsed
         # By definition, if we're not running in the Nuke GUI, there is no open script in the current session
         # We wont deal with cases where nuke.scriptOpen() has been run in a python session, as this is an edge case
