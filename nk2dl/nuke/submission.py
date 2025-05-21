@@ -337,6 +337,7 @@ class NukeSubmission:
                 submission_is_build_job: bool = False,
                 build_job_script_path: Optional[str] = None,
                 build_job_script_name: Optional[str] = None,
+                build_job_as_auxiliary_file: Optional[str] = None,
                 delete_build_job: Optional[bool] = None,
 
                 # Script copying and submission parameters
@@ -2913,26 +2914,6 @@ class NukeSubmission:
                 script_file_obj.write("# Log script location\n")
                 script_file_obj.write("logger.info(f\"Build job script started: {os.path.abspath(__file__)}\")\n\n")
 
-                # Add cleanup logic if delete_build_job is True
-                if self.delete_build_job:
-                    # Don't need to import os again
-                    script_file_obj.write("import atexit\n\n")
-                    script_file_obj.write(f"# Global variable to store submission results\n")
-                    script_file_obj.write(f"results = None\n\n")
-                    script_file_obj.write(f"# Self-cleaning script\n")
-                    script_file_obj.write(f"def _cleanup():\n")
-                    script_file_obj.write(f"    try:\n")
-                    script_file_obj.write(f"        if os.path.exists(__file__):\n")
-                    script_file_obj.write(f"            os.remove(__file__)\n")
-                    script_file_obj.write(f"            logger.info(f\"Removed temporary build job script file: {{__file__}}\")\n")
-                    script_file_obj.write(f"        # Here we can access the global results variable if needed\n")
-                    script_file_obj.write(f"        if results is not None:\n")
-                    script_file_obj.write(f"            job_ids = [job.get('job_id', 'unknown') for job in results]\n")
-                    script_file_obj.write(f"            logger.info(f\"Submitted jobs: {{job_ids}}\")\n")
-                    script_file_obj.write(f"    except Exception as e:\n")
-                    script_file_obj.write(f"        logger.error(f\"Failed to remove temporary build job script file {{__file__}}: {{e}}\")\n\n")
-                    script_file_obj.write(f"atexit.register(_cleanup)\n\n")
-
                 # Write a main function to ensure proper execution
                 script_file_obj.write("def main():\n")
                 
@@ -3095,23 +3076,13 @@ class NukeSubmission:
                     script_file_obj.write("        os.rename(__file__, tmp_file)\n")
                     script_file_obj.write("        os.remove(tmp_file)\n")
                     script_file_obj.write("        logger.info(\"Script file successfully deleted\")\n")
+                    if not self.build_job_as_auxiliary_file:
+                        script_file_obj.write("        logger.info(\"WARNING: If this Deadline job fails after this point, it cannot resume when submit_nuke_script(build_job_as_auxiliary_file=False)\")\n")
                     script_file_obj.write("    except Exception as e:\n")
                     script_file_obj.write("        logger.warning(f\"Failed to delete script file: {e}\")\n")
-                    script_file_obj.write("        # Create a self-deleting batch file as fallback (Windows only)\n")
-                    script_file_obj.write("        if os.name == 'nt':\n")
-                    script_file_obj.write("            try:\n")
-                    script_file_obj.write("                bat_path = os.path.join(os.path.dirname(__file__), f\"delete_{os.path.basename(__file__)}.bat\")\n")
-                    script_file_obj.write("                with open(bat_path, 'w') as f:\n")
-                    script_file_obj.write("                    f.write(f\"@echo off\\n\")\n")
-                    script_file_obj.write("                    f.write(f\"timeout /t 5 /nobreak > nul\\n\")\n")
-                    script_file_obj.write("                    f.write(f\"del \\\"{__file__}\\\"\\n\")\n")
-                    script_file_obj.write("                    f.write(f\"del \\\"%~f0\\\"\\n\")\n")
-                    script_file_obj.write("                import subprocess\n")
-                    script_file_obj.write("                subprocess.Popen([bat_path], shell=True, creationflags=subprocess.DETACHED_PROCESS)\n")
-                    script_file_obj.write("                logger.info(f\"Created self-deleting batch file: {bat_path}\")\n")
-                    script_file_obj.write("            except Exception as e2:\n")
-                    script_file_obj.write("                logger.warning(f\"Failed to create cleanup batch file: {e2}\")\n\n")
-                
+                    if not self.build_job_as_auxiliary_file:
+                        script_file_obj.write("        logger.info(\"WARNING: If this Deadline job fails after this point, it cannot resume when submit_nuke_script(build_job_as_auxiliary_file=False)\")\n")
+
                 script_file_obj.write("    # Enter loop printing READY FOR INPUT every 5 seconds\n")
                 script_file_obj.write("    # Deadline will read this and exit the process\n")
                 script_file_obj.write("    logger.info(\"Entering monitoring loop - will be terminated by Deadline\")\n")
