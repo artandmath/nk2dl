@@ -330,6 +330,7 @@ class NukeSubmission:
                 submit_writes_alphabetically: bool = False,
                 submit_writes_in_render_order: bool = False,
                 submit_script_as_auxiliary_file: Optional[bool] = None,
+                render_settings_from_metadata: bool = False,
 
                 # Build job parameters, submit as a Python script job that calls submit_nuke_script
                 # WARNING: setting submission_is_build_job=True as the default will result in infinite job submissions
@@ -450,6 +451,11 @@ class NukeSubmission:
                             - Dict: With integer keys for multiple filename templates
             submit_copied_script: Whether to submit the copied script
             submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
+            render_settings_from_metadata: Whether to extract submission settings from write node metadata.
+                                        Metadata keys starting with 'input/nk2dl/' will be used as submission settings.
+                                        For example, 'input/nk2dl/priority' will set the job priority. This is useful
+                                        for pipeline integrations where artists can set job parameters directly in their
+                                        Nuke scripts. Only works when write_nodes_as_separate_jobs is True.
             
             # Machine list parameters
             machine_list: List of machine names to allow or deny
@@ -581,6 +587,7 @@ class NukeSubmission:
 
         self._script_will_close = False
         self.submission_is_build_job = submission_is_build_job
+        self.render_settings_from_metadata = render_settings_from_metadata
 
         # Initialize build job settings
         self.build_job_script_path = build_job_script_path if build_job_script_path is not None else config.get('submission.build_job_script_path', None)
@@ -2526,6 +2533,9 @@ class NukeSubmission:
                             job_overrides = self.write_nodes_config.get_job_info_overrides(write_node)
                             plugin_overrides = self.write_nodes_config.get_plugin_info_overrides(write_node)
                             
+                            logger.debug(f"Job info overrides for {write_node}: {job_overrides}")
+                            logger.debug(f"Plugin info overrides for {write_node}: {plugin_overrides}")
+                            
                             # Apply job info overrides
                             for key, value in job_overrides.items():
                                 node_job_info[key] = value
@@ -2535,6 +2545,27 @@ class NukeSubmission:
                             for key, value in plugin_overrides.items():
                                 node_plugin_info[key] = value
                                 logger.debug(f"Applied plugin override: {key}={value}")
+                            
+                            # Extract and apply metadata settings if enabled
+                            if self.render_settings_from_metadata:
+                                metadata_job_overrides, metadata_plugin_overrides = self._extract_settings_from_metadata(write_node)
+                                
+                                logger.debug(f"Metadata job overrides for {write_node}: {metadata_job_overrides}")
+                                logger.debug(f"Metadata plugin overrides for {write_node}: {metadata_plugin_overrides}")
+                                
+                                # Apply metadata job overrides
+                                for key, value in metadata_job_overrides.items():
+                                    # Only apply if not already overridden by write_nodes config
+                                    if key not in job_overrides:
+                                        node_job_info[key] = value
+                                        logger.debug(f"Applied metadata job override: {key}={value}")
+                                
+                                # Apply metadata plugin overrides
+                                for key, value in metadata_plugin_overrides.items():
+                                    # Only apply if not already overridden by write_nodes config
+                                    if key not in plugin_overrides:
+                                        node_plugin_info[key] = value
+                                        logger.debug(f"Applied metadata plugin override: {key}={value}")
                             
                             # Check if this is a movie format and set BatchModeIsMovie if needed
                             # Skip for write_nodes_as_tasks as mentioned in the requirements
@@ -2683,6 +2714,27 @@ class NukeSubmission:
                         for key, value in plugin_overrides.items():
                             node_plugin_info[key] = value
                             logger.debug(f"Applied plugin override: {key}={value}")
+                        
+                        # Extract and apply metadata settings if enabled
+                        if self.render_settings_from_metadata:
+                            metadata_job_overrides, metadata_plugin_overrides = self._extract_settings_from_metadata(write_node)
+                            
+                            logger.debug(f"Metadata job overrides for {write_node}: {metadata_job_overrides}")
+                            logger.debug(f"Metadata plugin overrides for {write_node}: {metadata_plugin_overrides}")
+                            
+                            # Apply metadata job overrides
+                            for key, value in metadata_job_overrides.items():
+                                # Only apply if not already overridden by write_nodes config
+                                if key not in job_overrides:
+                                    node_job_info[key] = value
+                                    logger.debug(f"Applied metadata job override: {key}={value}")
+                            
+                            # Apply metadata plugin overrides
+                            for key, value in metadata_plugin_overrides.items():
+                                # Only apply if not already overridden by write_nodes config
+                                if key not in plugin_overrides:
+                                    node_plugin_info[key] = value
+                                    logger.debug(f"Applied metadata plugin override: {key}={value}")
                         
                         # Check if this is a movie format and set BatchModeIsMovie if needed
                         # Skip for write_nodes_as_tasks as mentioned in the requirements
@@ -2941,6 +2993,8 @@ class NukeSubmission:
                     args_str.append(f"    submit_writes_in_render_order={self.submit_writes_in_render_order}")
                 if self.submit_script_as_auxiliary_file is not None:
                     args_str.append(f"    submit_script_as_auxiliary_file={self.submit_script_as_auxiliary_file}")
+                if self.render_settings_from_metadata:
+                    args_str.append(f"    render_settings_from_metadata={self.render_settings_from_metadata}")
                 if self.copy_script is not None:
                     args_str.append(f"    copy_script={self.copy_script}")
                 if self.copy_script_path is not None:
@@ -3177,6 +3231,64 @@ class NukeSubmission:
             logger.error(f"Failed to submit script job: {e}", exc_info=True)
             raise SubmissionError(f"Failed to submit script job: {e}")
 
+    def _extract_settings_from_metadata(self, write_node_name):
+        """Extract submission settings from write node metadata.
+        
+        Looks for metadata keys starting with 'input/nk2dl/' and converts them to
+        submission settings. These settings can be in either Deadline job/plugin info format
+        or nk2dl parameter format.
+        
+        Args:
+            write_node_name: Name of the write node to extract metadata from
+            
+        Returns:
+            Tuple of (job_info_overrides, plugin_info_overrides) dictionaries
+        """
+        if not self.render_settings_from_metadata:
+            return {}, {}
+            
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_parsed()
+        
+        # Get the write node
+        node = nuke.toNode(write_node_name)
+        if not node or node.Class() != "Write":
+            logger.warning(f"Cannot extract metadata from {write_node_name}: Node not found or not a Write node")
+            return {}, {}
+            
+        # Get metadata from the write node
+        try:
+            metadata = node.metadata()
+            if not metadata:
+                logger.debug(f"No metadata found for write node {write_node_name}")
+                return {}, {}
+                
+            # Create temporary WriteNode to handle translation of parameters
+            metadata_settings = {}
+            
+            # Extract nk2dl metadata keys
+            for key, value in metadata.items():
+                if key.startswith('input/nk2dl/'):
+                    # Remove the 'input/nk2dl/' prefix
+                    setting_key = key[len('input/nk2dl/'):]
+                    metadata_settings[setting_key] = value
+                    
+            logger.debug(f"Extracted metadata settings from {write_node_name}: {metadata_settings}")
+            
+            # Create a WriteNode object to handle parameter translation
+            temp_node = WriteNode({"write_node": write_node_name})
+            
+            # Add each metadata setting to the WriteNode
+            for key, value in metadata_settings.items():
+                temp_node._add_override(key, value)
+                
+            # Return job and plugin info overrides
+            return temp_node.job_info_overrides, temp_node.plugin_info_overrides
+            
+        except Exception as e:
+            logger.warning(f"Failed to extract metadata from write node {write_node_name}: {e}")
+            return {}, {}
+
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
     """Submit a Nuke script to Deadline.
@@ -3191,6 +3303,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - submit_writes_alphabetically: Whether to sort write nodes alphabetically by name
           - submit_writes_in_render_order: Whether to sort write nodes by render order
           - submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
+          - render_settings_from_metadata: Whether to extract submission settings from write node metadata
+                                         stored as 'input/nk2dl/parameter_name'
           - copy_script: Whether to make copies of the script before submission
           - copy_script_path: Optional path template(s) for copying the script. Can be:
                             - String: Single path template
