@@ -263,7 +263,7 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Use batch mode"
     )
     nuke_group.add_argument(
-        "--RenderThreads", 
+        "--Threads", 
         metavar="COUNT",
         type=int,
         help="Number of render threads to use"

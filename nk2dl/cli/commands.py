@@ -188,7 +188,7 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         
     # Frame range options
     if hasattr(args, "Frames") and args.Frames is not None:
-        kwargs["frame_range"] = args.Frames
+        kwargs["frames"] = args.Frames
     if hasattr(args, "FramesPerTask") and args.FramesPerTask is not None:
         kwargs["chunk_size"] = args.FramesPerTask
         
@@ -196,14 +196,14 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
     if hasattr(args, "UseNukeX") and args.UseNukeX:
         kwargs["use_nuke_x"] = True
     if hasattr(args, "BatchMode") and args.BatchMode:
-        kwargs["use_batch_mode"] = True
+        kwargs["batch_mode"] = True
     if hasattr(args, "RenderThreads") and args.RenderThreads is not None:
-        kwargs["render_threads"] = args.RenderThreads
+        kwargs["threads"] = args.RenderThreads
     if hasattr(args, "UseGPU") and args.UseGPU:
         kwargs["use_gpu"] = True
     if hasattr(args, "RAM") and args.RAM is not None:
         # Convert GB to MB
-        kwargs["max_ram_usage"] = args.RAM * 1024
+        kwargs["ram_use"] = args.RAM * 1024
     if hasattr(args, "ContinueOnError") and args.ContinueOnError:
         kwargs["continue_on_error"] = True
     if hasattr(args, "ReloadBetweenTasks") and args.ReloadBetweenTasks:
