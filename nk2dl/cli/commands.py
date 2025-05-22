@@ -183,6 +183,8 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["use_node_frame_list"] = True
     if hasattr(args, "RenderOrderDependencies") and args.RenderOrderDependencies:
         kwargs["render_order_dependencies"] = True
+    if hasattr(args, "RenderSettingsFromMetadata") and args.RenderSettingsFromMetadata:
+        kwargs["render_settings_from_metadata"] = True
         
     # Frame range options
     if hasattr(args, "Frames") and args.Frames is not None:

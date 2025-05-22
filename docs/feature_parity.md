@@ -73,6 +73,7 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | - | *no plans to implement* | draftUser |
 | - | - | *no plans to implement* | draftEntity |
 | - | - | use_parser_instead_of_nuke | - |
+| - | - | render_settings_from_metadata | - |
 | - | - | copy_script | - |
 | - | - | copy_script_path | - |
 | - | - | copy_script_name | - |

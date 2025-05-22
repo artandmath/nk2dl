@@ -337,7 +337,7 @@ class NukeSubmission:
                 submission_is_build_job: bool = False,
                 build_job_script_path: Optional[str] = None,
                 build_job_script_name: Optional[str] = None,
-                build_job_as_auxiliary_file: Optional[str] = None,
+                build_job_as_auxiliary_file: Optional[bool] = None,  # Whether to submit the build job script as an auxiliary file for better job recovery
                 delete_build_job: Optional[bool] = None,
 
                 # Script copying and submission parameters
@@ -592,6 +592,7 @@ class NukeSubmission:
         # Initialize build job settings
         self.build_job_script_path = build_job_script_path if build_job_script_path is not None else config.get('submission.build_job_script_path', None)
         self.build_job_script_name = build_job_script_name if build_job_script_name is not None else config.get('submission.build_job_script_name', None)
+        self.build_job_as_auxiliary_file = build_job_as_auxiliary_file if build_job_as_auxiliary_file is not None else config.get('submission.build_job_as_auxiliary_file', True)
         self.delete_build_job = delete_build_job if delete_build_job is not None else config.get('submission.delete_build_job', True)
 
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
@@ -2874,6 +2875,13 @@ class NukeSubmission:
         Raises:
             SubmissionError: If script job submission fails
         """
+        # The build_job_as_auxiliary_file parameter controls whether the Python script is submitted
+        # as an auxiliary file to Deadline:
+        # - When True (default): The script is stored as an auxiliary file, allowing Deadline
+        #   to recover the job if it fails, since the script will be re-copied to the worker.
+        # - When False: The script path is only set in BuildJobsFilename. If the script gets 
+        #   deleted (e.g., by the script itself), the job can't be restarted or requeued.
+        
         logger.info(f"Creating script job for Nuke script: {self.script_path}")
         
         # Generate script path and name based on configuration or defaults
@@ -3124,11 +3132,11 @@ class NukeSubmission:
                     script_file_obj.write("        os.remove(tmp_file)\n")
                     script_file_obj.write("        logger.info(\"Script file successfully deleted\")\n")
                     if not self.build_job_as_auxiliary_file:
-                        script_file_obj.write("        logger.info(\"WARNING: If this Deadline job fails after this point, it cannot resume when submit_nuke_script(build_job_as_auxiliary_file=False)\")\n")
+                        script_file_obj.write("        logger.warning(\"WARNING: If this Deadline job fails after this point, it cannot resume because build_job_as_auxiliary_file=False\")\n")
                     script_file_obj.write("    except Exception as e:\n")
                     script_file_obj.write("        logger.warning(f\"Failed to delete script file: {e}\")\n")
                     if not self.build_job_as_auxiliary_file:
-                        script_file_obj.write("        logger.info(\"WARNING: If this Deadline job fails after this point, it cannot resume when submit_nuke_script(build_job_as_auxiliary_file=False)\")\n")
+                        script_file_obj.write("        logger.warning(\"WARNING: If this Deadline job fails after this point, it cannot resume because build_job_as_auxiliary_file=False\")\n")
 
                 script_file_obj.write("    # Enter loop printing READY FOR INPUT every 5 seconds\n")
                 script_file_obj.write("    # Deadline will read this and exit the process\n")
@@ -3189,6 +3197,7 @@ class NukeSubmission:
             
             plugin_info = {
                 'Version': nuke_utils.nuke_version(self.nuke_version),
+                # Always specify the script path in plugin info even if it's also an auxiliary file
                 'BuildJobsFilename': os.path.abspath(script_file),  # Make sure the path is absolute
                 'SingleFramesOnly': 'True'
             }
@@ -3196,8 +3205,16 @@ class NukeSubmission:
             logger.debug(f"Submitting script job with job_info: {json.dumps(job_info, indent=2)}")
             logger.debug(f"Plugin info: {json.dumps(plugin_info, indent=2)}")
             
-            # Collect auxiliary files but don't set them in job_info
-            script_aux_files = [os.path.abspath(script_file)]
+            # Determine auxiliary files based on settings
+            auxiliary_files = []
+            
+            # Add the build job Python script as an auxiliary file if requested
+            if self.build_job_as_auxiliary_file:
+                auxiliary_files.append(os.path.abspath(script_file))
+                logger.debug(f"Added build job script as auxiliary file: {script_file}")
+            else:
+                logger.debug(f"Script file is not added as auxiliary file. Using BuildJobsFilename only: {script_file}")
+                logger.warning(f"When build_job_as_auxiliary_file=False, job recovery may be limited if the script file is deleted")
             
             # Also add the original Nuke script as an auxiliary file if requested
             if self.submit_script_as_auxiliary_file:
@@ -3206,13 +3223,14 @@ class NukeSubmission:
                     script_file_path = os.path.abspath(self.copied_script_paths[0])
                 
                 # Add to the list of auxiliary files
-                script_aux_files.append(script_file_path)
+                auxiliary_files.append(script_file_path)
+                logger.debug(f"Added Nuke script as auxiliary file: {script_file_path}")
             
             # Store the auxiliary files for direct submission
-            auxiliary_files = script_aux_files
+            script_aux_files = auxiliary_files
             
             # Submit the job with auxiliary files
-            response = deadline.submit_job(job_info, plugin_info, auxiliary_files)
+            response = deadline.submit_job(job_info, plugin_info, script_aux_files)
             job_id = response['job_id']
             
             logger.info(f"Successfully submitted script job with ID: {job_id}")
@@ -3318,6 +3336,10 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - submission_is_build_job: Whether to submit as a Python script job that calls submit_nuke_script
           - build_job_script_path: Path template for the build job script file
           - build_job_script_name: Name template for the build job script file
+          - build_job_as_auxiliary_file: Whether to submit the build job script as an auxiliary file (default: True).
+                                      When True, the job can be recovered if it fails since Deadline
+                                      will re-copy the script to the worker. When False, the job cannot
+                                      be restarted if the script file is deleted.
           - delete_build_job: Whether to automatically delete the build job script after execution (default: True)
           - graph_scope_variables: List of graph scope variables in either flat format:
             ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations

@@ -110,7 +110,7 @@ class Config:
             # Build job settings
             'delete_build_job': True,
             'build_job_script_path': '{script}/..',
-            'build_job_script_name': '{basename}_{YYYY}{MM}{DD}_{hh}{mm}{ss}.py',
+            'build_job_script_name': '{basename}_build_job{YYYY}{MM}{DD}_{hh}{mm}{ss}.py',
             
             # Machine list options
             'machine_allow_list': None,

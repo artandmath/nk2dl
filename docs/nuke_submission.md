@@ -39,6 +39,7 @@ job_ids = submit_nuke_script(
 | `submit_writes_alphabetically` | bool | `False` | Sort write nodes alphabetically |
 | `submit_writes_in_render_order` | bool | `False` | Sort write nodes by render order |
 | `submit_script_as_auxiliary_file` | bool | `False` | Submit script as auxiliary file |
+| `render_settings_from_metadata` | bool | `False` | Extract submission settings from write node metadata |
 | `submission_is_build_job` | bool | `False` | Submit as a Python script job that calls submit_nuke_script and enters a ready state loop |
 
 ### Optional Job Info Parameters
@@ -292,6 +293,49 @@ submit_nuke_script(
     render_order_dependencies=True  # Automatically sets write_nodes_as_separate_jobs=True
 )
 ```
+
+## Render Settings from Write Node Metadata
+
+You can store submission settings directly in write node metadata and have them automatically applied during submission:
+
+```python
+from nk2dl import submit_nuke_script
+
+# Enable metadata-based settings
+submit_nuke_script(
+    "/path/to/script.nk",
+    write_nodes=["Write1", "Write2", "Write3"],
+    write_nodes_as_separate_jobs=True,
+    render_settings_from_metadata=True  # Extract settings from write node metadata
+)
+```
+
+### How It Works
+
+1. Add metadata to write nodes in your Nuke script with the prefix `input/nk2dl/` followed by the parameter name
+2. When submitting with `render_settings_from_metadata=True`, these values are extracted and applied as submission settings
+3. Settings apply only when submitting write nodes as separate jobs
+
+### Adding Metadata in Nuke
+
+```python
+# In Nuke Python panel or script editor:
+write_node = nuke.toNode('Write1')
+write_node.addMetadata("input/nk2dl/priority", "90")
+write_node.addMetadata("input/nk2dl/chunk_size", "5")
+write_node.addMetadata("input/nk2dl/use_gpu", "1")
+```
+
+You can use either nk2dl parameter names (like `priority`) or Deadline-specific names (like `Priority`).
+
+### Precedence Order
+
+When multiple sources provide the same setting, precedence is:
+1. **Highest**: Settings from the `write_nodes` dictionary 
+2. **Middle**: Settings from write node metadata
+3. **Lowest**: Global settings passed to `submit_nuke_script`
+
+This feature is particularly useful for pipeline integrations, allowing artists to set job parameters directly in their Nuke scripts that will be honored during submission.
 
 ## Views
 

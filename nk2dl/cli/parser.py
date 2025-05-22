@@ -227,6 +227,12 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         action="store_true",
         help="Set dependencies based on write node render order"
     )
+    write_group.add_argument(
+        "--MetadataSettings", "--RenderSettingsFromMetadata",
+        action="store_true",
+        dest="RenderSettingsFromMetadata",
+        help="Extract submission settings from write node metadata (keys starting with 'input/nk2dl/')"
+    )
     
     # Frame range options
     frame_group = parser.add_argument_group("Frame range options")

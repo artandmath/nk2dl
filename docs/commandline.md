@@ -74,6 +74,7 @@ The `submit` command supports the following options:
 | `--WritesAsSeparateTasks` | Submit write nodes as separate tasks for the same job |
 | `--NodeFrameRange` | Use frame range from write nodes instead of global frame range |
 | `--RenderOrderDependencies` | Set dependencies based on write node render order |
+| `--MetadataSettings`, `--RenderSettingsFromMetadata` | Extract submission settings from write node metadata (with 'input/nk2dl/' prefix) |
 
 ### Frame range options
 
@@ -129,6 +130,9 @@ nk2dl submit /path/to/script.nk --NukeX --Gpu --WriteNodes Write1,Write2
 
 # Specify graph scope variables
 nk2dl submit /path/to/script.nk --Var "shotcode:ABC_0010,ABC_0020"
+
+# Extract settings from write node metadata
+nk2dl submit /path/to/script.nk --WritesAsSeparateJobs --MetadataSettings
 
 # Allow specific machines for rendering
 nk2dl submit /path/to/script.nk --MachineList render01,render02,render03
