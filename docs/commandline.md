@@ -95,7 +95,6 @@ The `submit` command supports the following options:
 | `--ReloadBetweenTasks`, `--ReloadBetweenChunks` | Reload plugins between tasks |
 | `--PerformanceProfiler` | Use performance profiler |
 | `--XMLDirectory`, `--XMLDir` | Directory to save performance profile XML files |
-| `--Proxy` | Render in proxy mode |
 | `--Views VIEWS` | Views to render (comma-separated, default: all) |
 
 ### Graph scope variables options

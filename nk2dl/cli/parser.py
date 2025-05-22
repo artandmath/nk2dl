@@ -297,11 +297,6 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Directory to save performance profile files"
     )
     nuke_group.add_argument(
-        "--Proxy", 
-        action="store_true",
-        help="Render in proxy mode"
-    )
-    nuke_group.add_argument(
         "--Views", 
         metavar="VIEWS",
         help="Views to render (comma-separated, default: all)"

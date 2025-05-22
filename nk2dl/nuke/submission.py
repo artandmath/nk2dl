@@ -111,7 +111,6 @@ class WriteNode:
         'reload_plugins': 'ReloadPlugins',  # Will be set to "1" if True, "0" if False
         'performance_profiler': 'PerformanceProfiler',  # Will be set to "1" if True, "0" if False
         'performance_profiler_path': 'PerformanceProfilerDir',
-        'use_proxy': 'UseProxy',  # Will be set to "1" if True, "0" if False
         'output_file_path': 'OutputFilePath',
         'render_mode': 'RenderMode',  # Will be capitalized
         'views': 'Views',  # Will be comma-joined if list
@@ -120,7 +119,7 @@ class WriteNode:
     # Boolean parameters that need translation to "0"/"1"
     BOOLEAN_PARAMS = {
         'use_nuke_x', 'batch_mode', 'use_gpu', 'enforce_render_order', 
-        'continue_on_error', 'reload_plugins', 'performance_profiler', 'use_proxy'
+        'continue_on_error', 'reload_plugins', 'performance_profiler' 
     }
     
     # List of known Deadline Plugin Info keys (and future ones could be added)
@@ -128,7 +127,7 @@ class WriteNode:
         'Version', 'UseNukeX', 'BatchMode', 'EnforceRenderOrder', 'ContinueOnError',
         'RenderMode', 'SceneFile', 'BatchModeIsMovie', 'Views', 'Threads',
         'UseGpu', 'GpuOverride', 'RamUse', 'StackSize', 'ReloadPlugins',
-        'PerformanceProfiler', 'PerformanceProfilerDir', 'UseProxy',
+        'PerformanceProfiler', 'PerformanceProfilerDir', 
         'WriteNode', 'WriteNodesAsSeparateJobs', 'OutputFilePath',
         'GraphScopeVariablesEnabled', 'GraphScopeVariables'
     }
@@ -398,7 +397,6 @@ class NukeSubmission:
                 reload_plugins: bool = False,
                 performance_profiler: bool = False,
                 performance_profiler_path: Optional[str] = None,
-                use_proxy: bool = False,
                 write_nodes: Optional[Union[str, List[str], Dict[str, Any], List[Dict[str, Any]]]] = None,
                 render_mode: str = "full",
                 write_nodes_as_tasks: bool = False,
@@ -686,7 +684,6 @@ class NukeSubmission:
         self.reload_plugins = reload_plugins if isinstance(reload_plugins, bool) else config.get('submission.reload_plugins', False)
         self.performance_profiler = performance_profiler if isinstance(performance_profiler, bool) else config.get('submission.performance_profiler', False)
         self.performance_profiler_path = performance_profiler_path if performance_profiler_path is not None else config.get('submission.performance_profiler_path')
-        self.use_proxy = use_proxy if isinstance(use_proxy, bool) else config.get('submission.use_proxy', False)
         self.render_mode = render_mode if render_mode else config.get('submission.render_mode', 'full')
         self.render_order_dependencies = render_order_dependencies if isinstance(render_order_dependencies, bool) else config.get('submission.render_order_dependencies', False)
         self.job_dependencies = job_dependencies
@@ -1729,8 +1726,6 @@ class NukeSubmission:
             plugin_info["PerformanceProfiler"] = "1"
             if self.performance_profiler_path:
                 plugin_info["PerformanceProfilerDir"] = self.performance_profiler_path
-        if self.use_proxy:
-            plugin_info["UseProxy"] = "1"
         
         # Handle write nodes differently based on submission mode
         if self.write_nodes_as_tasks and self.write_nodes:
@@ -3030,8 +3025,6 @@ class NukeSubmission:
                     args_str.append(f"    performance_profiler={self.performance_profiler}")
                 if self.performance_profiler_path:
                     args_str.append(f'    performance_profiler_path="{self.performance_profiler_path}"')
-                if self.use_proxy:
-                    args_str.append(f"    use_proxy={self.use_proxy}")
                 if self.write_nodes:
                     args_str.append(f"    write_nodes={repr(self.write_nodes)}")
                 if self.render_mode != config.get('submission.render_mode', 'full'):
@@ -3301,7 +3294,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                              'Write3'  # Regular write node without overrides
                          ]
                          ```
-          - render_mode: Render mode (full, proxy)
+          - render_mode: Render mode (full, proxy, both). When set to "both", two separate submissions are created - one with "full" and one with "proxy". Note: The "both" option is only available in the submit_nuke_script function, not directly in NukeSubmission.
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - render_order_dependencies: Whether to set job dependencies based on render order
@@ -3337,6 +3330,24 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
             - job_info (dict): The job info used for submission
             - deadline_return (Any): The raw return from the Deadline submission
     """
+
+    # Handle the "both" render_mode by submitting two separate jobs
+    if kwargs.get('render_mode', "").lower() == 'both':
+        logger.info("Render mode 'both' specified. Submitting two separate jobs for 'full' and 'proxy' modes.")
+        
+        # Make a copy of kwargs to avoid modifying the original
+        full_kwargs = kwargs.copy()
+        full_kwargs['render_mode'] = 'full'
+        
+        proxy_kwargs = kwargs.copy()
+        proxy_kwargs['render_mode'] = 'proxy'
+        
+        # Submit jobs with full and proxy modes
+        full_jobs = submit_nuke_script(script_path, **full_kwargs)
+        proxy_jobs = submit_nuke_script(script_path, **proxy_kwargs)
+        
+        # Combine and return the results
+        return full_jobs + proxy_jobs
 
     if kwargs.get('submission_is_build_job', False):
         # WARNING: setting default to True will result in infinite job submissions

@@ -81,7 +81,6 @@ job_ids = submit_nuke_script(
 | `reload_plugins` | bool | `False` | Reload plugins between tasks |
 | `performance_profiler` | bool | `False` | Use the profiler |
 | `performance_profiler_path` | str | `None` | Directory for profile files |
-| `use_proxy` | bool | `False` | Use proxy mode for rendering |
 | `views` | list | `None` | List of view names to render |
 | `write_nodes` | list/dict | `None` | Write nodes to render. Can be a simple list of names, a dict with overrides, or a list of dicts for multiple nodes with individual overrides |
 | `render_mode` | str | `"full"` | Render mode (full, proxy) |

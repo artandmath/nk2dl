@@ -210,8 +210,7 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["performance_profiler"] = True
     if hasattr(args, "PerformanceProfilerPath") and args.PerformanceProfilerPath is not None:
         kwargs["performance_profiler_path"] = args.PerformanceProfilerPath
-    if hasattr(args, "Proxy") and args.Proxy:
-        kwargs["use_proxy"] = True
+    
     if hasattr(args, "Views") and args.Views is not None:
         kwargs["views"] = args.Views.split(",")
         
