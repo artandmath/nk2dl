@@ -332,13 +332,13 @@ class NukeSubmission:
                 submit_script_as_auxiliary_file: Optional[bool] = None,
                 render_settings_from_metadata: bool = False,
 
-                # Build job parameters, submit as a Python script job that calls submit_nuke_script
-                # WARNING: setting submission_is_build_job=True as the default will result in infinite job submissions
+                # Build job parameters
                 submission_is_build_job: bool = False,
                 build_job_script_path: Optional[str] = None,
-                build_job_script_name: Optional[str] = None,
-                build_job_as_auxiliary_file: Optional[bool] = None,  # Whether to submit the build job script as an auxiliary file for better job recovery
-                delete_build_job: Optional[bool] = None,
+                pre_build_job_script: Optional[Union[str, List[str]]] = None,
+                post_build_job_script: Optional[Union[str, List[str]]] = None,
+                build_job_as_auxiliary_file: Optional[bool] = None,
+                delete_build_job_script: Optional[bool] = None,
 
                 # Script copying and submission parameters
                 copy_script: Optional[bool] = None,
@@ -348,7 +348,6 @@ class NukeSubmission:
 
                 # ScriptJob parameters
                 script_job_script_path: Optional[str] = None,
-                script_job_script_name: Optional[str] = None,
                 script_job_script_args: Optional[List[str]] = None,
                 
                 # Machine list parameters
@@ -425,20 +424,37 @@ class NukeSubmission:
             use_parser_instead_of_nuke: Whether to use a parser instead of Nuke for parsing script
             submit_writes_alphabetically: Whether to sort write nodes alphabetically by name
             submit_writes_in_render_order: Whether to sort write nodes by render order
-            graph_scope_variables: List of graph scope variables to use for rendering. Can be provided in two formats:
-                                  
-                                  1. Flat list format (all combinations will be generated):
-                                     ["key1:value1,value2,...", "key2:valueA,valueB,..."]
-                                  
-                                  2. Nested list format (specific combinations):
-                                     [
-                                        ["key1:value1,value2", "key2:valueA"],  # First set of combinations
-                                        ["key1:value3", "key2:valueB"]          # Second set of combinations
-                                     ]
-                                     
-                                  If no values are provided for a key (e.g., "key:" or just "key"), 
-                                  all available values for that key will be used.
+            submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
+            render_settings_from_metadata: Whether to extract submission settings from write node metadata.
+                                        Metadata keys starting with 'input/nk2dl/' will be used as submission settings.
+                                        For example, 'input/nk2dl/priority' will set the job priority. This is useful
+                                        for pipeline integrations where artists can set job parameters directly in their
+                                        Nuke scripts. Only works when write_nodes_as_separate_jobs is True.
             
+            # Build job parameters
+            submission_is_build_job: Whether to submit as a Python script job that calls submit_nuke_script.
+                                   A build job script is generated at submission.
+                                   WARNING: setting submission_is_build_job=True as the default will result 
+                                   in infinite job submissions.
+            build_job_script_path: Full path template for the build job script file.
+                                 Contains both directory and filename with tokens.
+                                 Supports tokens for both directory and filename parts:
+                                 - Script directory tokens: {sdir}, {nkdir}, {scriptdir}, {nukescriptdir}
+                                 - Script stem tokens: {ss}, {basename}, {stem}, {sstem}, {scriptstem}
+                                 - Script name tokens: {s}, {script}, {scriptname}
+                                 - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+                                 - Extension token: {ext} (replaced with 'py')
+                                 Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"
+            pre_build_job_script: Path to a script to run before the build job starts,
+                                or list [script_path, arg1, arg2, ...] where the first item is the script path
+                                and remaining items are arguments. Script runs within the generated build job script.
+            post_build_job_script: Path to a script to run after the build job completes,
+                                 or list [script_path, arg1, arg2, ...] where the first item is the script path
+                                 and remaining items are arguments. Script runs within the generated build job script
+                                 and receives the submission results.
+            build_job_as_auxiliary_file: Whether to submit the build job script as an auxiliary file (default: True)
+            delete_build_job_script: Whether to delete the build job script after successful submission (default: True)
+
             # Script copying and submission parameters
             copy_script: Whether to copy the script before submission
             copy_script_path: Optional path template(s) for copying the script. Can be:
@@ -591,9 +607,10 @@ class NukeSubmission:
 
         # Initialize build job settings
         self.build_job_script_path = build_job_script_path if build_job_script_path is not None else config.get('submission.build_job_script_path', None)
-        self.build_job_script_name = build_job_script_name if build_job_script_name is not None else config.get('submission.build_job_script_name', None)
+        self.pre_build_job_script = pre_build_job_script
+        self.post_build_job_script = post_build_job_script
         self.build_job_as_auxiliary_file = build_job_as_auxiliary_file if build_job_as_auxiliary_file is not None else config.get('submission.build_job_as_auxiliary_file', True)
-        self.delete_build_job = delete_build_job if delete_build_job is not None else config.get('submission.delete_build_job', True)
+        self.delete_build_job_script = delete_build_job_script if delete_build_job_script is not None else config.get('submission.delete_build_job_script', True)
 
         # If render_order_dependencies is True, implicitly set write_nodes_as_separate_jobs to True as well
         if render_order_dependencies:
@@ -2884,53 +2901,75 @@ class NukeSubmission:
         
         logger.info(f"Creating script job for Nuke script: {self.script_path}")
         
-        # Generate script path and name based on configuration or defaults
+        # Generate timestamp for default path generation
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
         script_stem = self.script_path.stem
         script_basename = self.script_path.name
         
-        # Determine script directory and name
+        # Determine full script path with directory and name
         if self.build_job_script_path:
             # Replace tokens in path
-            script_dir = self.build_job_script_path
-            # Replace tokens with their values
-            script_dir = script_dir.replace("{script}", str(self.script_path.parent))
-            script_dir = script_dir.replace("{output}", str(self.script_path.parent))  # Default to script dir if no output dir
+            script_path = self._replace_script_directory_tokens(self.build_job_script_path)
             
-            # Create directory if it doesn't exist
-            os.makedirs(os.path.dirname(script_dir), exist_ok=True)
+            # If the path doesn't contain a file extension, add .py
+            if not os.path.splitext(script_path)[1]:
+                script_path += ".py"
+                
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(os.path.abspath(script_path)), exist_ok=True)
         else:
-            # Default to script directory
+            # Default to script directory with timestamp
             script_dir = str(self.script_path.parent)
-            
-        # Determine script name
-        if self.build_job_script_name:
-            # Replace tokens in name
-            script_name = self.build_job_script_name
-            # Replace stem tokens
-            script_name = script_name.replace("{basename}", script_stem)
-            script_name = script_name.replace("{stem}", script_stem)
-            # Replace date tokens
-            now = datetime.datetime.now()
-            script_name = script_name.replace('{YYYY}', now.strftime('%Y'))
-            script_name = script_name.replace('{YY}', now.strftime('%y'))
-            script_name = script_name.replace('{MM}', now.strftime('%m'))
-            script_name = script_name.replace('{DD}', now.strftime('%d'))
-            script_name = script_name.replace('{hh}', now.strftime('%H'))
-            script_name = script_name.replace('{mm}', now.strftime('%M'))
-            script_name = script_name.replace('{ss}', now.strftime('%S'))
-        else:
-            # Default script name with timestamp
             script_name = f"{script_stem}_{timestamp}.py"
+            script_path = os.path.join(script_dir, script_name)
             
-        # Combine directory and name
-        script_file = os.path.join(script_dir, script_name)
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(os.path.abspath(script_path)), exist_ok=True)
         
-        logger.debug(f"Creating build job script file at: {script_file}")
+        logger.debug(f"Creating build job script file at: {script_path}")
+        
+        # Process pre and post build job scripts, which can be either a string or a list of strings
+        pre_build_script_info = None
+        if self.pre_build_job_script:
+            # Handle either string or list format
+            if isinstance(self.pre_build_job_script, str):
+                # Single script path, no arguments
+                script_path_with_tokens = self.pre_build_job_script
+                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                pre_build_script_info = {'path': resolved_path, 'args': []}
+                logger.debug(f"Pre-build job script: {resolved_path}")
+            elif isinstance(self.pre_build_job_script, list) and len(self.pre_build_job_script) > 0:
+                # List format: [script_path, arg1, arg2, ...]
+                script_path_with_tokens = self.pre_build_job_script[0]
+                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                args = self.pre_build_job_script[1:]
+                pre_build_script_info = {'path': resolved_path, 'args': args}
+                logger.debug(f"Pre-build job script: {resolved_path} with arguments: {args}")
+            else:
+                logger.warning(f"Invalid pre_build_job_script format: {self.pre_build_job_script}")
+        
+        post_build_script_info = None
+        if self.post_build_job_script:
+            # Handle either string or list format
+            if isinstance(self.post_build_job_script, str):
+                # Single script path, no arguments
+                script_path_with_tokens = self.post_build_job_script
+                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                post_build_script_info = {'path': resolved_path, 'args': []}
+                logger.debug(f"Post-build job script: {resolved_path}")
+            elif isinstance(self.post_build_job_script, list) and len(self.post_build_job_script) > 0:
+                # List format: [script_path, arg1, arg2, ...]
+                script_path_with_tokens = self.post_build_job_script[0]
+                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                args = self.post_build_job_script[1:]
+                post_build_script_info = {'path': resolved_path, 'args': args}
+                logger.debug(f"Post-build job script: {resolved_path} with arguments: {args}")
+            else:
+                logger.warning(f"Invalid post_build_job_script format: {self.post_build_job_script}")
         
         # Use a regular file context to create the script
         try:
-            with open(script_file, 'w') as script_file_obj:
+            with open(script_path, 'w') as script_file_obj:
                 # Add proper encoding header for Python 3 compatibility
                 script_file_obj.write("#!/usr/bin/env python\n")
                 script_file_obj.write("# -*- coding: utf-8 -*-\n\n")
@@ -2969,6 +3008,50 @@ class NukeSubmission:
                 script_file_obj.write("# Log script location\n")
                 script_file_obj.write("logger.info(f\"Build job script started: {os.path.abspath(__file__)}\")\n\n")
 
+                # Add function to run scripts with proper error handling
+                if pre_build_script_info or post_build_script_info:
+                    script_file_obj.write("def run_script(script_path, script_type, args=None, results=None):\n")
+                    script_file_obj.write("    \"\"\"Run a Python script with proper error handling.\n")
+                    script_file_obj.write("    \n")
+                    script_file_obj.write("    Args:\n")
+                    script_file_obj.write("        script_path: Path to the script to run\n")
+                    script_file_obj.write("        script_type: Type of script ('pre-build' or 'post-build')\n")
+                    script_file_obj.write("        args: Optional list of arguments to pass to the script\n")
+                    script_file_obj.write("        results: Optional submission results to pass to the script\n")
+                    script_file_obj.write("    \"\"\"\n")
+                    script_file_obj.write("    if not os.path.exists(script_path):\n")
+                    script_file_obj.write("        logger.error(f\"Cannot run {script_type} script: File not found: {script_path}\")\n")
+                    script_file_obj.write("        return False\n")
+                    script_file_obj.write("    \n")
+                    script_file_obj.write("    try:\n")
+                    script_file_obj.write("        if args:\n")
+                    script_file_obj.write("            logger.info(f\"Running {script_type} script: {script_path} with args: {args}\")\n")
+                    script_file_obj.write("        else:\n")
+                    script_file_obj.write("            logger.info(f\"Running {script_type} script: {script_path}\")\n")
+                    script_file_obj.write("        # Create a locals dict with common variables that might be useful\n")
+                    script_file_obj.write("        script_locals = {\n")
+                    script_file_obj.write("            'os': os,\n")
+                    script_file_obj.write("            'sys': sys,\n")
+                    script_file_obj.write("            'logger': logger,\n")
+                    script_file_obj.write("            'logging': logging,\n")
+                    script_file_obj.write("            'args': args or [],\n")
+                    script_file_obj.write("        }\n")
+                    script_file_obj.write("        # Add results if available (for post-build script)\n")
+                    script_file_obj.write("        if results is not None:\n")
+                    script_file_obj.write("            script_locals['results'] = results\n")
+                    script_file_obj.write("            script_locals['job_ids'] = [job.get('job_id', 'unknown') for job in results]\n")
+                    script_file_obj.write("        \n")
+                    script_file_obj.write("        with open(script_path, 'r') as script_file:\n")
+                    script_file_obj.write("            script_content = script_file.read()\n")
+                    script_file_obj.write("        \n")
+                    script_file_obj.write("        # Execute the script with the locals dictionary\n")
+                    script_file_obj.write("        exec(script_content, script_locals)\n")
+                    script_file_obj.write("        logger.info(f\"Completed {script_type} script: {script_path}\")\n")
+                    script_file_obj.write("        return True\n")
+                    script_file_obj.write("    except Exception as e:\n")
+                    script_file_obj.write("        logger.error(f\"Error running {script_type} script {script_path}: {e}\", exc_info=True)\n")
+                    script_file_obj.write("        return False\n\n")
+
                 # Write a main function to ensure proper execution
                 script_file_obj.write("def main():\n")
                 
@@ -2982,6 +3065,15 @@ class NukeSubmission:
                 # Properly escape the path to avoid \n being interpreted as newline
                 script_path_escaped = str(self.script_path).replace('\\', '\\\\')
                 script_file_obj.write(f"    logger.info(\"Submitting script: {script_path_escaped}\")\n\n")
+                
+                # Add pre-build job script execution if provided
+                if pre_build_script_info:
+                    pre_build_path_escaped = pre_build_script_info['path'].replace('\\', '\\\\')
+                    args_repr = repr(pre_build_script_info['args'])
+                    script_file_obj.write(f"    # Run pre-build job script\n")
+                    script_file_obj.write(f"    pre_script_success = run_script(\"{pre_build_path_escaped}\", \"pre-build\", args={args_repr})\n")
+                    script_file_obj.write(f"    if not pre_script_success:\n")
+                    script_file_obj.write(f"        logger.warning(\"Pre-build script failed, but continuing with submission\")\n\n")
                 
                 # Create the function call with all parameters
                 script_path_str = str(self.script_path)
@@ -3003,6 +3095,12 @@ class NukeSubmission:
                     args_str.append(f"    submit_script_as_auxiliary_file={self.submit_script_as_auxiliary_file}")
                 if self.render_settings_from_metadata:
                     args_str.append(f"    render_settings_from_metadata={self.render_settings_from_metadata}")
+                if self.build_job_script_path:
+                    args_str.append(f'    build_job_script_path="{self.build_job_script_path}"')
+                if self.pre_build_job_script:
+                    args_str.append(f"    pre_build_job_script={repr(self.pre_build_job_script)}")
+                if self.post_build_job_script:
+                    args_str.append(f"    post_build_job_script={repr(self.post_build_job_script)}")
                 if self.copy_script is not None:
                     args_str.append(f"    copy_script={self.copy_script}")
                 if self.copy_script_path is not None:
@@ -3121,8 +3219,17 @@ class NukeSubmission:
                 script_file_obj.write("    job_ids = [job.get('job_id', 'unknown') for job in results]\n")
                 script_file_obj.write("    logger.info(f\"Successfully submitted {len(results)} jobs with IDs: {job_ids}\")\n\n")
                 
-                # Add cleanup logic if delete_build_job is True - delete file immediately after submission
-                if self.delete_build_job:
+                # Add post-build job script execution if provided
+                if post_build_script_info:
+                    post_build_path_escaped = post_build_script_info['path'].replace('\\', '\\\\')
+                    args_repr = repr(post_build_script_info['args'])
+                    script_file_obj.write(f"    # Run post-build job script\n")
+                    script_file_obj.write(f"    post_script_success = run_script(\"{post_build_path_escaped}\", \"post-build\", args={args_repr}, results=results)\n")
+                    script_file_obj.write(f"    if not post_script_success:\n")
+                    script_file_obj.write(f"        logger.warning(\"Post-build script failed\")\n\n")
+                
+                # Add cleanup logic if delete_build_job_script is True - delete file immediately after submission
+                if self.delete_build_job_script:
                     script_file_obj.write("    # Delete the script file immediately after successful submission\n")
                     script_file_obj.write("    try:\n")
                     script_file_obj.write("        logger.info(f\"Deleting script file: {__file__}\")\n")
@@ -3160,7 +3267,7 @@ class NukeSubmission:
 
                 logger.debug(f"Python script content generated with {len(args_str)} parameters")
             
-            logger.info(f"Created script job Python file: {script_file}")
+            logger.info(f"Created script job Python file: {script_path}")
             
             # Get Deadline connection
             deadline = get_connection()
@@ -3198,7 +3305,7 @@ class NukeSubmission:
             plugin_info = {
                 'Version': nuke_utils.nuke_version(self.nuke_version),
                 # Always specify the script path in plugin info even if it's also an auxiliary file
-                'BuildJobsFilename': os.path.abspath(script_file),  # Make sure the path is absolute
+                'BuildJobsFilename': os.path.abspath(script_path),  # Make sure the path is absolute
                 'SingleFramesOnly': 'True'
             }
             
@@ -3210,10 +3317,10 @@ class NukeSubmission:
             
             # Add the build job Python script as an auxiliary file if requested
             if self.build_job_as_auxiliary_file:
-                auxiliary_files.append(os.path.abspath(script_file))
-                logger.debug(f"Added build job script as auxiliary file: {script_file}")
+                auxiliary_files.append(os.path.abspath(script_path))
+                logger.debug(f"Added build job script as auxiliary file: {script_path}")
             else:
-                logger.debug(f"Script file is not added as auxiliary file. Using BuildJobsFilename only: {script_file}")
+                logger.debug(f"Script file is not added as auxiliary file. Using BuildJobsFilename only: {script_path}")
                 logger.warning(f"When build_job_as_auxiliary_file=False, job recovery may be limited if the script file is deleted")
             
             # Also add the original Nuke script as an auxiliary file if requested
@@ -3307,6 +3414,60 @@ class NukeSubmission:
             logger.warning(f"Failed to extract metadata from write node {write_node_name}: {e}")
             return {}, {}
 
+    # First, let's add a helper method for script directory token replacement
+    def _replace_script_directory_tokens(self, path: str) -> str:
+        """Replace script directory tokens in a path.
+        
+        Args:
+            path: Path with tokens
+            
+        Returns:
+            Path with tokens replaced
+        """
+        # Define script directory tokens
+        script_directory_tokens = ["{sdir}", "{nkdir}", "{s_dir}", "{nk_dir}", "{scriptdir}", 
+                                  "{script_dir}", "{nukescriptdir}", "{nukescript_dir}", "{nuke_script_dir}"]
+        
+        # Replace script directory tokens with script parent directory
+        for token in script_directory_tokens:
+            if token in path:
+                path = path.replace(token, str(self.script_path.parent))
+                
+        # Replace stem tokens
+        stem_tokens = ["{basename}", "{stem}", "{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", 
+                       "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
+        for token in stem_tokens:
+            if token in path:
+                path = path.replace(token, self.script_stem)
+                
+        # Replace script name tokens
+        name_tokens = ["{s}", "{ns}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
+        for token in name_tokens:
+            if token in path:
+                path = path.replace(token, self.script_filename)
+        
+        # Replace date tokens
+        now = datetime.datetime.now()
+        date_tokens = {
+            '{YYYY}': now.strftime('%Y'),
+            '{YY}': now.strftime('%y'),
+            '{MM}': now.strftime('%m'),
+            '{DD}': now.strftime('%d'),
+            '{hh}': now.strftime('%H'),
+            '{mm}': now.strftime('%M'),
+            '{ss}': now.strftime('%S')
+        }
+        
+        for token, value in date_tokens.items():
+            if token in path:
+                path = path.replace(token, value)
+        
+        # Replace extension token
+        if '{ext}' in path:
+            path = path.replace('{ext}', 'py')
+                
+        return path
+
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
     """Submit a Nuke script to Deadline.
@@ -3334,13 +3495,19 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                             - Dict: With integer keys for multiple filename templates
           - submit_copied_script: Whether to use the copied script path in the submission
           - submission_is_build_job: Whether to submit as a Python script job that calls submit_nuke_script
-          - build_job_script_path: Path template for the build job script file
-          - build_job_script_name: Name template for the build job script file
+          - build_job_script_path: Full path template for the build job script file.
+                                 Supports tokens for both directory and filename parts:
+                                 - Script directory tokens: {sdir}, {nkdir}, {scriptdir}, {nukescriptdir}
+                                 - Script stem tokens: {ss}, {basename}, {stem}, {sstem}, {scriptstem}
+                                 - Script name tokens: {s}, {script}, {scriptname}
+                                 - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+                                 - Extension token: {ext} (replaced with 'py')
+                                 Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"
           - build_job_as_auxiliary_file: Whether to submit the build job script as an auxiliary file (default: True).
                                       When True, the job can be recovered if it fails since Deadline
                                       will re-copy the script to the worker. When False, the job cannot
                                       be restarted if the script file is deleted.
-          - delete_build_job: Whether to automatically delete the build job script after execution (default: True)
+          - delete_build_job_script: Whether to automatically delete the build job script after execution (default: True)
           - graph_scope_variables: List of graph scope variables in either flat format:
             ["key1:value1,value2", "key2:valueA,valueB"] - generates all combinations
             Or nested format:
@@ -3381,17 +3548,16 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                           If None, uses config or current Nuke version
           - use_nuke_x: Whether to use NukeX for rendering
           - batch_mode: Whether to use batch mode
-          - render_threads: Number of render threads
+          - threads: Number of render threads
           - use_gpu: Whether to use GPU for rendering
           - gpu_override: Specific GPU to use
-          - max_ram_usage: Maximum RAM usage (MB)
+          - ram_use: Maximum RAM usage (MB)
           - enforce_render_order: Whether to enforce write node render order
-          - min_stack_size: Minimum stack size (MB)
+          - stack_size: Minimum stack size (MB)
           - continue_on_error: Whether to continue rendering on error
           - reload_plugins: Whether to reload plugins between tasks
-          - use_profiler: Whether to use the performance profiler
-          - profile_dir: Directory for performance profile files
-          - use_proxy: Whether to use proxy mode for rendering
+          - performance_profiler: Whether to use the performance profiler
+          - performance_profiler_path: Directory for performance profile files
           - write_nodes: Write nodes to render. Can be provided in multiple formats:
                        - Single string: The name of a write node
                        - List of strings: Multiple write node names
@@ -3434,9 +3600,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - render_order_dependencies: Whether to set job dependencies based on render order
-          - use_nodes_frame_list: Whether to use node-specific frame lists
-          - parse_output_paths_to_deadline: Whether to parse output paths to add as OutputFilename entries in job info.
-                                           Defaults to True if script_is_open is True
+          - use_node_frame_list: Whether to use node-specific frame lists
           - views: List of view names to render. If None, all views will be rendered.
           
           # Environment Variables parameters
@@ -3445,8 +3609,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                             Can use the special token "{config:extend}" as the first item
                             to include config values and then extend them with the rest of the list.
           - environment: Dictionary of environment variables to add to jobs.
-                      Can use the special key "{config}" with value "extend"
-                      to include config values and then extend/override them with the rest of the dictionary.
+                       Can use the special key "{config}" with value "extend"
+                       to include config values and then extend/override them with the rest of the dictionary.
           - omit_environment_keys: List of environment variables to omit from jobs.
                                  Can use the special token "{config:extend}" as the first item
                                  to include config values and then extend them with the rest of the list.
@@ -3466,7 +3630,19 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
             - job_info (dict): The job info used for submission
             - deadline_return (Any): The raw return from the Deadline submission
     """
-
+    # Compatibility handling for deprecated build_job_script_name parameter
+    if 'build_job_script_name' in kwargs:
+        build_job_script_name = kwargs.pop('build_job_script_name')
+        # Only modify build_job_script_path if it wasn't provided
+        if 'build_job_script_path' not in kwargs or not kwargs['build_job_script_path']:
+            script_dir = config.get('submission.build_job_script_path', os.path.dirname(script_path))
+            if script_dir:
+                kwargs['build_job_script_path'] = os.path.join(script_dir, build_job_script_name)
+            else:
+                # If no script_dir is available, just use the filename directly
+                kwargs['build_job_script_path'] = build_job_script_name
+        logger.warning("The build_job_script_name parameter is deprecated. Use build_job_script_path with tokens instead.")
+        
     # Handle the "both" render_mode by submitting two separate jobs
     if kwargs.get('render_mode', "").lower() == 'both':
         logger.info("Render mode 'both' specified. Submitting two separate jobs for 'full' and 'proxy' modes.")

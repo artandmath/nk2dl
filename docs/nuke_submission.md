@@ -41,6 +41,9 @@ job_ids = submit_nuke_script(
 | `submit_script_as_auxiliary_file` | bool | `False` | Submit script as auxiliary file |
 | `render_settings_from_metadata` | bool | `False` | Extract submission settings from write node metadata |
 | `submission_is_build_job` | bool | `False` | Submit as a Python script job that calls submit_nuke_script and enters a ready state loop |
+| `build_job_script_path` | str | `None` | Full path template for the build job script file, supporting tokens for both directory and filename components (see below for available tokens) |
+| `build_job_as_auxiliary_file` | bool | `True` | Whether to submit the build job script as an auxiliary file (default: True). When True, the job can be recovered if it fails since Deadline will re-copy the script to the worker. When False, the job cannot be restarted if the script file is deleted.
+| `delete_build_job_script` | bool | `True` | Whether to automatically delete the build job script after execution (default: True)
 
 ### Optional Job Info Parameters
 
@@ -310,210 +313,12 @@ submit_nuke_script(
 )
 ```
 
-### How It Works
+### Available Script Tokens
 
-1. Add metadata to write nodes in your Nuke script with the prefix `input/nk2dl/` followed by the parameter name
-2. When submitting with `render_settings_from_metadata=True`, these values are extracted and applied as submission settings
-3. Settings apply only when submitting write nodes as separate jobs
-
-### Adding Metadata in Nuke
-
-```python
-# In Nuke Python panel or script editor:
-write_node = nuke.toNode('Write1')
-write_node.addMetadata("input/nk2dl/priority", "90")
-write_node.addMetadata("input/nk2dl/chunk_size", "5")
-write_node.addMetadata("input/nk2dl/use_gpu", "1")
-```
-
-You can use either nk2dl parameter names (like `priority`) or Deadline-specific names (like `Priority`).
-
-### Precedence Order
-
-When multiple sources provide the same setting, precedence is:
-1. **Highest**: Settings from the `write_nodes` dictionary 
-2. **Middle**: Settings from write node metadata
-3. **Lowest**: Global settings passed to `submit_nuke_script`
-
-This feature is particularly useful for pipeline integrations, allowing artists to set job parameters directly in their Nuke scripts that will be honored during submission.
-
-## Views
-
-For multi-view or stereoscopic Nuke scripts, you can specify which views to render:
-
-```python
-from nk2dl import submit_nuke_script
-
-# Render specific views
-submit_nuke_script(
-    "/path/to/script.nk",
-    views=["left", "right"]  # Render only the left and right views
-)
-```
-
-This is useful for stereoscopic workflows where you want to control which eye views to render.
-
-## Environment Variables
-
-Control environment variables for the Deadline job:
-
-```python
-submit_nuke_script(
-    "/path/to/script.nk",
-    use_current_environment=True  # Use all current environment variables
-)
-```
-
-Or specify specific environment variables:
-
-```python
-submit_nuke_script(
-    "/path/to/script.nk",
-    environment_keys=["NUKE_PATH", "PYTHONPATH", "LICENSE_SERVER"],
-    environment={"OCIO": "/path/to/config.ocio"}
-)
-```
-
-## Machine Lists
-
-Control which machines can or cannot render your job:
-
-```python
-# Allow specific machines only
-submit_nuke_script(
-    "/path/to/script.nk",
-    machine_list=["render01", "render02", "render03"]
-)
-
-# Deny specific machines
-submit_nuke_script(
-    "/path/to/script.nk",
-    machine_list=["render01", "render02"],
-    machine_list_is_a_deny_list=True
-)
-
-# Alternative explicit syntax
-submit_nuke_script(
-    "/path/to/script.nk",
-    machine_allow_list=["render01", "render02", "render03"]  # Same as machine_list
-)
-
-submit_nuke_script(
-    "/path/to/script.nk",
-    machine_deny_list=["render04", "render05"]  # Deny specific machines
-)
-```
-
-Note: You cannot use both allow and deny lists in the same submission.
-
-### Configuration
-
-Machine lists can also be specified in the configuration files:
-
-```yaml
-submission:
-  machine_allow_list: ["render01", "render02", "render03"]
-  # OR
-  machine_deny_list: ["render04", "render05"]
-```
-
-These configuration values will be used if no machine lists are explicitly provided in the submission parameters. The same validation rules apply - you cannot have both allow and deny lists in the configuration.
-
-## Graph Scope Variables (Nuke 15.2+)
-
-Submit multiple job variations using Graph Scope Variables:
-
-```python
-submit_nuke_script(
-    "/path/to/script.nk",
-    frames="1-100",
-    graph_scope_variables=["shotcode:ABC_0010,ABC_0020", "resolution:HD,2K,4K"]
-)
-```
-
-This will generate 6 jobs (2 shotcodes × 3 resolutions) with all combinations.
-
-You can also specify specific combinations to use:
-
-```python
-submit_nuke_script(
-    "/path/to/script.nk",
-    frames="1-100",
-    graph_scope_variables=[
-        ["shotcode:ABC_0010", "resolution:HD"],
-        ["shotcode:ABC_0020", "resolution:4K"]
-    ]
-)
-```
-
-This will generate 2 jobs with specific combinations.
-
-## Name and Comment Templates
-
-The `job_name` and `comment` parameters support tokens that will be replaced at submission time:
-
-```python
-submit_nuke_script(
-    "/path/to/script.nk",
-    job_name="{file} / {write} / {range}",
-    comment="Rendering frames {range} for {batch} in {write}"
-)
-```
-
-### Available Tokens
-
-| Token | Description |
-|-------|-------------|
-| `{file}` | Nuke script filename (without extension) |
-| `{write}` | Write node name |
-| `{range}` | Frame range |
-| `{batch}` | Batch name |
-| `{script}` | Full script filename with extension |
-| `{output}` | Output filename from write node |
-| `{render_order}` | Render order of write node |
-
-## Job Return Values
-
-The `submit_nuke_script` function returns a list of dictionaries, with each dictionary containing detailed information about a submitted job:
-
-```python
-jobs = submit_nuke_script("/path/to/script.nk", frames="1-100")
-for job in jobs:
-    print(f"Job ID: {job['job_id']}")
-    print(f"Render Order: {job['render_order']}")
-```
-
-### Return Dictionary Structure
-
-Each job dictionary in the returned list contains:
-
-| Key | Type | Description |
-|-----|------|-------------|
-| `job_id` | str | The Deadline job ID |
-| `render_order` | int | The render order of the write node (0 if not fetched) |
-| `plugin_info` | dict | The complete plugin info used for submission |
-| `job_info` | dict | The complete job info used for submission |
-| `deadline_return` | Any | The raw return from the Deadline submission |
-
-## Advanced Submission Features
-
-### Build Job Submission
-
-The `submission_is_build_job` parameter enables a special type of submission that creates a Python script job on Deadline that will in turn submit the Nuke render:
-
-```python
-submit_nuke_script(
-    "/path/to/script.nk",
-    submission_is_build_job=True,  # Submit as a build job
-    write_nodes=["Write1", "Write2"]
-)
-```
-
-This approach offers several advantages:
-- The heavy processing of analyzing the Nuke script happens on the farm rather than your local workstation
-- You can queue up multiple submissions without tying up your local Nuke license
-- It can be faster for complex scripts with many write nodes
-
-After the job completes its submission, it enters a loop that prints "READY FOR INPUT" every 5 seconds. This message is recognized by Deadline to indicate the task is complete.
-
-> **Warning**: Setting `submission_is_build_job=True` when submitting from another build job script may result in infinite job submissions.
+For `build_job_script_path`:
+- Script directory tokens: `{sdir}`, `{nkdir}`, `{s_dir}`, `{nk_dir}`, `{scriptdir}`, `{script_dir}`, `{nukescriptdir}`, `{nukescript_dir}`, `{nuke_script_dir}`
+- Script stem tokens: `{ss}`, `{basename}`, `{stem}`, `{sstem}`, `{nstem}`, `{nkstem}`, `{scriptstem}`, `{script_stem}`, `{nukescriptstem}`, `{nukescript_stem}`, `{nuke_script_stem}`
+- Script name tokens: `{s}`, `{ns}`, `{nk}`, `{script}`, `{scriptname}`, `{script_name}`, `{nukescript}`, `{nuke_script}`
+- Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
+- Extension token: `{ext}` (replaced with 'py')
+- Example: `"{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"`

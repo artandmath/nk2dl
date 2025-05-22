@@ -108,9 +108,9 @@ class Config:
             'script_copy_name': '{basename}_copy.nk',
             
             # Build job settings
-            'delete_build_job': True,
-            'build_job_script_path': '{script}/..',
-            'build_job_script_name': '{basename}_build_job{YYYY}{MM}{DD}_{hh}{mm}{ss}.py',
+            'build_job_script_path': None,
+            'build_job_as_auxiliary_file': True,
+            'delete_build_job_script': True,
             
             # Machine list options
             'machine_allow_list': None,

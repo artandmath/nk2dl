@@ -89,3 +89,4 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | - | environment | - |
 | - | - | omit_environment_keys | - |
 | - | - | submission_is_build_job | - |
+| - | - | build_job_script_path | - |

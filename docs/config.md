@@ -168,15 +168,16 @@ submission:
   
   # Build job options
   # Whether to automatically delete the build job script after execution
-  delete_build_job: true
+  delete_build_job_script: true
   
-  # Build job script path with tokens available: {script}, {output}
-  build_job_script_path: null  # Default is script directory
-  
-  # Build job script name with tokens available:
-  # - Script stem: {basename}, {stem}
-  # - Date/time: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
-  build_job_script_name: "{basename}_{YYYY}{MM}{DD}_{hh}{mm}{ss}.py"
+  # Build job script path with tokens available:
+  # Script directory tokens: {sdir}, {nkdir}, {scriptdir}, {nukescriptdir}
+  # Script stem tokens: {ss}, {basename}, {stem}, {sstem}, {scriptstem}
+  # Script name tokens: {s}, {script}, {scriptname}
+  # Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+  # Extension token: {ext} (replaced with 'py')
+  # Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"
+  build_job_script_path: null  # Full path template for both directory and filename
   
   # Environment variables
   use_current_environment: false     # Use current environment variables
