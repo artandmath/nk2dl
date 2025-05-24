@@ -199,7 +199,7 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to a script to run after each task completes"
     )
     dependency_group.add_argument(
-        "--ScriptJobScript", "--ScriptJobScriptPath",
+        "--ScriptJobScript", "--ScriptJobScriptPath", "--ScriptJobPath",
         metavar="SCRIPT_PATH",
         dest="ScriptJobScriptPath",
         help="Path to a Python script to submit as a script job. Uses Deadline's built-in Nuke plugin ScriptJob functionality. The script runs in Nuke's script editor as a terminal session but cannot take arguments. For more complex workflows with pre/post scripts and arguments, use the Python API with submission_is_build_job=True."
@@ -208,6 +208,16 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         "--SubmitNukeScript", 
         action="store_true",
         help="Submit the Nuke script as an auxiliary file"
+    )
+    dependency_group.add_argument(
+        "--BuildJob", 
+        action="store_true",
+        help="Submit as a build job (creates a Python script that calls submit_nuke_script)"
+    )
+    dependency_group.add_argument(
+        "--BuildJobScriptPath", 
+        metavar="SCRIPT_PATH",
+        help="Path template for build job script file (supports tokens like {scriptdir}, {nkstem}, {YYYY}-{MM}-{DD})"
     )
     
     # Write node options
@@ -239,6 +249,11 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Set dependencies based on write node render order"
     )
     write_group.add_argument(
+        "--SortWritesAlphabetically", 
+        action="store_true",
+        help="Sort write nodes alphabetically by name"
+    )
+    write_group.add_argument(
         "--MetadataSettings", "--RenderSettingsFromMetadata",
         action="store_true",
         dest="RenderSettingsFromMetadata",
@@ -262,6 +277,11 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
     
     # Nuke options
     nuke_group = parser.add_argument_group("Nuke options")
+    nuke_group.add_argument(
+        "--UseParser", 
+        action="store_true",
+        help="Use parser instead of Nuke API for script parsing"
+    )
     nuke_group.add_argument(
         "--NukeX", "-nx", "--UseNukeX",
         action="store_true",

@@ -163,6 +163,10 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["submit_suspended"] = True
     if hasattr(args, "SubmitNukeScript") and args.SubmitNukeScript:
         kwargs["submit_script"] = True
+    if hasattr(args, "BuildJob") and args.BuildJob:
+        kwargs["submission_is_build_job"] = True
+    if hasattr(args, "BuildJobScriptPath") and args.BuildJobScriptPath is not None:
+        kwargs["build_job_script_path"] = args.BuildJobScriptPath
     
     # Script hook options
     if hasattr(args, "PreJobScript") and args.PreJobScript is not None:
@@ -205,6 +209,8 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["use_node_frame_list"] = True
     if hasattr(args, "RenderOrderDependencies") and args.RenderOrderDependencies:
         kwargs["render_order_dependencies"] = True
+    if hasattr(args, "SortWritesAlphabetically") and args.SortWritesAlphabetically:
+        kwargs["submit_writes_alphabetically"] = True
     if hasattr(args, "RenderSettingsFromMetadata") and args.RenderSettingsFromMetadata:
         kwargs["render_settings_from_metadata"] = True
         
@@ -215,6 +221,8 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["chunk_size"] = args.FramesPerTask
         
     # Nuke options
+    if hasattr(args, "UseParser") and args.UseParser:
+        kwargs["use_parser_instead_of_nuke"] = True
     if hasattr(args, "UseNukeX") and args.UseNukeX:
         kwargs["use_nuke_x"] = True
     if hasattr(args, "BatchMode") and args.BatchMode:
