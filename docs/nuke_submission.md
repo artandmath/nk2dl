@@ -40,6 +40,7 @@ job_ids = submit_nuke_script(
 | `submit_writes_in_render_order` | bool | `False` | Sort write nodes by render order |
 | `submit_script_as_auxiliary_file` | bool | `False` | Submit script as auxiliary file |
 | `render_settings_from_metadata` | bool | `False` | Extract submission settings from write node metadata |
+| `script_job_script_path` | str | `None` | Path to a Python script to submit as a script job. When specified, sets ScriptJob=True and ScriptFilename to the provided path. ScriptJob is built-in functionality of the Deadline Nuke plugin that runs the script as a Python script job in the nuke script editor as a terminal session but cannot take any arguments. Consider using build job parameters instead as build jobs can use pre and post build job scripts to run Python scripts with arguments. |
 | `submission_is_build_job` | bool | `False` | Submit as a Python script job that calls submit_nuke_script and enters a ready state loop |
 | `build_job_script_path` | str | `None` | Full path template for the build job script file, supporting tokens for both directory and filename components (see below for available tokens) |
 | `build_job_as_auxiliary_file` | bool | `True` | Whether to submit the build job script as an auxiliary file (default: True). When True, the job can be recovered if it fails since Deadline will re-copy the script to the worker. When False, the job cannot be restarted if the script file is deleted.
@@ -157,6 +158,59 @@ For `copy_script_path` (full path including directory and filename):
 - Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
 - Temp directory tokens: `{tmp}`, `{temp}`, `{tmpdir}`, `{tempdir}`
 - UUID token: `{uuid}`
+
+## ScriptJob Submission
+
+nk2dl supports submitting Python scripts as ScriptJobs using the Deadline Nuke plugin's built-in ScriptJob functionality:
+
+```python
+from nk2dl import submit_nuke_script
+
+# Submit a Python script as a ScriptJob
+submit_nuke_script(
+    "/path/to/nukescript.nk",
+    script_job_script_path="/path/to/my_python_script.py"
+)
+```
+
+ScriptJob submissions are also supported via the command line interface:
+
+```bash
+# Submit a Python script as a ScriptJob via CLI
+nk2dl submit /path/to/nukescript.nk --ScriptJobScript "/path/to/my_python_script.py"
+```
+
+### ScriptJob vs Build Job
+
+There are two ways to run Python scripts in nk2dl:
+
+1. **ScriptJob** (`script_job_script_path`): Uses Deadline's built-in Nuke plugin ScriptJob functionality
+   - Runs the script in Nuke's script editor as a terminal session
+   - Cannot pass arguments to the script
+   - Simpler setup, but limited functionality
+
+2. **Build Job** (`submission_is_build_job=True`): Creates a custom Python script that calls `submit_nuke_script`
+   - Can use pre and post build job scripts with arguments
+   - More flexible and powerful
+   - Can handle complex submission workflows
+
+Example of ScriptJob usage:
+
+```python
+# Simple ScriptJob - no arguments supported
+submit_nuke_script(
+    "/path/to/nukescript.nk",
+    script_job_script_path="/shared/scripts/render_setup.py"
+)
+
+# Build Job alternative - supports arguments and workflows
+submit_nuke_script(
+    "/path/to/nukescript.nk", 
+    submission_is_build_job=True,
+    pre_build_job_script=["/shared/scripts/pre_render.py", "arg1", "arg2"],
+    post_build_job_script=["/shared/scripts/post_render.py", "success"]
+)
+```
 
 ## Frame Ranges
 

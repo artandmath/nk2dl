@@ -173,6 +173,10 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["pre_task_script"] = args.PreTaskScript
     if hasattr(args, "PostTaskScript") and args.PostTaskScript is not None:
         kwargs["post_task_script"] = args.PostTaskScript
+    
+    # ScriptJob options  
+    if hasattr(args, "ScriptJobScriptPath") and args.ScriptJobScriptPath is not None:
+        kwargs["script_job_script_path"] = args.ScriptJobScriptPath
         
     # Script copying and submission options
     if hasattr(args, "CopyScript") and args.CopyScript:

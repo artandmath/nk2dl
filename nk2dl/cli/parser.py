@@ -199,6 +199,12 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Path to a script to run after each task completes"
     )
     dependency_group.add_argument(
+        "--ScriptJobScript", "--ScriptJobScriptPath",
+        metavar="SCRIPT_PATH",
+        dest="ScriptJobScriptPath",
+        help="Path to a Python script to submit as a script job. Uses Deadline's built-in Nuke plugin ScriptJob functionality. The script runs in Nuke's script editor as a terminal session but cannot take arguments. For more complex workflows with pre/post scripts and arguments, use the Python API with submission_is_build_job=True."
+    )
+    dependency_group.add_argument(
         "--SubmitNukeScript", 
         action="store_true",
         help="Submit the Nuke script as an auxiliary file"

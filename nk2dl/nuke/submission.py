@@ -132,7 +132,8 @@ class WriteNode:
         'UseGpu', 'GpuOverride', 'RamUse', 'StackSize', 'ReloadPlugins',
         'PerformanceProfiler', 'PerformanceProfilerDir', 
         'WriteNode', 'WriteNodesAsSeparateJobs', 'OutputFilePath',
-        'GraphScopeVariablesEnabled', 'GraphScopeVariables'
+        'GraphScopeVariablesEnabled', 'GraphScopeVariables',
+        'ScriptJob', 'ScriptFilename'
     }
     
     # Add prefixes for keys that have numeric suffixes
@@ -351,7 +352,6 @@ class NukeSubmission:
 
                 # ScriptJob parameters
                 script_job_script_path: Optional[str] = None,
-                script_job_script_args: Optional[List[str]] = None,
                 
                 # Machine list parameters
                 machine_list: Optional[List[str]] = None,
@@ -472,6 +472,15 @@ class NukeSubmission:
                                         For example, 'input/nk2dl/priority' will set the job priority. This is useful
                                         for pipeline integrations where artists can set job parameters directly in their
                                         Nuke scripts. Only works when write_nodes_as_separate_jobs is True.
+            
+            # ScriptJob parameters
+            script_job_script_path: Path to a Python script to submit as a script job. When specified, 
+                                   sets ScriptJob=True and ScriptFilename to the provided path.
+                                   ScriptJob is built in functionality of the Deadline Nuke plugin.
+                                   It runs the script as a Python script job in the nuke script editor as a
+                                   terminal session but cannot take any arguments.
+                                   Consider using the build job parameters instead as the build job script
+                                   can use pre and post build job scripts to run the python scripts with arguments.
             
             # Machine list parameters
             machine_list: List of machine names to allow or deny
@@ -733,6 +742,9 @@ class NukeSubmission:
         
         # Store copy script path and name options
         self.copy_script_path = copy_script_path
+        
+        # Store ScriptJob parameters
+        self.script_job_script_path = script_job_script_path
         
         # Initialize machine list parameters
         self.machine_allow_list, self.machine_deny_list = self._initialize_machine_lists(machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list)
@@ -1838,6 +1850,11 @@ class NukeSubmission:
             # If not submitting as auxiliary file, add script path to SceneFile
             plugin_info["SceneFile"] = script_file_path
         # No else clause needed - if script is an auxiliary file, it will be added to job_info as AuxFile0
+        
+        # Handle ScriptJob parameters
+        if self.script_job_script_path:
+            plugin_info["ScriptJob"] = "True"
+            plugin_info["ScriptFilename"] = self.script_job_script_path
         
         # Add BatchModeIsMovie flag if needed - single write node that outputs a movie format
         # Note: When this is set, we need to update ChunkSize in job_info, but that's done in submit()

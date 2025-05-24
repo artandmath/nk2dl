@@ -32,8 +32,8 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | GraphScopeVariables | - | graph_scope_variables | - |
 | GraphScopeVariablesEnabled | - | *auto-generated* | - |
 | OutputFilePath | - | output_file_path | - |
-| ScriptJob | - | - | scriptJob |
-| ScriptFilename | - | - | scriptFilename |
+| ScriptJob | - | script_job_script_path | scriptJob |
+| ScriptFilename | - | script_job_script_path | scriptFilename |
 | BuildJobsFilename | - | *if submission_is_build_job=True* | - |
 | - | Name | job_name | jobName |
 | - | Plugin | "Nuke" | "Nuke" |

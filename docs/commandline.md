@@ -65,6 +65,7 @@ The `submit` command supports the following options:
 | `--Dependencies JOB_IDS` | Job IDs this job depends on (comma-separated) |
 | `--SubmitJobsAsSuspended` | Submit jobs as suspended |
 | `--SubmitNukeScript` | Submit the Nuke script as an auxiliary file |
+| `--ScriptJobScript`, `--ScriptJobPath`, `--ScriptJobScriptPath SCRIPT_PATH` | Path to a Python script to submit as a script job. Uses Deadline's built-in Nuke plugin ScriptJob functionality. The script runs in Nuke's script editor as a terminal session but cannot take arguments. |
 
 ### Write node options
 
@@ -149,6 +150,9 @@ nk2dl submit /path/to/script.nk --CopyScript --CopyScriptPath "/shared/scripts/{
 
 # Copy script to multiple locations using multiple paths
 nk2dl submit /path/to/script.nk --CopyScript --CopyScriptPaths "{outdir}/.farm/{nkstem}.nk" "/backup/scripts/{nkstem}_{YYYY}-{MM}-{DD}.nk" "/shared/archive/{nkstem}.nk"
+
+# Submit a Python script as a ScriptJob
+nk2dl submit /path/to/script.nk --ScriptJobScript "/shared/scripts/render_setup.py"
 
 # Full example with multiple options
 nk2dl submit /path/to/script.nk \
