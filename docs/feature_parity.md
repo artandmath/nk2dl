@@ -45,6 +45,7 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | Priority | priority | priority |
 | - | BatchName | batch_name | batchName |
 | - | Department | department | department |
+| - | UserName | user_name | - |
 | - | Comment | comment | comment |
 | - | ExtraInfo{index} | extra_info | extraInfo{n} |
 | - | JobDependency{index} | job_dependencies | dependencies |

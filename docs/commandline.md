@@ -39,6 +39,7 @@ The `submit` command supports the following options:
 | `--JobName NAME` | Job name (default: <nukescript_filename>/<write_nodename>) |
 | `--Comment TEXT` | Comment for the job |
 | `--Department NAME` | Department for the job |
+| `--UserName NAME` | User name for the job |
 
 ### Priority and pool options
 
@@ -151,11 +152,8 @@ nk2dl submit /path/to/script.nk \
     --JobName "{script_stem}_{write}" \
     --BatchName "Project_123" \
     --Department comp \
+    --UserName jdoe \
     --Pool nuke \
     --Group farm \
     --FramesPerTask 10
 ```
-
-## Environment Variables
-
-The CLI respects the same environment variables and configuration files as the Python API. See the [Configuration documentation](config.md) for details. 

@@ -26,8 +26,9 @@ submission:
   threads: 0
   ram_use: 0
   stack_size: 0
-  batch_name_template: "{script_stem}"
+  batch_name_template: "{nukescript}"
   job_name_template: "{batch} / {write} / {file}"
+  build_job_name_template: "{buildjob} >> {nukescript}"
   comment_template: ""
   render_mode: "full"
   write_nodes_as_tasks: false

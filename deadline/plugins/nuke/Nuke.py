@@ -459,14 +459,22 @@ class NukeProcess (ManagedProcess):
         # NK2DL: Add support for Graph Scope Variables (Nuke 15.2+)
         graphScopeVars = self.deadlinePlugin.GetPluginInfoEntryWithDefault("GraphScopeVariables", "")
         if graphScopeVars and float(self.Version) >= 15.2:
-            self.deadlinePlugin.LogInfo("Setting Graph Scope Variables: " + graphScopeVars)
+            self.deadlinePlugin.LogInfo("NK2DL: Setting Graph Scope Variables: " + graphScopeVars)
             renderarguments += " --var " + graphScopeVars
         # NK2DL: end of modification
         
         # NK2DL: Add support for Build Jobs Python Script
         buildJobsFilename = self.deadlinePlugin.GetPluginInfoEntryWithDefault("BuildJobsFilename", "")
         if buildJobsFilename:
-            self.deadlinePlugin.LogInfo("Setting Build Jobs Python Script: " + buildJobsFilename)
+            buildJobsDir = os.path.dirname(buildJobsFilename)
+            buildJobsBaseName = os.path.basename(buildJobsFilename)
+            self.deadlinePlugin.LogInfo("NK2DL: Build Jobs - submitted python script path: " + buildJobsFilename)
+            if os.path.isfile(os.path.join(self.deadlinePlugin.GetJobsDataDirectory(), buildJobsBaseName)):
+                buildJobsFilename = os.path.join(self.deadlinePlugin.GetJobsDataDirectory(), buildJobsBaseName)
+                self.deadlinePlugin.LogInfo("NK2DL: Build Jobs - local python script path: " + buildJobsFilename)
+                os.environ['NK2DL_BUILD_JOB_IS_AUXILIARY'] = 'true'
+                self.deadlinePlugin.LogInfo(f"NK2DL: Build Jobs - setting NK2DL_BUILD_JOB_IS_AUXILIARY to '{os.environ['NK2DL_BUILD_JOB_IS_AUXILIARY']}'")
+            self.deadlinePlugin.LogInfo(f"NK2DL: Build Jobs - executing python script: {buildJobsFilename}")
             renderarguments += " -t " + buildJobsFilename
         # NK2DL: end of modification
 

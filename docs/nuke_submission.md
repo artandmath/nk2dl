@@ -56,6 +56,7 @@ job_ids = submit_nuke_script(
 | `group` | str | Config | Worker group |
 | `chunk_size` | int | Config | Number of frames per task |
 | `department` | str | Config | Department |
+| `user_name` | str | Config | User name |
 | `comment` | str | Config | Job comment |
 | `concurrent_tasks` | int | `1` | Number of parallel tasks for the job |
 | `extra_info` | list | `[]` | List of extra info fields |

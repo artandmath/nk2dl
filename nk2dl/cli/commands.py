@@ -114,6 +114,8 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["comment"] = args.Comment
     if hasattr(args, "Department") and args.Department is not None:
         kwargs["department"] = args.Department
+    if hasattr(args, "UserName") and args.UserName is not None:
+        kwargs["user_name"] = args.UserName
         
     # Priority and pool options
     if hasattr(args, "Pool") and args.Pool is not None:
@@ -197,8 +199,8 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
         kwargs["use_nuke_x"] = True
     if hasattr(args, "BatchMode") and args.BatchMode:
         kwargs["batch_mode"] = True
-    if hasattr(args, "RenderThreads") and args.RenderThreads is not None:
-        kwargs["threads"] = args.RenderThreads
+    if hasattr(args, "Threads") and args.Threads is not None:
+        kwargs["threads"] = args.Threads
     if hasattr(args, "UseGPU") and args.UseGPU:
         kwargs["use_gpu"] = True
     if hasattr(args, "RAM") and args.RAM is not None:

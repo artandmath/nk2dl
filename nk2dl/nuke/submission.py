@@ -12,6 +12,8 @@ import itertools
 import datetime
 import logging
 import sys
+import tempfile
+import uuid
 
 from ..common.config import config
 from ..common.errors import SubmissionError
@@ -81,6 +83,7 @@ class WriteNode:
         'group': 'Group',
         'chunk_size': 'ChunkSize',
         'department': 'Department',
+        'user_name': 'UserName',
         'comment': 'Comment',
         'concurrent_tasks': 'ConcurrentTasks',
         'frames': 'Frames',
@@ -334,6 +337,7 @@ class NukeSubmission:
 
                 # Build job parameters
                 submission_is_build_job: bool = False,
+                build_job_name: Optional[str] = None,   
                 build_job_script_path: Optional[str] = None,
                 pre_build_job_script: Optional[Union[str, List[str]]] = None,
                 post_build_job_script: Optional[Union[str, List[str]]] = None,
@@ -365,6 +369,7 @@ class NukeSubmission:
                 group: Optional[str] = None,
                 chunk_size: Optional[int] = None,
                 department: Optional[str] = None,
+                user_name: Optional[str] = None,
                 comment: Optional[str] = None,
                 concurrent_tasks: Optional[int] = None,
                 extra_info: Optional[List[str]] = None,
@@ -488,6 +493,7 @@ class NukeSubmission:
             group: Worker group (defaults to config value)
             chunk_size: Number of frames per task (defaults to config value)
             department: Department (defaults to config value)
+            user_name: User name (defaults to config value)
             comment: Job comment (defaults to config value)
                      Can include tokens like {script}, {ss}, {write}, {file}, etc.
             concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
@@ -607,6 +613,7 @@ class NukeSubmission:
 
         # Initialize build job settings
         self.build_job_script_path = build_job_script_path if build_job_script_path is not None else config.get('submission.build_job_script_path', None)
+        self.build_job_name_template = build_job_name if build_job_name else config.get('submission.build_job_name_template', "{buildjob} >> {nukescript}")
         self.pre_build_job_script = pre_build_job_script
         self.post_build_job_script = post_build_job_script
         self.build_job_as_auxiliary_file = build_job_as_auxiliary_file if build_job_as_auxiliary_file is not None else config.get('submission.build_job_as_auxiliary_file', True)
@@ -660,11 +667,12 @@ class NukeSubmission:
         self.script_stem = self.script_path.stem
         
         # Store the batch_name template for later processing
-        self.batch_name_template = batch_name if batch_name else config.get('submission.batch_name_template', "{script_stem}")
+        self.batch_name_template = batch_name if batch_name else config.get('submission.batch_name_template', "{scriptname}")
         # Process batch name tokens first (since job name might depend on batch name)
         self.batch_name = self._replace_batch_name_tokens(self.batch_name_template)
         
         self.department = department if department is not None else config.get('submission.department')
+        self.user_name = user_name if user_name is not None else config.get('submission.user_name')
         
         # Load comment value or template
         self.comment_template = comment if comment is not None else config.get('submission.comment_template', "")
@@ -818,7 +826,6 @@ class NukeSubmission:
             self._parse_graph_scope_variables()
 
 
-        
     def _initialize_machine_lists(self, machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list):
         """Initialize machine allow and deny lists based on provided parameters.
         
@@ -944,13 +951,14 @@ class NukeSubmission:
         
         return nuke_utils.node_pretty_path(node)
 
-    def _replace_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
+    def _replace_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None, allowed_token_group_names=None) -> str:
         """Generic token replacement function for any field.
         
         Args:
             template: Template string with tokens
             write_node: Optional write node name for write-node specific tokens
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
+            allowed_token_group_names: Optional list of token group names to allow (all allowed if None)
             
         Returns:
             String with tokens replaced
@@ -986,32 +994,55 @@ class NukeSubmission:
         # Start with the template
         result = template
         
-        # Define token groups
-        script_stem_tokens = ["{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
-        script_name_tokens = ["{s}", "{ns}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
-        file_stem_tokens = ["{fs}", "{fns}", "{os}", "{fstem}", "{ostem}", "{filestem}", "{file_stem}", "{filenamestem}", "{filename_stem}", "{outputstem}", "{output_stem}"]
-        batch_name_tokens = ["{b}", "{bn}", "{batch}", "{batchname}", "{batch_name}"]
-        write_node_tokens = ["{w}", "{wn}", "{write}", "{writenode}", "{write_node}", "{write_name}"]
-        output_tokens = ["{o}", "{fn}", "{file}", "{filename}", "{file_name}", "{output}"]
-        render_order_tokens = ["{r}", "{ro}", "{renderorder}", "{render_order}"]
+        # Define token groups with their names
+        script_directory_tokens = ["{nkdir}", "{scriptdir}", "{nukescriptdir}"]
+        script_stem_tokens = ["{nkstem}", "{scriptstem}", "{nukescriptstem}"]
+        script_name_tokens = ["{nk}", "{script}", "{scriptname}","{nukescript}"]
+        batch_name_tokens = ["{batch}", "{batchname}"]
+        write_node_tokens = ["{write}", "{writenode}", "{writename}"]
+        output_directory_tokens = ["{outdir}", "{outputdir}"]
+        output_stem_tokens = ["{filestem}", "{filenamestem}", "{outstem}", "{outputstem}"]
+        output_tokens = ["{file}", "{filename}", "{out}", "{output}"]
+        render_order_tokens = ["{ro}", "{renderorder}"]
         frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
-        gsv_tokens = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}", "{graph_scope_vars}", "{graph_scope_variables}"]
-        
-        # Include all token groups
-        allowed_token_groups = [
-            script_stem_tokens,
-            script_name_tokens,
-            file_stem_tokens,
-            batch_name_tokens,
-            frame_range_tokens,
-            write_node_tokens,
-            output_tokens,
-            render_order_tokens,
-            gsv_tokens
-        ]
+        gsv_tokens = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}"]
+        temp_directory_tokens = ["{tmp}", "{temp}","{tmpdir}", "{tempdir}"]
+        uuid_tokens = ["{uuid}"]
+        build_directory_tokens = ["{builddir}", "{buildjobdir}"]
+        build_name_tokens = ["{buildjob}", "{buildname}"]
+        build_stem_tokens = ["{buildstem}", "{buildjobstem}"]
+        date_tokens = ["{YYYY}", "{YY}", "{MM}", "{DD}", "{hh}", "{mm}", "{ss}"]
+
+        # Create a mapping of token group names to token groups
+        token_group_map = {
+            'script_directory_tokens': script_directory_tokens,
+            'script_stem_tokens': script_stem_tokens,
+            'script_name_tokens': script_name_tokens,
+            'batch_name_tokens': batch_name_tokens,
+            'write_node_tokens': write_node_tokens,
+            'output_directory_tokens': output_directory_tokens,
+            'output_stem_tokens': output_stem_tokens,
+            'output_tokens': output_tokens,
+            'render_order_tokens': render_order_tokens,
+            'frame_range_tokens': frame_range_tokens,
+            'gsv_tokens': gsv_tokens,
+            'temp_directory_tokens': temp_directory_tokens,
+            'uuid_tokens': uuid_tokens,
+            'build_directory_tokens': build_directory_tokens,
+            'build_name_tokens': build_name_tokens,
+            'build_stem_tokens': build_stem_tokens,
+            'date_tokens': date_tokens
+        }
+
+        # Filter token groups if allowed_token_group_names is provided
+        if allowed_token_group_names is not None:
+            token_groups = [token_group_map[name] for name in allowed_token_group_names if name in token_group_map]
+        else:
+            # Include all token groups
+            token_groups = list(token_group_map.values())
         
         # Replace tokens with their values
-        for token_group in allowed_token_groups:
+        for token_group in token_groups:
             for token in token_group:
                 # Skip token replacement if it's not in the template
                 if token not in result:
@@ -1021,11 +1052,13 @@ class NukeSubmission:
                 value = ""
                 
                 # Get the value for each token type
-                if token in script_stem_tokens:
+                if token in script_directory_tokens:
+                    value = str(self.script_path.parent)
+                elif token in script_stem_tokens:
                     value = self.script_stem
                 elif token in script_name_tokens:
                     value = self.script_filename
-                elif token in file_stem_tokens:
+                elif token in output_stem_tokens:
                     # File stem tokens require a write node to get output path
                     if write_node:
                         # Ensure the script is open
@@ -1063,6 +1096,48 @@ class NukeSubmission:
                         value = ",".join([f"{key}={val}" for key, val in gsv_combination])
                     else:
                         value = ""  # Empty string if no GSV combination or not supported
+                elif token in temp_directory_tokens:
+                    # Return a temporary directory path without creating it
+                    value = tempfile.gettempdir()
+                elif token in uuid_tokens:
+                    # Generate a UUID for temporary file identification
+                    value = str(uuid.uuid4())
+                elif token in build_directory_tokens:
+                    # Extract directory from build job script path
+                    if self.build_job_script_path:
+                        value = str(Path(self.build_job_script_path).parent)
+                    else:
+                        value = ""
+                elif token in build_name_tokens:
+                    # Extract filename from build job script path
+                    if self.build_job_script_path:
+                        value = Path(self.build_job_script_path).name
+                    else:
+                        value = ""
+                elif token in build_stem_tokens:
+                    # Extract stem from build job script path
+                    if self.build_job_script_path:
+                        value = Path(self.build_job_script_path).stem
+                    else:
+                        value = ""                    
+                elif token in date_tokens:
+                    # Replace date tokens with their values
+                    now = datetime.datetime.now()
+                    if token == '{YYYY}':
+                        value = now.strftime('%Y')
+                    elif token == '{YY}':
+                        value = now.strftime('%y')
+                    elif token == '{MM}':
+                        value = now.strftime('%m')
+                    elif token == '{DD}':
+                        value = now.strftime('%d')
+                    elif token == '{hh}':
+                        value = now.strftime('%H')
+                    elif token == '{mm}':
+                        value = now.strftime('%M')
+                    elif token == '{ss}':
+                        value = now.strftime('%S')
+  
                 elif write_node and token in write_node_tokens + output_tokens + render_order_tokens:
                     # Ensure the script is open
                     nuke = self._ensure_script_can_be_parsed()
@@ -1087,17 +1162,34 @@ class NukeSubmission:
                 # Replace the token with its value
                 result = result.replace(token, value)
         
+        # Handle environment variable tokens with a cleaner regex approach
+        # First handle PowerShell style: {$env:VAR}, {$Env:VAR}, {$ENV:VAR}
+        ps_env_pattern = re.compile(r'\{\$(env|Env|ENV):([^}]+)\}')
+        for match in ps_env_pattern.finditer(result):
+            full_token = match.group(0)
+            env_var = match.group(2)
+            env_value = os.environ.get(env_var, "")
+            result = result.replace(full_token, env_value)
+        
+        # Then handle Unix style: {$VAR}
+        unix_env_pattern = re.compile(r'\{\$([^:}]+)\}')
+        for match in unix_env_pattern.finditer(result):
+            full_token = match.group(0)
+            env_var = match.group(1)
+            env_value = os.environ.get(env_var, "")
+            result = result.replace(full_token, env_value)
+        
         return result
 
     def _replace_batch_name_tokens(self, template: str) -> str:
         """Replace tokens in batch name template.
         
         Supported tokens (ONLY these are allowed):
-        - Script stem tokens: {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}, {nuke_script_stem}
-        - Script name tokens: {s}, {ns}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
+        - script_stem_tokens: {nkstem}, {scriptstem}, {nukescriptstem}
+        - script_name_tokens: {nk}, {script}, {scriptname}, {nukescript}
         
         Args:
-            template: Batch name template with tokens
+            template: template with tokens
 
         Returns:
             Batch name with tokens replaced
@@ -1105,93 +1197,105 @@ class NukeSubmission:
         Raises:
             ValueError: If a restricted token is used in batch_name
         """
-        nuke = self._ensure_script_can_be_parsed()
-        
-        # Start with the template
-        result = template
-        
-        # Define token groups
-        script_stem_tokens = ["{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
-        script_name_tokens = ["{s}", "{ns}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
-        
-        # Define allowed tokens for batch name
         # Batch name can ONLY use script name and script stem tokens
-        allowed_token_groups = [script_stem_tokens, script_name_tokens]
-        
-        # Replace tokens with their values
-        for token_group in allowed_token_groups:
-            for token in token_group:
-                # Skip token replacement if it's not in the template
-                if token not in result:
-                    continue
-                
-                # Get the value for each token type
-                if token in script_stem_tokens:
-                    value = self.script_stem
-                elif token in script_name_tokens:
-                    value = self.script_filename
-                else:
-                    # Skip tokens that don't match any of the allowed groups
-                    continue
-                
-                # Replace the token with its value
-                result = result.replace(token, value)
-        
-        return result
+        allowed_token_groups = ['script_stem_tokens', 'script_name_tokens']
+        return self._replace_tokens(template, allowed_token_group_names=allowed_token_groups)
 
     def _replace_job_name_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Replace tokens in job name template.
-        
-        Supported tokens:
-        - Script stem tokens: {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}, {nuke_script_stem}
-        - Script name tokens: {s}, {ns}, {nk}, {script}, {scriptname}, {script_name}, {nukescript}, {nuke_script}
-        - Batch name tokens: {b}, {bn}, {batch}, {batchname}, {batch_name}
-        - Write node tokens: {w}, {wn}, {writenode}, {write}, {write_node}, {write_name}
-        - File stem tokens: {fs}, {fns}, {os}, {fstem}, {ostem}, {filestem}, {file_stem}, {filenamestem}, {filename_stem}, {outputstem}, {output_stem}
-        - Output tokens: {o}, {fn}, {file}, {filename}, {file_name}, {output}
-        - Render order tokens: {r}, {ro}, {renderorder}, {render_order}
-        - Frame range tokens: {x}, {f}, {fr}, {range}, {framerange}
-
+                
         Args:
-            template: Job name template with tokens
+            template: template with tokens
             write_node: Specific write node to use for token replacement
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
 
         Returns:
             Job name with tokens replaced
         """
-        return self._replace_tokens(template, write_node, gsv_combination)
+        # All token groups except build tokens are allowed for job name
+        allowed_token_groups = [
+            'script_directory_tokens', 'script_stem_tokens', 'script_name_tokens',
+            'batch_name_tokens', 'write_node_tokens', 'output_directory_tokens',
+            'output_stem_tokens', 'output_tokens', 'render_order_tokens',
+            'frame_range_tokens', 'gsv_tokens', 'temp_directory_tokens',
+            'uuid_tokens', 'date_tokens'
+        ]
+        return self._replace_tokens(template, write_node, gsv_combination, allowed_token_groups)
 
     def _replace_comment_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Replace tokens in comment template.
         
-        Supports the same tokens as job_name.
-
         Args:
-            template: Comment template with tokens
+            template: template with tokens
             write_node: Specific write node to use for token replacement
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
 
         Returns:
             Comment with tokens replaced
         """
-        return self._replace_tokens(template, write_node, gsv_combination)
+
+        allowed_token_groups = [
+            'script_directory_tokens', 'script_stem_tokens', 'script_name_tokens',
+            'batch_name_tokens', 'write_node_tokens', 'output_directory_tokens',
+            'output_stem_tokens', 'output_tokens', 'render_order_tokens',
+            'frame_range_tokens', 'gsv_tokens', 'temp_directory_tokens',
+            'uuid_tokens', 'date_tokens'
+        ]
+        return self._replace_tokens(template, write_node, gsv_combination, allowed_token_groups)
 
     def _replace_extrainfo_tokens(self, template: str, write_node: Optional[str] = None, gsv_combination=None) -> str:
         """Replace tokens in extrainfo template.
         
-        Supports the same tokens as job_name.
-
         Args:
-            template: ExtraInfo template with tokens
+            template: template with tokens
             write_node: Specific write node to use for token replacement
             gsv_combination: Optional tuple of (key, value) pairs for GSV to apply
 
         Returns:
             ExtraInfo with tokens replaced
         """
-        return self._replace_tokens(template, write_node, gsv_combination)
+
+        allowed_token_groups = [
+            'script_directory_tokens', 'script_stem_tokens', 'script_name_tokens',
+            'batch_name_tokens', 'write_node_tokens', 'output_directory_tokens',
+            'output_stem_tokens', 'output_tokens', 'render_order_tokens',
+            'frame_range_tokens', 'gsv_tokens', 'temp_directory_tokens',
+            'uuid_tokens', 'date_tokens'
+        ]
+        return self._replace_tokens(template, write_node, gsv_combination, allowed_token_groups)
     
+    def _replace_build_job_script_tokens(self, template: str) -> str:
+        """Replace tokens in build job script template.
+
+        Args:
+            template: template with tokens
+
+        Returns:
+            Build job script with tokens replaced
+        """
+
+        allowed_token_groups = [
+            'script_directory_tokens', 'script_stem_tokens', 'script_name_tokens',
+            'batch_name_tokens', 'write_node_tokens', 'output_directory_tokens',
+            'output_stem_tokens', 'output_tokens', 'render_order_tokens',
+            'frame_range_tokens', 'gsv_tokens', 'temp_directory_tokens',
+            'uuid_tokens', 'date_tokens'
+        ]
+        return self._replace_tokens(template, allowed_token_group_names=allowed_token_groups)
+    
+    def _replace_build_job_name_tokens(self, template: str) -> str:
+        """Replace tokens in build job name template.
+        
+        Returns:
+            Build job name with tokens replaced
+        """
+        allowed_token_groups = [
+            'build_directory_tokens', 'build_name_tokens', 'build_stem_tokens',
+            'script_directory_tokens', 'script_stem_tokens', 'script_name_tokens',
+            'batch_name_tokens', 'write_node_tokens', 'output_directory_tokens'
+        ]
+        return self._replace_tokens(template, allowed_token_group_names=allowed_token_groups)
+        
     def _get_frame_range_from_nuke(self, write_node_name: Optional[str] = None) -> None:
         """Get frame range from Nuke script using Nuke API.
         
@@ -1442,6 +1546,8 @@ class NukeSubmission:
             job_info["BatchName"] = self.batch_name
         if self.department:
             job_info["Department"] = self.department
+        if self.user_name:
+            job_info["UserName"] = self.user_name
         if self.comment:
             # Process comment tokens if it contains any
             if any(token in self.comment for token in ["{", "}"]):
@@ -2903,30 +3009,30 @@ class NukeSubmission:
         
         # Generate timestamp for default path generation
         timestamp = datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-        script_stem = self.script_path.stem
-        script_basename = self.script_path.name
+        nukescript_stem = self.script_path.stem
         
         # Determine full script path with directory and name
         if self.build_job_script_path:
             # Replace tokens in path
-            script_path = self._replace_script_directory_tokens(self.build_job_script_path)
+            build_job_script_path = self._replace_build_job_script_tokens(self.build_job_script_path)
             
             # If the path doesn't contain a file extension, add .py
-            if not os.path.splitext(script_path)[1]:
-                script_path += ".py"
+            if not os.path.splitext(build_job_script_path)[1]:
+                build_job_script_path += ".py"
                 
             # Ensure directory exists
-            os.makedirs(os.path.dirname(os.path.abspath(script_path)), exist_ok=True)
+            os.makedirs(os.path.dirname(os.path.abspath(build_job_script_path)), exist_ok=True)
         else:
             # Default to script directory with timestamp
             script_dir = str(self.script_path.parent)
-            script_name = f"{script_stem}_{timestamp}.py"
-            script_path = os.path.join(script_dir, script_name)
-            
+            build_job_script_name = f"{nukescript_stem}_build_job_{timestamp}.py"
+            build_job_script_path = os.path.join(script_dir, build_job_script_name)
+            self.build_job_script_path = build_job_script_path
+
         # Ensure directory exists
-        os.makedirs(os.path.dirname(os.path.abspath(script_path)), exist_ok=True)
+        os.makedirs(os.path.dirname(os.path.abspath(build_job_script_path)), exist_ok=True)
         
-        logger.debug(f"Creating build job script file at: {script_path}")
+        logger.debug(f"Creating build job script file at: {build_job_script_path}")
         
         # Process pre and post build job scripts, which can be either a string or a list of strings
         pre_build_script_info = None
@@ -2935,13 +3041,13 @@ class NukeSubmission:
             if isinstance(self.pre_build_job_script, str):
                 # Single script path, no arguments
                 script_path_with_tokens = self.pre_build_job_script
-                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                resolved_path = self._replace_build_job_script_tokens(script_path_with_tokens)
                 pre_build_script_info = {'path': resolved_path, 'args': []}
                 logger.debug(f"Pre-build job script: {resolved_path}")
             elif isinstance(self.pre_build_job_script, list) and len(self.pre_build_job_script) > 0:
                 # List format: [script_path, arg1, arg2, ...]
                 script_path_with_tokens = self.pre_build_job_script[0]
-                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                resolved_path = self._replace_build_job_script_tokens(script_path_with_tokens)
                 args = self.pre_build_job_script[1:]
                 pre_build_script_info = {'path': resolved_path, 'args': args}
                 logger.debug(f"Pre-build job script: {resolved_path} with arguments: {args}")
@@ -2954,13 +3060,13 @@ class NukeSubmission:
             if isinstance(self.post_build_job_script, str):
                 # Single script path, no arguments
                 script_path_with_tokens = self.post_build_job_script
-                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                resolved_path = self._replace_build_job_script_tokens(script_path_with_tokens)
                 post_build_script_info = {'path': resolved_path, 'args': []}
                 logger.debug(f"Post-build job script: {resolved_path}")
             elif isinstance(self.post_build_job_script, list) and len(self.post_build_job_script) > 0:
                 # List format: [script_path, arg1, arg2, ...]
                 script_path_with_tokens = self.post_build_job_script[0]
-                resolved_path = self._replace_script_directory_tokens(script_path_with_tokens)
+                resolved_path = self._replace_build_job_script_tokens(script_path_with_tokens)
                 args = self.post_build_job_script[1:]
                 post_build_script_info = {'path': resolved_path, 'args': args}
                 logger.debug(f"Post-build job script: {resolved_path} with arguments: {args}")
@@ -2969,7 +3075,7 @@ class NukeSubmission:
         
         # Use a regular file context to create the script
         try:
-            with open(script_path, 'w') as script_file_obj:
+            with open(build_job_script_path, 'w') as script_file_obj:
                 # Add proper encoding header for Python 3 compatibility
                 script_file_obj.write("#!/usr/bin/env python\n")
                 script_file_obj.write("# -*- coding: utf-8 -*-\n\n")
@@ -2988,24 +3094,26 @@ class NukeSubmission:
                 script_file_obj.write("from nk2dl import submit_nuke_script\n")
                 
                 # Add logging setup
-                script_file_obj.write("# Set up logging\n")
+                script_file_obj.write("\n# Set up logging\n")
                 script_file_obj.write("logger = logging.getLogger('nk2dl.submission.submit_as_build_job')\n")
                 script_file_obj.write("logger.setLevel(logging.INFO)\n")
-                script_file_obj.write("# Prevent propagation to root logger to avoid double logging\n")
+                script_file_obj.write("\n# Prevent propagation to root logger to avoid double logging\n")
                 script_file_obj.write("logger.propagate = False\n")
                 script_file_obj.write("handler = logging.StreamHandler(sys.stdout)\n")
-                script_file_obj.write("# Use a simpler formatter without timestamp when running inside another logger like Deadline\n")
+                script_file_obj.write("\n# Use a simpler formatter without timestamp when running inside another logger like Deadline\n")
                 script_file_obj.write("formatter = logging.Formatter('%(name)s - %(levelname)s - %(message)s')\n")
                 script_file_obj.write("handler.setFormatter(formatter)\n")
-                script_file_obj.write("logger.addHandler(handler)\n\n")
+                script_file_obj.write("logger.addHandler(handler)\n")
                 
                 # Add verification of build job environment variable
-                script_file_obj.write("# Verify the build job environment variable is set correctly\n")
-                script_file_obj.write("build_job_env = os.environ.get('NK2DL_IN_BUILD_JOB', 'not set')\n")
-                script_file_obj.write("logger.info(f\"NK2DL_IN_BUILD_JOB environment variable is '{build_job_env}'\")\n\n")
+                script_file_obj.write("\n# Verify the build job environment variable is set correctly\n")
+                script_file_obj.write("build_job_env = os.environ.get('NK2DL_IN_BUILD_JOB', 'not set') # required for pre/post build scripts\n")
+                script_file_obj.write("build_job_aux_env = os.environ.get('NK2DL_BUILD_JOB_IS_AUXILIARY', 'not set') # optional\n")
+                script_file_obj.write("logger.info(f\"NK2DL_IN_BUILD_JOB environment variable is '{build_job_env}'\")\n")
+                script_file_obj.write("logger.info(f\"NK2DL_BUILD_JOB_IS_AUXILIARY environment variable is '{build_job_aux_env}'\")\n")
                 
                 # Log script location
-                script_file_obj.write("# Log script location\n")
+                script_file_obj.write("\n# Log script location\n")
                 script_file_obj.write("logger.info(f\"Build job script started: {os.path.abspath(__file__)}\")\n\n")
 
                 # Add function to run scripts with proper error handling
@@ -3019,9 +3127,31 @@ class NukeSubmission:
                     script_file_obj.write("        args: Optional list of arguments to pass to the script\n")
                     script_file_obj.write("        results: Optional submission results to pass to the script\n")
                     script_file_obj.write("    \"\"\"\n")
+                    script_file_obj.write("    # Check if we should run scripts from the same directory as build script\n")
+                    script_file_obj.write("    build_job_aux_env = os.environ.get('NK2DL_BUILD_JOB_IS_AUXILIARY', '').lower() == 'true'\n")
+                    script_file_obj.write("    original_script_path = script_path\n")
+                    script_file_obj.write("    \n")
+                    script_file_obj.write("    if build_job_aux_env:\n")
+                    script_file_obj.write("        # Get directory of this build job script\n")
+                    script_file_obj.write("        build_script_dir = os.path.dirname(os.path.abspath(__file__))\n")
+                    script_file_obj.write("        # Get just the filename of the script\n")
+                    script_file_obj.write("        script_filename = os.path.basename(script_path)\n")
+                    script_file_obj.write("        # Create new path in the same directory as build script\n")
+                    script_file_obj.write("        script_path = os.path.join(build_script_dir, script_filename)\n")
+                    script_file_obj.write("        logger.info(f\"Using script from build job directory: {script_path}\")\n")
+                    script_file_obj.write("    \n")
                     script_file_obj.write("    if not os.path.exists(script_path):\n")
-                    script_file_obj.write("        logger.error(f\"Cannot run {script_type} script: File not found: {script_path}\")\n")
-                    script_file_obj.write("        return False\n")
+                    script_file_obj.write("        if build_job_aux_env and original_script_path != script_path:\n")
+                    script_file_obj.write("            logger.warning(f\"Script not found in build job directory: {script_path}\")\n")
+                    script_file_obj.write("            logger.info(f\"Falling back to original script path: {original_script_path}\")\n")
+                    script_file_obj.write("            script_path = original_script_path\n")
+                    script_file_obj.write("            \n")
+                    script_file_obj.write("            if not os.path.exists(script_path):\n")
+                    script_file_obj.write("                logger.error(f\"Cannot run {script_type} script: File not found: {script_path}\")\n")
+                    script_file_obj.write("                return False\n")
+                    script_file_obj.write("        else:\n")
+                    script_file_obj.write("            logger.error(f\"Cannot run {script_type} script: File not found: {script_path}\")\n")
+                    script_file_obj.write("            return False\n")
                     script_file_obj.write("    \n")
                     script_file_obj.write("    try:\n")
                     script_file_obj.write("        if args:\n")
@@ -3062,11 +3192,24 @@ class NukeSubmission:
                 # Log start of submission process
                 script_file_obj.write("    logger.info(\"Starting Nuke script submission\")\n")
                 
+                # Add a global variable to store the original and running script paths
+                script_file_obj.write("    # Store original and running script paths as globals for potential self-deletion\n")
+                script_file_obj.write("    ORIGINAL_SCRIPT_PATH = None\n")
+                script_file_obj.write("    RUNNING_SCRIPT_PATH = None\n\n")
+                script_file_obj.write("    try:\n")
+                script_file_obj.write("        import os\n")
+                script_file_obj.write("        RUNNING_SCRIPT_PATH = os.path.abspath(__file__)\n")
+                script_file_obj.write("    except NameError:\n")
+                script_file_obj.write("        logger.warning(\"Could not determine running script path\")\n\n")
+                
                 # Properly escape the path to avoid \n being interpreted as newline
-                script_path_escaped = str(self.script_path).replace('\\', '\\\\')
-                script_file_obj.write(f"    logger.info(\"Submitting script: {script_path_escaped}\")\n\n")
+                build_job_script_path_escaped = str(build_job_script_path).replace('\\', '\\\\')
+                script_file_obj.write(f"    ORIGINAL_SCRIPT_PATH = \"{build_job_script_path_escaped}\"\n")
+                script_file_obj.write(f"    logger.info(\"Submitting script: {build_job_script_path_escaped}\")\n")
+                script_file_obj.write(f"    logger.info(f\"Running from: {{RUNNING_SCRIPT_PATH}}\")\n\n")
                 
                 # Add pre-build job script execution if provided
+                pre_build_path_escaped = None
                 if pre_build_script_info:
                     pre_build_path_escaped = pre_build_script_info['path'].replace('\\', '\\\\')
                     args_repr = repr(pre_build_script_info['args'])
@@ -3096,6 +3239,7 @@ class NukeSubmission:
                 if self.render_settings_from_metadata:
                     args_str.append(f"    render_settings_from_metadata={self.render_settings_from_metadata}")
                 if self.build_job_script_path:
+                    logger.warning(f"build_job_script_path should have been popped from args before this point: {self.build_job_script_path}")
                     args_str.append(f'    build_job_script_path="{self.build_job_script_path}"')
                 if self.pre_build_job_script:
                     args_str.append(f"    pre_build_job_script={repr(self.pre_build_job_script)}")
@@ -3129,6 +3273,11 @@ class NukeSubmission:
                     args_str.append(f"    chunk_size={self.chunk_size}")
                 if self.department is not None:
                     args_str.append(f'    department="{self.department}"')
+                if self.user_name:
+                    args_str.append(f'    user_name="{self.user_name}"')
+                else:
+                    import getpass
+                    args_str.append(f'    user_name="{getpass.getuser()}"')
                 if self.comment_template:
                     args_str.append(f'    comment="{self.comment_template}"')
                 if self.concurrent_tasks != config.get('submission.concurrent_tasks', 1):
@@ -3220,6 +3369,7 @@ class NukeSubmission:
                 script_file_obj.write("    logger.info(f\"Successfully submitted {len(results)} jobs with IDs: {job_ids}\")\n\n")
                 
                 # Add post-build job script execution if provided
+                post_build_path_escaped = None
                 if post_build_script_info:
                     post_build_path_escaped = post_build_script_info['path'].replace('\\', '\\\\')
                     args_repr = repr(post_build_script_info['args'])
@@ -3232,10 +3382,10 @@ class NukeSubmission:
                 if self.delete_build_job_script:
                     script_file_obj.write("    # Delete the script file immediately after successful submission\n")
                     script_file_obj.write("    try:\n")
-                    script_file_obj.write("        logger.info(f\"Deleting script file: {__file__}\")\n")
+                    script_file_obj.write("        logger.info(f\"Deleting script file: {ORIGINAL_SCRIPT_PATH}\")\n")
                     script_file_obj.write("        # Rename the file first to avoid permission issues\n")
-                    script_file_obj.write("        tmp_file = __file__ + '.tmp'\n")
-                    script_file_obj.write("        os.rename(__file__, tmp_file)\n")
+                    script_file_obj.write("        tmp_file = ORIGINAL_SCRIPT_PATH + '.tmp'\n")
+                    script_file_obj.write("        os.rename(ORIGINAL_SCRIPT_PATH, tmp_file)\n")
                     script_file_obj.write("        os.remove(tmp_file)\n")
                     script_file_obj.write("        logger.info(\"Script file successfully deleted\")\n")
                     if not self.build_job_as_auxiliary_file:
@@ -3243,7 +3393,7 @@ class NukeSubmission:
                     script_file_obj.write("    except Exception as e:\n")
                     script_file_obj.write("        logger.warning(f\"Failed to delete script file: {e}\")\n")
                     if not self.build_job_as_auxiliary_file:
-                        script_file_obj.write("        logger.warning(\"WARNING: If this Deadline job fails after this point, it cannot resume because build_job_as_auxiliary_file=False\")\n")
+                        script_file_obj.write("        logger.warning(\"WARNING: If this Deadline job fails after this point, it may not be able to resume because build_job_as_auxiliary_file=False\")\n")
 
                 script_file_obj.write("    # Enter loop printing READY FOR INPUT every 5 seconds\n")
                 script_file_obj.write("    # Deadline will read this and exit the process\n")
@@ -3267,7 +3417,7 @@ class NukeSubmission:
 
                 logger.debug(f"Python script content generated with {len(args_str)} parameters")
             
-            logger.info(f"Created script job Python file: {script_path}")
+            logger.info(f"Created script job Python file: {build_job_script_path}")
             
             # Get Deadline connection
             deadline = get_connection()
@@ -3275,7 +3425,7 @@ class NukeSubmission:
             # Prepare job and plugin info
             job_info = {
                 'Plugin': 'Nuke',
-                'Name': self.job_name if hasattr(self, 'job_name') else os.path.basename(str(self.script_path)),
+                'Name': self._replace_build_job_name_tokens(self.build_job_name_template),
                 'Frames': '1',
                 'ChunkSize': '1'
             }
@@ -3289,8 +3439,10 @@ class NukeSubmission:
                 job_info['Priority'] = self.priority
             if self.department:
                 job_info['Department'] = self.department
+            if self.user_name:
+                job_info['UserName'] = self.user_name
             if self.comment:
-                job_info['Comment'] = f"NK2DL build job for: {script_basename}"
+                job_info['Comment'] = self.comment
             if self.batch_name:
                 job_info['BatchName'] = self.batch_name
             if self.concurrent_tasks:
@@ -3305,7 +3457,7 @@ class NukeSubmission:
             plugin_info = {
                 'Version': nuke_utils.nuke_version(self.nuke_version),
                 # Always specify the script path in plugin info even if it's also an auxiliary file
-                'BuildJobsFilename': os.path.abspath(script_path),  # Make sure the path is absolute
+                'BuildJobsFilename': os.path.abspath(build_job_script_path),  # Make sure the path is absolute
                 'SingleFramesOnly': 'True'
             }
             
@@ -3317,10 +3469,26 @@ class NukeSubmission:
             
             # Add the build job Python script as an auxiliary file if requested
             if self.build_job_as_auxiliary_file:
-                auxiliary_files.append(os.path.abspath(script_path))
-                logger.debug(f"Added build job script as auxiliary file: {script_path}")
+                if os.path.exists(os.path.abspath(build_job_script_path)):
+                    auxiliary_files.append(os.path.abspath(build_job_script_path))
+                    logger.debug(f"Added build job script as auxiliary file: {build_job_script_path}")
+                else:
+                    logger.warning(f"Build job script not found but was requested: {build_job_script_path}.")
+                if pre_build_path_escaped:
+                    if os.path.exists(os.path.abspath(pre_build_path_escaped)):
+                        auxiliary_files.append(os.path.abspath(pre_build_path_escaped))
+                        logger.debug(f"Added pre-build script as auxiliary file: {pre_build_path_escaped}")
+                    else:
+                        logger.warning(f"Pre-build script not found but was requested: {pre_build_path_escaped}")
+                if post_build_path_escaped:
+                    if os.path.exists(os.path.abspath(post_build_path_escaped)):
+                        auxiliary_files.append(os.path.abspath(post_build_path_escaped))
+                        logger.debug(f"Added post-build script as auxiliary file: {post_build_path_escaped}")
+                    else:
+                        logger.warning(f"Post-build script not found but was requested: {post_build_path_escaped}")
+                logger.debug(f"Added build job script as auxiliary file: {build_job_script_path}")
             else:
-                logger.debug(f"Script file is not added as auxiliary file. Using BuildJobsFilename only: {script_path}")
+                logger.debug(f"Script file is not added as auxiliary file. Using BuildJobsFilename only: {build_job_script_path}")
                 logger.warning(f"When build_job_as_auxiliary_file=False, job recovery may be limited if the script file is deleted")
             
             # Also add the original Nuke script as an auxiliary file if requested
@@ -3414,60 +3582,6 @@ class NukeSubmission:
             logger.warning(f"Failed to extract metadata from write node {write_node_name}: {e}")
             return {}, {}
 
-    # First, let's add a helper method for script directory token replacement
-    def _replace_script_directory_tokens(self, path: str) -> str:
-        """Replace script directory tokens in a path.
-        
-        Args:
-            path: Path with tokens
-            
-        Returns:
-            Path with tokens replaced
-        """
-        # Define script directory tokens
-        script_directory_tokens = ["{sdir}", "{nkdir}", "{s_dir}", "{nk_dir}", "{scriptdir}", 
-                                  "{script_dir}", "{nukescriptdir}", "{nukescript_dir}", "{nuke_script_dir}"]
-        
-        # Replace script directory tokens with script parent directory
-        for token in script_directory_tokens:
-            if token in path:
-                path = path.replace(token, str(self.script_path.parent))
-                
-        # Replace stem tokens
-        stem_tokens = ["{basename}", "{stem}", "{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", 
-                       "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
-        for token in stem_tokens:
-            if token in path:
-                path = path.replace(token, self.script_stem)
-                
-        # Replace script name tokens
-        name_tokens = ["{s}", "{ns}", "{nk}", "{script}", "{scriptname}", "{script_name}", "{nukescript}", "{nuke_script}"]
-        for token in name_tokens:
-            if token in path:
-                path = path.replace(token, self.script_filename)
-        
-        # Replace date tokens
-        now = datetime.datetime.now()
-        date_tokens = {
-            '{YYYY}': now.strftime('%Y'),
-            '{YY}': now.strftime('%y'),
-            '{MM}': now.strftime('%m'),
-            '{DD}': now.strftime('%d'),
-            '{hh}': now.strftime('%H'),
-            '{mm}': now.strftime('%M'),
-            '{ss}': now.strftime('%S')
-        }
-        
-        for token, value in date_tokens.items():
-            if token in path:
-                path = path.replace(token, value)
-        
-        # Replace extension token
-        if '{ext}' in path:
-            path = path.replace('{ext}', 'py')
-                
-        return path
-
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
     """Submit a Nuke script to Deadline.
@@ -3521,6 +3635,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - group: Worker group (defaults to config value)
           - chunk_size: Number of frames per task (defaults to config value)
           - department: Department (defaults to config value)
+          - user_name: User name (defaults to config value)
           - comment: Job comment (defaults to config value)
           - concurrent_tasks: Number of parallel tasks for the job (defaults to 1)
           - extra_info: List of extra info fields
@@ -3630,19 +3745,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
             - job_info (dict): The job info used for submission
             - deadline_return (Any): The raw return from the Deadline submission
     """
-    # Compatibility handling for deprecated build_job_script_name parameter
-    if 'build_job_script_name' in kwargs:
-        build_job_script_name = kwargs.pop('build_job_script_name')
-        # Only modify build_job_script_path if it wasn't provided
-        if 'build_job_script_path' not in kwargs or not kwargs['build_job_script_path']:
-            script_dir = config.get('submission.build_job_script_path', os.path.dirname(script_path))
-            if script_dir:
-                kwargs['build_job_script_path'] = os.path.join(script_dir, build_job_script_name)
-            else:
-                # If no script_dir is available, just use the filename directly
-                kwargs['build_job_script_path'] = build_job_script_name
-        logger.warning("The build_job_script_name parameter is deprecated. Use build_job_script_path with tokens instead.")
-        
+
     # Handle the "both" render_mode by submitting two separate jobs
     if kwargs.get('render_mode', "").lower() == 'both':
         logger.info("Render mode 'both' specified. Submitting two separate jobs for 'full' and 'proxy' modes.")

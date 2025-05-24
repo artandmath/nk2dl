@@ -83,6 +83,11 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         metavar="NAME",
         help="Department for the job"
     )
+    job_group.add_argument(
+        "--UserName", 
+        metavar="NAME",
+        help="User name for the job"
+    )
     
     # Priority and pool options
     resource_group = parser.add_argument_group("Priority and pool options")
