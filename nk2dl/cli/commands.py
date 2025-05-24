@@ -174,6 +174,22 @@ def _args_to_kwargs(args: argparse.Namespace) -> Dict[str, Any]:
     if hasattr(args, "PostTaskScript") and args.PostTaskScript is not None:
         kwargs["post_task_script"] = args.PostTaskScript
         
+    # Script copying and submission options
+    if hasattr(args, "CopyScript") and args.CopyScript:
+        kwargs["copy_script"] = True
+    if hasattr(args, "CopyScriptPath") and args.CopyScriptPath is not None:
+        # Handle single or multiple copy script paths
+        if len(args.CopyScriptPath) == 1:
+            # Single path - pass as string
+            kwargs["copy_script_path"] = args.CopyScriptPath[0]
+        else:
+            # Multiple paths - pass as list
+            kwargs["copy_script_path"] = args.CopyScriptPath
+    if hasattr(args, "SubmitCopiedScript") and args.SubmitCopiedScript:
+        kwargs["submit_copied_script"] = True
+    if hasattr(args, "SubmitScriptAsAuxiliaryFile") and args.SubmitScriptAsAuxiliaryFile:
+        kwargs["submit_script_as_auxiliary_file"] = True
+        
     # Write node options
     if hasattr(args, "WriteNodes") and args.WriteNodes is not None:
         kwargs["write_nodes"] = args.WriteNodes.split(",")

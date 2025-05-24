@@ -77,7 +77,6 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | - | render_settings_from_metadata | - |
 | - | - | copy_script | - |
 | - | - | copy_script_path | - |
-| - | - | copy_script_name | - |
 | - | - | submit_copied_script | - |
 | - | - | script_is_current | - |
 | - | - | submit_script_as_auxiliary_file | - |

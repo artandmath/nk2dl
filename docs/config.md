@@ -148,23 +148,22 @@ submission:
   copy_script: false
   submit_copied_script: false
   
-  # Script copy path with tokens available:
-  # Script dir tokens: {script}, {nukescript}, {scene}, {scenefile}, {ns}, {s}, {nk}, {scriptname}, {script_name}, {nuke_script}
-  # Output dir tokens: {output}, {render}, {out}, {export}, {o}
-  script_copy_path: ./.farm/  # Path with optional tokens for script or output directory
-  
-  # Name tokens:
-  # - Script stem: {basename}, {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem}, {scriptstem}, {script_stem}, etc.
-  # - Extension: {ext}
-  # - Date/time: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
-  script_copy_name: {basename}_{YYYY}{MM}{DD}.{ext}
+  # Script copy path with full path template (directory + filename) and tokens available:
+  # Script directory tokens: {nkdir}, {scriptdir}, {nukescriptdir}
+  # Script stem tokens: {nkstem}, {scriptstem}, {nukescriptstem}
+  # Script name tokens: {nk}, {script}, {scriptname}, {nukescript}
+  # Output directory tokens: {outdir}, {outputdir}
+  # Output stem tokens: {filestem}, {filenamestem}, {outstem}, {outputstem}
+  # Output tokens: {output}
+  # Extension token: {ext}
+  # Date/time tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+  # Temp directory tokens: {tmp}, {temp}, {tmpdir}, {tempdir}
+  # UUID token: {uuid}
+  script_copy_path: "{outdir}/.farm/{nkstem}.nk"
   
   # Multiple copy locations (optional)
-  script_copy0_path: "{output}/.farm/"  # First copy with output directory token
-  script_copy0_name: "{basename}.{ext}"
-  
-  script_copy1_path: "{script}/archive/"  # Second copy with script directory token
-  script_copy1_name: "{basename}_{YYYY}-{MM}-{DD}.{ext}"
+  # script_copy0_path: "{outdir}/.farm/{nukescript}"  # First copy with output directory token
+  # script_copy1_path: "{nkdir}/archive/{nkstem}_{YYYY}-{MM}-{DD}.nk"  # Second copy with script directory token
   
   # Build job options
   # Whether to automatically delete the build job script after execution
@@ -175,8 +174,7 @@ submission:
   # Script stem tokens: {ss}, {basename}, {stem}, {sstem}, {scriptstem}
   # Script name tokens: {s}, {script}, {scriptname}
   # Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
-  # Extension token: {ext} (replaced with 'py')
-  # Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"
+  # Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.py"
   build_job_script_path: null  # Full path template for both directory and filename
   
   # Environment variables

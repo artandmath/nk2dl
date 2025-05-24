@@ -116,9 +116,9 @@ The `submit` command supports the following options:
 | Option | Description |
 |--------|-------------|
 | `--CopyScript` | Copy script before submission |
-| `--CopyScriptPath PATH` | Path template for copying script |
-| `--CopyScriptName NAME` | Filename template for copied script |
-| `--SubmitCopiedScript` | Submit the copied script |
+| `--CopyScriptPath PATH_TEMPLATE [PATH_TEMPLATE ...]`, `--CopyScriptPaths` | Full file path template(s) for copying script (includes directory and filename). Can specify multiple paths to create multiple copies. Supports tokens: {nkdir}, {nkstem}, {nk}, {outdir}, {YYYY}, {MM}, {DD}, etc. Examples: '{outdir}/.farm/{nkstem}.nk' or multiple paths |
+| `--SubmitCopiedScript` | Submit the copied script instead of the original |
+| `--SubmitScriptAsAuxiliaryFile` | Submit the script as an auxiliary file |
 
 ## Examples
 
@@ -140,6 +140,15 @@ nk2dl submit /path/to/script.nk --MachineList render01,render02,render03
 
 # Deny specific machines for rendering
 nk2dl submit /path/to/script.nk --MachineDenyList render04,render05
+
+# Copy script to farm directory before submission
+nk2dl submit /path/to/script.nk --CopyScript --CopyScriptPath "{outdir}/.farm/{nkstem}.nk" --SubmitCopiedScript
+
+# Copy script with timestamp and submit as auxiliary file
+nk2dl submit /path/to/script.nk --CopyScript --CopyScriptPath "/shared/scripts/{nkstem}_{YYYY}-{MM}-{DD}.nk" --SubmitScriptAsAuxiliaryFile
+
+# Copy script to multiple locations using multiple paths
+nk2dl submit /path/to/script.nk --CopyScript --CopyScriptPaths "{outdir}/.farm/{nkstem}.nk" "/backup/scripts/{nkstem}_{YYYY}-{MM}-{DD}.nk" "/shared/archive/{nkstem}.nk"
 
 # Full example with multiple options
 nk2dl submit /path/to/script.nk \

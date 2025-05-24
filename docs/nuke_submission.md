@@ -108,8 +108,7 @@ job_ids = submit_nuke_script(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `copy_script` | bool | Config | Copy script before submission |
-| `copy_script_path` | str/list/dict | Config | Path template(s) for script copying; can be string, list of strings, or dict with integer keys |
-| `copy_script_name` | str/list/dict | Config | Filename template(s) for copied script; can be string, list of strings, or dict with integer keys |
+| `copy_script_path` | str/list/dict | Config | Full path template(s) for script copying (directory + filename); can be string, list of strings, or dict with integer keys |
 | `submit_copied_script` | bool | Config | Submit copied script path |
 
 ## Script Copying
@@ -126,12 +125,11 @@ submit_nuke_script(
     submit_copied_script=True  # Submit the copied script
 )
 
-# Specify custom location for the copy
+# Specify custom location for the copy (full path with directory and filename)
 submit_nuke_script(
     "/path/to/script.nk",
     copy_script=True,
-    copy_script_path="{output}/farm/", 
-    copy_script_name="{basename}_{YYYY}-{MM}-{DD}.{ext}",
+    copy_script_path="{output}/farm/{basename}_{YYYY}-{MM}-{DD}.{ext}",
     submit_copied_script=True
 )
 
@@ -139,22 +137,26 @@ submit_nuke_script(
 submit_nuke_script(
     "/path/to/script.nk",
     copy_script=True,
-    copy_script_path=["{output}/farm/", "{script}/archive/"],
-    copy_script_name=["{basename}.{ext}", "{basename}_{YYYY}-{MM}-{DD}.{ext}"],
+    copy_script_path=[
+        "{outdir}/farm/{nkstem}.nk", 
+        "{nkdir}/archive/{nkstem}_{YYYY}-{MM}-{DD}.nk"
+    ],
     submit_copied_script=True
 )
 ```
 
 ### Available Script Copy Tokens
 
-For `copy_script_path`:
-- Script directory tokens: `{script}`, `{nukescript}`, `{scene}`, `{scenefile}`, `{ns}`, `{s}`, `{nk}`, `{scriptname}`, `{script_name}`, `{nuke_script}`
-- Output directory tokens: `{output}`, `{render}`, `{out}`, `{export}`, `{o}`
-
-For `copy_script_name`:
-- Script stem tokens: `{basename}`, `{ss}`, `{nss}`, `{nks}`, `{sstem}`, `{nstem}`, `{nkstem}`, `{scriptstem}`, `{script_stem}`, `{nukescriptstem}`, `{nukescript_stem}`, `{nuke_script_stem}`
-- Extension token: `{ext}` (file extension without the dot)
+For `copy_script_path` (full path including directory and filename):
+- Script directory tokens: `{nkdir}`, `{scriptdir}`, `{nukescriptdir}`
+- Script stem tokens: `{nkstem}`, `{scriptstem}`, `{nukescriptstem}`
+- Script name tokens: `{nk}`, `{script}`, `{scriptname}`, `{nukescript}`
+- Output directory tokens: `{outdir}`, `{outputdir}`
+- Output stem tokens: `{filestem}`, `{filenamestem}`, `{outstem}`, `{outputstem}`
+- Output tokens: `{output}`
 - Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
+- Temp directory tokens: `{tmp}`, `{temp}`, `{tmpdir}`, `{tempdir}`
+- UUID token: `{uuid}`
 
 ## Frame Ranges
 

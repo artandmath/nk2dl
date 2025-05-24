@@ -117,9 +117,9 @@ except Exception as e:
 
 # Example of how you might use the submission results
 logger.info("Examples of how you could use the submission results:")
-logger.info(f"1. Create a submission report")
-logger.info(f"2. Connect to asset managment database")
-logger.info(f"3. Connect to notification system")
+logger.info(f"1. Create a report")
+logger.info(f"2. Connect to an asset managment database")
+logger.info(f"3. Connect to a notification system")
 
 # Return success
 logger.info("Post-build job script completed successfully")

@@ -160,13 +160,8 @@ python ./tests/test_nk2dl.py
 - The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
 - `nk2dl` has a feature that will create a backup copy(s) of the submitted script. `nk2dl` will resolve the project root on the copy(s) before submission and can submit the resolved copy.
 - The example python script includes a demonstation of how to use the script copy features. 
-- To set up script copying, use one of the following config options:
-## Script Copy functions
-- The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
-- `nk2dl` has a feature that will create a backup copy(s) of the submitted script. `nk2dl` will resolve the project root on the copy(s) before submission and can submit the resolved copy.
-- The example python script includes a demonstation of how to use the script copy features. 
 - To set up script copying, you can:
-  - Use the `copy_script_path` and `copy_script_name` parameters directly in the function call
+  - Use the `copy_script_path` parameter directly in the function call (full path with directory and filename)
   - Or use one of the following config options:
 
 ### Direct parameter usage example
@@ -174,46 +169,44 @@ python ./tests/test_nk2dl.py
 submit_nuke_script(
     "/path/to/script.nk",
     copy_script=True,
-    copy_script_path="{output}/farm/",
-    copy_script_name="{basename}_{YYYY}-{MM}-{DD}.{ext}"
+    copy_script_path="{outdir}/farm/{nkstem}_{YYYY}-{MM}-{DD}.nk"
 )
 
 # For multiple copies, provide lists:
 submit_nuke_script(
     "/path/to/script.nk",
     copy_script=True,
-    copy_script_path=["{output}/farm/", "{script}/archive/"],
-    copy_script_name=["{basename}.{ext}", "{basename}_{YYYY}-{MM}-{DD}.{ext}"]
+    copy_script_path=[
+        "{outdir}/.farm/{scriptname}", 
+        "{nkdir}/archive/{nkstem}_{YYYY}-{MM}-{DD}.nk"
+    ]
 )
 ```
 
 ### Script copy config example - one copy of submitted nukescript
 ```yaml
 submission:
-  # The following are the defaults if no config is provided
-  script_copy_path: '{script}/.farm/'  # Path can include tokens {script} or {output}
-  script_copy_name: '{basename}.{ext}' # Available script stem tokens: {basename}, {ss}, {nss}, etc.
+  # Full path template including directory and filename
+  # Available tokens: {nkdir}, {nkstem}, {output}, {YYYY}, etc.
+  script_copy_path: '{outdir}/.farm/{nkstem}.nk'  
 ```
 
 ### Available tokens for script_copy_path
-- Script directory tokens: `{script}`, `{nukescript}`, `{scene}`, `{scenefile}`, `{ns}`, `{s}`, `{nk}`, `{scriptname}`, `{script_name}`, `{nuke_script}`
-- Output directory tokens: `{output}`, `{render}`, `{out}`, `{export}`, `{o}`
-- If no tokens are used, the path is treated as relative to the script directory
-
-### Available tokens for script_copy_name
-- Script stem tokens: `{basename}`, `{ss}`, `{nss}`, `{nks}`, `{sstem}`, `{nstem}`, `{nkstem}`, `{scriptstem}`, `{script_stem}`, `{nukescriptstem}`, `{nukescript_stem}`, `{nuke_script_stem}`
-- Extension token: `{ext}` (file extension without the dot)
+- Script directory tokens: `{nkdir}`, `{scriptdir}`, `{nukescriptdir}`
+- Script stem tokens: `{nkstem}`, `{scriptstem}`, `{nukescriptstem}`
+- Script name tokens: `{nk}`, `{script}`, `{scriptname}`, `{nukescript}`
+- Output directory tokens: `{outdir}`, `{outputdir}`
+- Output stem tokens: `{filestem}`, `{filenamestem}`, `{outstem}`, `{outputstem}`
+- Output tokens: `{output}`
 - Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
+- Temp directory tokens: `{tmp}`, `{temp}`, `{tmpdir}`, `{tempdir}`
+- UUID token: `{uuid}`
 
 ### Script copy config example - many copies of submitted nukescript
 
 ```yaml
 submission:
-  script_copy0_path: '{output}/.farm/'
-  script_copy0_name: '{basename}.{ext}'
-  
-  script_copy1_path: '{script}/archive/'
-  script_copy1_name: '{basename}_{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.{ext}'
-
+  script_copy0_path: '{outdir}/.farm/{nukescript}'
+  script_copy1_path: '{nkdir}/archive/{basename}_{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.nk'
   #script_copy2_path: etc
 ```

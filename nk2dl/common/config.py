@@ -105,8 +105,7 @@ class Config:
             'environment_keys': [],
             'environment': {},
             'omit_environment_keys': [],
-            'script_copy_path': '{output}/.farm/',
-            'script_copy_name': '{basename}_copy.nk',
+            'script_copy_path': '{outdir}/.farm/{nkstem}.nk',
             
             # Build job settings
             'build_job_script_path': None,

@@ -347,7 +347,6 @@ class NukeSubmission:
                 # Script copying and submission parameters
                 copy_script: Optional[bool] = None,
                 copy_script_path: Optional[Union[str, List[str], Dict[int, str]]] = None,
-                copy_script_name: Optional[Union[str, List[str], Dict[int, str]]] = None,
                 submit_copied_script: Optional[bool] = None,
 
                 # ScriptJob parameters
@@ -448,8 +447,7 @@ class NukeSubmission:
                                  - Script stem tokens: {ss}, {basename}, {stem}, {sstem}, {scriptstem}
                                  - Script name tokens: {s}, {script}, {scriptname}
                                  - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
-                                 - Extension token: {ext} (replaced with 'py')
-                                 Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"
+                                 Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.py"
             pre_build_job_script: Path to a script to run before the build job starts,
                                 or list [script_path, arg1, arg2, ...] where the first item is the script path
                                 and remaining items are arguments. Script runs within the generated build job script.
@@ -462,14 +460,11 @@ class NukeSubmission:
 
             # Script copying and submission parameters
             copy_script: Whether to copy the script before submission
-            copy_script_path: Optional path template(s) for copying the script. Can be:
-                            - String: Single path template
-                            - List: Multiple path templates
-                            - Dict: With integer keys for multiple path templates
-            copy_script_name: Optional filename template(s) for the copied script. Can be:
-                            - String: Single filename template
-                            - List: Multiple filename templates (must match length of copy_script_path if also a list)
-                            - Dict: With integer keys for multiple filename templates
+            copy_script_path: Optional file path template(s) for copying the script (includes both directory and filename). Can be:
+                            - String: Single file path template (e.g., "{outdir}/.farm/{scriptname}")
+                            - List: Multiple file path templates
+                            - Dict: With integer keys for multiple file path templates
+                            Supports tokens: {script}, {output}, {basename}, {YYYY}, {MM}, {DD}, etc.
             submit_copied_script: Whether to submit the copied script
             submit_script_as_auxiliary_file: Whether to submit the script as an auxiliary file
             render_settings_from_metadata: Whether to extract submission settings from write node metadata.
@@ -738,7 +733,6 @@ class NukeSubmission:
         
         # Store copy script path and name options
         self.copy_script_path = copy_script_path
-        self.copy_script_name = copy_script_name
         
         # Initialize machine list parameters
         self.machine_allow_list, self.machine_deny_list = self._initialize_machine_lists(machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list)
@@ -1296,6 +1290,22 @@ class NukeSubmission:
         ]
         return self._replace_tokens(template, allowed_token_group_names=allowed_token_groups)
         
+    def _replace_copy_script_tokens(self, template: str) -> str:
+        """Replace tokens in copy script path template.
+        
+        Args:
+            template: File path template with tokens
+            
+        Returns:
+            Copy script path with tokens replaced
+        """
+        allowed_token_groups = [
+            'script_directory_tokens', 'script_stem_tokens', 'script_name_tokens',
+            'output_directory_tokens', 'output_stem_tokens', 'output_tokens',
+            'date_tokens', 'temp_directory_tokens', 'uuid_tokens'
+        ]
+        return self._replace_tokens(template, allowed_token_group_names=allowed_token_groups)
+    
     def _get_frame_range_from_nuke(self, write_node_name: Optional[str] = None) -> None:
         """Get frame range from Nuke script using Nuke API.
         
@@ -2184,38 +2194,26 @@ class NukeSubmission:
     def _copy_script(self) -> List[str]:
         """Copy the Nuke script to the specified location(s) based on config.
         
-        The configuration options for script copying are:
-        - copy_script_path: Path template for copying the script (directly from constructor)
-        - copy_script_name: Filename template for the copied script (directly from constructor)
+        The copy_script_path parameter contains full file paths (directory + filename) with tokens.
+        Multiple copies can be specified using:
+        - copy_script_path = "/path/to/destination/{nkstem}.nk" (single copy)
+        - copy_script_path = ["/path1/{nkstem}.nk", "/path2/{nkstem}.nk"] (multiple copies)  
+        - copy_script_path = {0: "/path1/{nkstem}.nk", 1: "/path2/{nkstem}.nk"} (indexed)
         
-        For multiple copies, these can be lists or dictionaries with integer keys:
-        - copy_script_path = ["path1", "path2"]
-        - copy_script_name = ["name1", "name2"]
-        
-        Or from config:
-        - NK2DL_SCRIPT__COPY__PATH: Path template for copying the script
-        - NK2DL_SCRIPT__COPY__NAME: Filename template for the copied script
-        
-        For multiple copies in config:
-        - NK2DL_SCRIPT__COPY0__PATH, NK2DL_SCRIPT__COPY1__PATH, etc.
-        - NK2DL_SCRIPT__COPY0__NAME, NK2DL_SCRIPT__COPY1__NAME, etc.
-        
-        Available tokens for the path template:
-        - Script directory tokens: {script}, {nukescript}, {scene}, {scenefile}, {ns},
-          {s}, {nk}, {scriptname}, {script_name}, {nuke_script}
-        - Output directory tokens: {output}, {render}, {out}, {export}, {o}
-        
-        Available tokens for the name template:
-        - Script stem tokens: {basename}, {ss}, {nss}, {nks}, {sstem}, {nstem}, {nkstem},
-          {scriptstem}, {script_stem}, {nukescriptstem}, {nukescript_stem}, {nuke_script_stem}
-        - {ext}: File extension without the dot
-        - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+        Available tokens:
+        - Script directory: {nkdir}, {scriptdir}, {nukescriptdir}
+        - Script stem: {nkstem}, {scriptstem}, {nukescriptstem} 
+        - Script name: {nk}, {script}, {scriptname}, {nukescript}
+        - Output directory: {outdir}, {outputdir}
+        - Output stem: {filestem}, {filenamestem}, {outstem}, {outputstem}
+        - Date: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
+        - Temp: {tmp}, {temp}, {tmpdir}, {tempdir}
+        - UUID: {uuid}
         
         Returns:
             List of paths where the script was copied to
         """
         import shutil
-        import datetime
         
         if not self.copy_script:
             logger.debug("Script copying is disabled")
@@ -2235,186 +2233,55 @@ class NukeSubmission:
 
         copied_paths = []
         
-        # Process various input formats for copy_script_path and copy_script_name
-        copy_configs = []
+        # Process copy_script_path parameter
+        path_templates = []
         
-        # Case 1: Both are provided as strings
-        if isinstance(self.copy_script_path, str) and (self.copy_script_name is None or isinstance(self.copy_script_name, str)):
-            copy_configs.append({
-                'path': self.copy_script_path,
-                'name': self.copy_script_name,
-            })
-        
-        # Case 2: copy_script_path is a list
-        elif isinstance(self.copy_script_path, list):
-            if self.copy_script_name is None:
-                # Only paths provided
-                for path in self.copy_script_path:
-                    copy_configs.append({
-                        'path': path,
-                        'name': None,
-                    })
-            elif isinstance(self.copy_script_name, list):
-                # Both paths and names are lists
-                # Check that they have the same length
-                if len(self.copy_script_path) != len(self.copy_script_name):
-                    logger.warning(f"copy_script_path and copy_script_name lists have different lengths: {len(self.copy_script_path)} vs {len(self.copy_script_name)}. Using the shorter length.")
-                    min_len = min(len(self.copy_script_path), len(self.copy_script_name))
-                    for i in range(min_len):
-                        copy_configs.append({
-                            'path': self.copy_script_path[i],
-                            'name': self.copy_script_name[i],
-                        })
-                else:
-                    # Same length, process normally
-                    for i in range(len(self.copy_script_path)):
-                        copy_configs.append({
-                            'path': self.copy_script_path[i],
-                            'name': self.copy_script_name[i],
-                        })
+        if self.copy_script_path is not None:
+            # Handle different input formats
+            if isinstance(self.copy_script_path, str):
+                path_templates = [self.copy_script_path]
+            elif isinstance(self.copy_script_path, list):
+                path_templates = self.copy_script_path
+            elif isinstance(self.copy_script_path, dict):
+                # Sort by keys and extract values
+                path_templates = [self.copy_script_path[key] for key in sorted(self.copy_script_path.keys())]
+        else:
+            # Fall back to config
+            # First check for single configuration
+            single_config_path = config.get('submission.script_copy_path', None)
+            if single_config_path is not None:
+                path_templates = [single_config_path]
             else:
-                # Paths is a list but name is a single string
-                for path in self.copy_script_path:
-                    copy_configs.append({
-                        'path': path,
-                        'name': self.copy_script_name,
-                    })
-        
-        # Case 3: copy_script_path is a dictionary
-        elif isinstance(self.copy_script_path, dict):
-            if self.copy_script_name is None:
-                # Only paths provided as dict
-                for idx, path in self.copy_script_path.items():
-                    copy_configs.append({
-                        'path': path,
-                        'name': None,
-                    })
-            elif isinstance(self.copy_script_name, dict):
-                # Both are dicts, merge by keys
-                all_keys = sorted(set(self.copy_script_path.keys()) | set(self.copy_script_name.keys()))
-                for idx in all_keys:
-                    path = self.copy_script_path.get(idx)
-                    name = self.copy_script_name.get(idx)
-                    if path is not None:  # Only add if we have a path
-                        copy_configs.append({
-                            'path': path,
-                            'name': name,
-                        })
-            else:
-                # Paths is a dict but name is a single string
-                for idx, path in self.copy_script_path.items():
-                    copy_configs.append({
-                        'path': path,
-                        'name': self.copy_script_name,
-                    })
-        
-        # If no direct parameters provided, fall back to config
-        if not copy_configs:
-            # First check for the single configuration case from config
-            single_config = {
-                'path': config.get('submission.script_copy_path', None),
-                'name': config.get('submission.script_copy_name', None),
-            }
-            
-            # If single config exists, use it
-            if single_config['path'] is not None:
-                copy_configs = [single_config]
-            else:
-                # Otherwise, look for indexed configurations (copy0, copy1, ...)
+                # Look for indexed configurations (copy0_path, copy1_path, ...)
                 index = 0
                 while True:
-                    path = config.get(f'submission.script_copy{index}_path', None)
-                    if path is None:
+                    indexed_path = config.get(f'submission.script_copy{index}_path', None)
+                    if indexed_path is None:
                         break
-                        
-                    copy_configs.append({
-                        'path': path,
-                        'name': config.get(f'submission.script_copy{index}_name', None),
-                    })
+                    path_templates.append(indexed_path)
                     index += 1
-            
-            # If still no configurations found, use default
-            if not copy_configs:
-                logger.debug("No script copy configuration found, using default")
-                copy_configs = [{
-                    'path': '{output}/farm/',
-                    'name': '{basename}.{ext}',
-                }]
+                
+                # If still no configurations found, use default
+                if not path_templates:
+                    logger.debug("No script copy configuration found, using default")
+                    path_templates = ["{outdir}/.farm/{nkstem}.nk"]
         
-        # Get output directory from first write node if we have one
-        output_dir = None
-        if self.output_file_path:
-            output_dir = Path(self.output_file_path)
-        elif self.write_nodes and len(self.write_nodes) == 1:
-            # Get output path from the first write node
-            node = nuke.toNode(self.write_nodes[0])
-            if node and node.Class() == "Write":
-                output_file = self._get_node_pretty_path(node)
-                output_dir = Path(os.path.dirname(output_file))
-        
-        # Process each copy configuration
-        for copy_config in copy_configs:
+        # Process each path template
+        for path_template in path_templates:
             try:
-                # Get copy path
-                path_template = copy_config['path']
-                name_template = copy_config.get('name') or '{basename}.{ext}'
+                # Replace tokens in the full path
+                resolved_path = self._replace_copy_script_tokens(path_template)
                 
-                # Replace path tokens
-                copy_path = path_template
+                # Ensure we have a valid path
+                if not resolved_path:
+                    logger.warning(f"Empty path after token replacement: {path_template}")
+                    continue
                 
-                # Script path tokens - include all alternatives from elsewhere in the codebase
-                script_tokens = ["{script}", "{nukescript}", "{scene}", "{scenefile}", "{ns}", 
-                                "{s}", "{nk}", "{scriptname}", "{script_name}", "{nuke_script}"]
-                for token in script_tokens:
-                    if token in copy_path:
-                        copy_path = copy_path.replace(token, str(self.script_path.parent))
+                # Convert to Path object and resolve
+                target_path = Path(resolved_path).resolve()
                 
-                # Output path tokens
-                output_tokens = ["{output}", "{render}", "{out}", "{export}", "{o}"]
-                for token in output_tokens:
-                    if token in copy_path:
-                        if output_dir:
-                            copy_path = copy_path.replace(token, str(output_dir))
-                        else:
-                            # If no output dir is available, fall back to script dir
-                            copy_path = copy_path.replace(token, str(self.script_path.parent))
-                            logger.warning(f"No output directory available, replacing {token} with script directory")
-                
-                # If no tokens were replaced, assume path is relative to script directory
-                if copy_path == path_template:
-                    target_dir = self.script_path.parent / copy_path
-                else:
-                    target_dir = Path(copy_path)
-                
-                target_dir = target_dir.resolve()
-                target_dir.mkdir(parents=True, exist_ok=True)
-                
-                # Process filename template
-                # Replace date tokens
-                now = datetime.datetime.now()
-                name = name_template
-                
-                # Script stem tokens
-                stem_tokens = ["{basename}", "{ss}", "{nss}", "{nks}", "{sstem}", "{nstem}", "{nkstem}", 
-                               "{scriptstem}", "{script_stem}", "{nukescriptstem}", "{nukescript_stem}", "{nuke_script_stem}"]
-                for token in stem_tokens:
-                    if token in name:
-                        name = name.replace(token, self.script_path.stem)
-                
-                # Script extension token
-                name = name.replace('{ext}', self.script_path.suffix.lstrip('.'))
-                
-                # Date tokens
-                name = name.replace('{YYYY}', now.strftime('%Y'))
-                name = name.replace('{YY}', now.strftime('%y'))
-                name = name.replace('{MM}', now.strftime('%m'))
-                name = name.replace('{DD}', now.strftime('%d'))
-                name = name.replace('{hh}', now.strftime('%H'))
-                name = name.replace('{mm}', now.strftime('%M'))
-                name = name.replace('{ss}', now.strftime('%S'))
-                
-                # Construct full target path
-                target_path = target_dir / name
+                # Create directory if it doesn't exist
+                target_path.parent.mkdir(parents=True, exist_ok=True)
                 
                 # Copy the script
                 logger.info(f"Copying script from {self.script_path} to {target_path}")
@@ -2428,7 +2295,7 @@ class NukeSubmission:
                 copied_paths.append(str(target_path))
                 
             except Exception as e:
-                logger.error(f"Failed to copy script: {e}")
+                logger.error(f"Failed to copy script using template '{path_template}': {e}")
         
         # Store the copied paths
         self.copied_script_paths = copied_paths
@@ -3249,8 +3116,6 @@ class NukeSubmission:
                     args_str.append(f"    copy_script={self.copy_script}")
                 if self.copy_script_path is not None:
                     args_str.append(f"    copy_script_path={repr(self.copy_script_path)}")
-                if self.copy_script_name is not None:
-                    args_str.append(f"    copy_script_name={repr(self.copy_script_name)}")
                 if self.submit_copied_script is not None:
                     args_str.append(f"    submit_copied_script={self.submit_copied_script}")
                 if self.machine_allow_list:
@@ -3599,14 +3464,11 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
           - render_settings_from_metadata: Whether to extract submission settings from write node metadata
                                          stored as 'input/nk2dl/parameter_name'
           - copy_script: Whether to make copies of the script before submission
-          - copy_script_path: Optional path template(s) for copying the script. Can be:
-                            - String: Single path template
-                            - List: Multiple path templates 
-                            - Dict: With integer keys for multiple path templates
-          - copy_script_name: Optional filename template(s) for the copied script. Can be:
-                            - String: Single filename template
-                            - List: Multiple filename templates
-                            - Dict: With integer keys for multiple filename templates
+          - copy_script_path: Optional file path template(s) for copying the script. Can be:
+                            - String: Single file path template (e.g., "{outdir}/.farm/{nkstem}.nk")
+                            - List: Multiple file path templates
+                            - Dict: With integer keys for multiple file path templates
+                            Supports tokens: {script}, {output}, {nkstem}, {YYYY}, {MM}, {DD}, etc.
           - submit_copied_script: Whether to use the copied script path in the submission
           - submission_is_build_job: Whether to submit as a Python script job that calls submit_nuke_script
           - build_job_script_path: Full path template for the build job script file.
@@ -3615,8 +3477,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                                  - Script stem tokens: {ss}, {basename}, {stem}, {sstem}, {scriptstem}
                                  - Script name tokens: {s}, {script}, {scriptname}
                                  - Date tokens: {YYYY}, {YY}, {MM}, {DD}, {hh}, {mm}, {ss}
-                                 - Extension token: {ext} (replaced with 'py')
-                                 Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"
+                                 Example: "{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.py"
           - build_job_as_auxiliary_file: Whether to submit the build job script as an auxiliary file (default: True).
                                       When True, the job can be recovered if it fails since Deadline
                                       will re-copy the script to the worker. When False, the job cannot

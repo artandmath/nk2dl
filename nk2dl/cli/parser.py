@@ -323,6 +323,34 @@ def _setup_submit_parser(parser: argparse.ArgumentParser) -> None:
         help="Graph scope variables (format: var:value1,value2,var2:value3,value4)"
     )
 
+    # Script copying and submission options
+    copy_group = parser.add_argument_group("Script copying and submission options")
+    copy_group.add_argument(
+        "--CopyScript", 
+        action="store_true",
+        help="Copy script before submission"
+    )
+    copy_group.add_argument(
+        "--CopyScriptPath", "--CopyScriptPaths",
+        metavar="PATH_TEMPLATE",
+        nargs='+',
+        help="Full file path template(s) for copying script (includes directory and filename). "
+             "Can specify multiple paths to create multiple copies. "
+             "Supports tokens: {nkdir}, {nkstem}, {nk}, {outdir}, {YYYY}, {MM}, {DD}, etc. "
+             "Examples: '{outdir}/.farm/{nkstem}.nk' or multiple: "
+             "'{outdir}/.farm/{nkstem}.nk' '/backup/{nkstem}_{YYYY}-{MM}-{DD}.nk'"
+    )
+    copy_group.add_argument(
+        "--SubmitCopiedScript", 
+        action="store_true",
+        help="Submit the copied script instead of the original"
+    )
+    copy_group.add_argument(
+        "--SubmitScriptAsAuxiliaryFile", 
+        action="store_true",
+        help="Submit the script as an auxiliary file"
+    )
+
 
 def _setup_config_parser(parser: argparse.ArgumentParser) -> None:
     """Set up the config command parser with all options."""

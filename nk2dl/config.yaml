@@ -56,12 +56,10 @@ submission:
   environment: {}
   omit_environment_keys: []
 
-  # Script copying options (can define multiple copy locations)
-  script_copy_path: "{output}/.farm/"  # Can include tokens: {script}, {output}, etc.
-  script_copy_name: "{basename}.{ext}"  # Can include date tokens and basename/ext
+  # Script copying options
+  # Full path with tokens: {nkdir}, {nkstem}, {outputdir}, {YYYY}, full token list in docs
+  script_copy_path: "{outdir}/.farm/{nkstem}.nk"  
 
   # Alternatively, define multiple copy locations:
-  # script_copy0_path: "./.farm/"
-  # script_copy0_name: "{basename}.{ext}"
-  # script_copy1_path: "{script}/archive/"
-  # script_copy1_name: "{basename}_{YYYY}-{MM}-{DD}.{ext}"
+  # script_copy0_path: "{outdir}/.farm/{nkstem}.nk"
+  # script_copy1_path: "{nkdir}/archive/{nkstem}_{YYYY}-{MM}-{DD}.nk"

@@ -210,12 +210,11 @@ Control how scripts are copied before submission:
 # Enable script copying with default paths
 submit_nuke_script("path/to/script.nk", copy_script=True)
 
-# Specify custom path and name for the copy
+# Specify custom full path for the copy (directory + filename)
 submit_nuke_script(
     "path/to/script.nk",
     copy_script=True,
-    copy_script_path="{output}/farm/",
-    copy_script_name="{basename}_{YYYY}-{MM}-{DD}.{ext}",
+    copy_script_path="{outdir}/.farm/{scriptname}_{YYYY}-{MM}-{DD}.nk",
     submit_copied_script=True  # Submit the copied script instead of original
 )
 
@@ -223,7 +222,9 @@ submit_nuke_script(
 submit_nuke_script(
     "path/to/script.nk",
     copy_script=True,
-    copy_script_path=["{output}/farm/", "{script}/archive/"],
-    copy_script_name=["{basename}.{ext}", "{basename}_{YYYY}-{MM}-{DD}.{ext}"]
+    copy_script_path=[
+        "{outdir}/.farm/{scriptname}.nk", 
+        "{nkdir}/archive/{scriptname}_{YYYY}-{MM}-{DD}.nk"
+    ]
 )
 ```
