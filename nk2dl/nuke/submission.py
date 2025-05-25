@@ -611,7 +611,8 @@ class NukeSubmission:
                                  to include config values and then extend them with the rest of the list.
         """
 
-        self._script_will_close = False
+        self.script_will_close = False
+        self.nuke_module = None
         self.submission_is_build_job = submission_is_build_job
         self.render_settings_from_metadata = render_settings_from_metadata
 
@@ -899,34 +900,61 @@ class NukeSubmission:
         Returns:
             Either the nuke module or our parser module interface
         """
-        if self.use_parser_instead_of_nuke:
-            # Use our custom parser module
-            nuke = nuke_utils.parser_module()
-            
-            # If the script path is different from what's currently parsed, we need to open it
-            if not self.script_is_open:
-                # Open the script
-                nuke.scriptOpen(str(self.script_path.absolute()))
-                # Mark as same as current session now
-                self.script_is_open = True
-                # Track that we opened a script
-                self._script_will_close = True
-            
-            return nuke
+        if not self.nuke_module:
+            if self.use_parser_instead_of_nuke:
+                # Use our custom parser module
+                nuke = nuke_utils.parser_module()
+                
+                # If the script path is different from what's currently parsed, we need to open it
+                if not self.script_is_open:
+                    # Open the script
+                    nuke.scriptOpen(str(self.script_path.absolute()))
+                    # Mark as same as current session now
+                    self.script_is_open = True
+                    # Track that we opened a script
+                    self.script_will_close = True
+                self.nuke_module = nuke
+                return nuke
+            else:
+                # Use the actual Nuke module
+                nuke = nuke_utils.nuke_module()
+                
+                # If the script path is different from what's currently open in Nuke, we need to open it
+                if not self.script_is_open:
+                    # Open the script
+                    nuke.scriptOpen(str(self.script_path.absolute()))
+                    # Mark as same as current session now
+                    self.script_is_open = True
+                    # Track that we opened a script
+                    self.script_will_close = True
+                self.nuke_module = nuke
+                return nuke
         else:
-            # Use the actual Nuke module
-            nuke = nuke_utils.nuke_module()
+            return self.nuke_module
+
+    def _all_write_nodes(self, filter_types=None):
+        """Get all write nodes of specified types.
+        
+        Args:
+            filter_types: Optional list of write node types to include.
+                         Defaults to ['Write', 'DeepWrite'] if None.
+                         
+        Returns:
+            List of write nodes matching the specified types
+        """
+        # Set default filter types if none provided
+        if filter_types is None:
+            filter_types = ['Write', 'DeepWrite']
+        
+        # Ensure the script is open
+        nuke = self._ensure_script_can_be_parsed()
+        
+        # Get all nodes of the specified types
+        all_write_nodes = []
+        for node_type in filter_types:
+            all_write_nodes.extend(nuke.allNodes(node_type))
             
-            # If the script path is different from what's currently open in Nuke, we need to open it
-            if not self.script_is_open:
-                # Open the script
-                nuke.scriptOpen(str(self.script_path.absolute()))
-                # Mark as same as current session now
-                self.script_is_open = True
-                # Track that we opened a script
-                self._script_will_close = True
-            
-            return nuke
+        return all_write_nodes
 
     def _get_node_pretty_path(self, node, gsv_combination=None) -> str:
         """Get a node's file path while preserving frame number placeholders.
@@ -1808,7 +1836,7 @@ class NukeSubmission:
         elif not self.write_nodes:
             # If no write node specified: find all enabled write nodes
             write_nodes = []
-            for node in nuke.allNodes('Write','DeepWrite'):
+            for node in self._all_write_nodes():
                 if not node['disable'].value():
                     write_nodes.append(node)
             
@@ -2111,7 +2139,7 @@ class NukeSubmission:
                             logger.warning(f"Failed to set GSV value {key}={value}: {e}")
             
             # Find all Write nodes
-            all_write_nodes = nuke.allNodes('Write','DeepWrite')
+            all_write_nodes = self._all_write_nodes()
             logger.debug(f"Found {len(all_write_nodes)} Write nodes in nukescript: {nuke.root().name()}")
             
             for node in all_write_nodes:
@@ -2462,7 +2490,7 @@ class NukeSubmission:
                 
                 # Get all enabled Write nodes
                 enabled_write_nodes = []
-                for node in nuke.allNodes('Write','DeepWrite'):
+                for node in self._all_write_nodes():
                     if not node['disable'].value():
                         enabled_write_nodes.append(node.name())
                 
@@ -2846,22 +2874,22 @@ class NukeSubmission:
                         raise SubmissionError(f"Failed to submit job: {e}")
             
             # Close the script if we opened it
-            if self._script_will_close:
+            if self.script_will_close:
                 nuke = self._ensure_script_can_be_parsed()
                 nuke.scriptClose()
                 nuke.scriptClear()
-                self._script_will_close = False
+                self.script_will_close = False
                 logger.info(f"Script {self.script_path} closed after submission")
             
             return self.jobs
                     
         except Exception as e:
             # Close the script if we opened it, even if submission failed
-            if self._script_will_close:
+            if self.script_will_close:
                 try:
                     nuke = self._ensure_script_can_be_parsed()
                     nuke.scriptClose()
-                    self._script_will_close = False
+                    self.script_will_close = False
                 except:
                     pass  # Don't let script closing error mask the original error
             
