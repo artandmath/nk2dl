@@ -1808,7 +1808,7 @@ class NukeSubmission:
         elif not self.write_nodes:
             # If no write node specified: find all enabled write nodes
             write_nodes = []
-            for node in nuke.allNodes('Write'):
+            for node in nuke.allNodes('Write','DeepWrite'):
                 if not node['disable'].value():
                     write_nodes.append(node)
             
@@ -2111,7 +2111,7 @@ class NukeSubmission:
                             logger.warning(f"Failed to set GSV value {key}={value}: {e}")
             
             # Find all Write nodes
-            all_write_nodes = nuke.allNodes('Write')
+            all_write_nodes = nuke.allNodes('Write','DeepWrite')
             logger.debug(f"Found {len(all_write_nodes)} Write nodes in nukescript: {nuke.root().name()}")
             
             for node in all_write_nodes:
@@ -2462,7 +2462,7 @@ class NukeSubmission:
                 
                 # Get all enabled Write nodes
                 enabled_write_nodes = []
-                for node in nuke.allNodes('Write'):
+                for node in nuke.allNodes('Write','DeepWrite'):
                     if not node['disable'].value():
                         enabled_write_nodes.append(node.name())
                 
