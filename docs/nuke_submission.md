@@ -89,7 +89,8 @@ job_ids = submit_nuke_script(
 | `performance_profiler_path` | str | `None` | Directory for profile files |
 | `views` | list | `None` | List of view names to render |
 | `write_nodes` | list/dict | `None` | Write nodes to render. Can be a simple list of names, a dict with overrides, or a list of dicts for multiple nodes with individual overrides |
-| `render_mode` | str | `"full"` | Render mode (full, proxy) |
+| `render_mode` | str | `"full"` | Render mode (full, proxy, both). When set to "both", two separate submissions are created - one with "full" and one with "proxy" |
+| `proxy_args` | dict | `{}` | Dictionary of arguments to override for the proxy submission when render_mode="both".rwise ignored. |
 | `write_nodes_as_tasks` | bool | `False` | Submit write nodes as separate tasks |
 | `write_nodes_as_separate_jobs` | bool | `False` | Submit write nodes as separate jobs |
 | `render_order_dependencies` | bool | `False` | Set job dependencies based on render order |
@@ -354,6 +355,65 @@ submit_nuke_script(
 )
 ```
 
+## Dual Render Mode (Full + Proxy)
+
+nk2dl supports submitting both full and proxy renders simultaneously with different settings for each:
+
+```python
+from nk2dl import submit_nuke_script
+
+# Submit both full and proxy renders with same settings
+submit_nuke_script(
+    "/path/to/script.nk",
+    render_mode="both",
+    priority=50,
+    chunk_size=10
+)
+
+# Submit both renders with different settings for proxy
+submit_nuke_script(
+    "/path/to/script.nk",
+    render_mode="both",
+    priority=50,              # Applied to both full and proxy
+    chunk_size=10,            # Applied to both full and proxy
+    proxy_args={
+        'priority': 30,       # Lower priority for proxy
+        'chunk_size': 20,     # Larger chunks for proxy
+        'pool': 'proxy_pool', # Different pool for proxy
+        'comment': 'Proxy render for review'
+    }
+)
+
+# Advanced example with write node overrides
+submit_nuke_script(
+    "/path/to/script.nk",
+    render_mode="both",
+    write_nodes_as_separate_jobs=True,
+    write_nodes=[
+        {
+            'write_node': 'Write1',
+            'priority': 80,
+            'use_gpu': True
+        },
+        'Write2'
+    ],
+    proxy_args={
+        'priority': 40,       # Override base priority for all proxy jobs
+        'use_gpu': False,     # Disable GPU for proxy renders
+        'batch_name': 'Proxy Batch'
+    }
+)
+```
+
+### How Dual Render Mode Works
+
+When `render_mode="both"` is specified:
+
+1. **Full Render**: Uses all the provided parameters with `render_mode="full"`
+2. **Proxy Render**: Uses all the provided parameters with `render_mode="proxy"`, plus any overrides from `proxy_args`
+
+The `proxy_args` dictionary can contain any valid submission parameter and will override the base parameters only for the proxy submission.
+
 ## Render Settings from Write Node Metadata
 
 You can store submission settings directly in write node metadata and have them automatically applied during submission:
@@ -376,6 +436,4 @@ For `build_job_script_path`:
 - Script directory tokens: `{sdir}`, `{nkdir}`, `{s_dir}`, `{nk_dir}`, `{scriptdir}`, `{script_dir}`, `{nukescriptdir}`, `{nukescript_dir}`, `{nuke_script_dir}`
 - Script stem tokens: `{ss}`, `{basename}`, `{stem}`, `{sstem}`, `{nstem}`, `{nkstem}`, `{scriptstem}`, `{script_stem}`, `{nukescriptstem}`, `{nukescript_stem}`, `{nuke_script_stem}`
 - Script name tokens: `{s}`, `{ns}`, `{nk}`, `{script}`, `{scriptname}`, `{script_name}`, `{nukescript}`, `{nuke_script}`
-- Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}` (hour), `{mm}` (minute), `{ss}` (second)
-- Extension token: `{ext}` (replaced with 'py')
-- Example: `"{scriptdir}/build_jobs/{stem}_{YYYY}-{MM}-{DD}.{ext}"`
+- Date tokens: `{YYYY}` (year), `{YY}` (2-digit year), `{MM}` (month), `{DD}` (day), `{hh}`
