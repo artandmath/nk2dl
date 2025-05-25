@@ -3618,6 +3618,10 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                          ]
                          ```
           - render_mode: Render mode (full, proxy, both). When set to "both", two separate submissions are created - one with "full" and one with "proxy". Note: The "both" option is only available in the submit_nuke_script function, not directly in NukeSubmission.
+          - proxy_args: Dictionary of arguments to override for the proxy submission when render_mode="both". 
+                       These arguments will be applied only to the proxy submission, allowing different settings 
+                       for proxy vs full renders. For example: proxy_args={'priority': 30, 'chunk_size': 20}.
+                       Only used when render_mode="both", otherwise ignored.
           - write_nodes_as_tasks: Whether to submit write nodes as separate tasks
           - write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
           - render_order_dependencies: Whether to set job dependencies based on render order
@@ -3651,6 +3655,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
             - job_info (dict): The job info used for submission
             - deadline_return (Any): The raw return from the Deadline submission
     """
+    # Extract proxy_args if provided, pop it from kwargs so it doesn't get passed to NukeSubmission
+    proxy_args = kwargs.pop('proxy_args', {})
 
     # Handle the "both" render_mode by submitting two separate jobs
     if kwargs.get('render_mode', "").lower() == 'both':
@@ -3662,6 +3668,11 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
         
         proxy_kwargs = kwargs.copy()
         proxy_kwargs['render_mode'] = 'proxy'
+        
+        # Apply proxy-specific overrides if provided
+        if proxy_args:
+            logger.info(f"Applying proxy-specific arguments: {list(proxy_args.keys())}")
+            proxy_kwargs.update(proxy_args)
         
         # Submit jobs with full and proxy modes
         full_jobs = submit_nuke_script(script_path, **full_kwargs)
