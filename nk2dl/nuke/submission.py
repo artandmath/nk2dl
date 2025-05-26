@@ -409,6 +409,9 @@ class NukeSubmission:
                 use_node_frame_list: bool = False,
                 views: Optional[List[str]] = None,
                 
+                # Dual render mode parameters
+                proxy_args: Optional[Dict[str, Any]] = None,
+                
                 # Graph Scope Variables parameters (Nuke 15.2+)
                 graph_scope_variables: Optional[Union[List[str], List[List[str]]]] = None,
                 
@@ -576,7 +579,7 @@ class NukeSubmission:
                            'Write3'  # Regular write node without overrides
                        ]
                        ```
-            render_mode: Render mode (full, proxy)
+            render_mode: Render mode (full, proxy, both). When set to "both", two separate submissions are created - one with "full" and one with "proxy". 
             write_nodes_as_tasks: Whether to submit write nodes as 1 task per write node
             write_nodes_as_separate_jobs: Whether to submit write nodes as separate jobs
             render_order_dependencies: Whether to set job dependencies based on render order
@@ -609,6 +612,10 @@ class NukeSubmission:
             omit_environment_keys: List of environment variables to omit from jobs.
                                  Can use the special token "{config:extend}" as the first item
                                  to include config values and then extend them with the rest of the list.
+            proxy_args: Dictionary of arguments to override for the proxy submission when render_mode="both". 
+                       These arguments will be applied only to the proxy submission, allowing different settings 
+                       for proxy vs full renders. For example: proxy_args={'priority': 30, 'chunk_size': 20}.
+                       Only used when render_mode="both", otherwise ignored.
         """
 
         self.script_will_close = False
@@ -722,7 +729,31 @@ class NukeSubmission:
         self.reload_plugins = reload_plugins if isinstance(reload_plugins, bool) else config.get('submission.reload_plugins', False)
         self.performance_profiler = performance_profiler if isinstance(performance_profiler, bool) else config.get('submission.performance_profiler', False)
         self.performance_profiler_path = performance_profiler_path if performance_profiler_path is not None else config.get('submission.performance_profiler_path')
-        self.render_mode = render_mode if render_mode else config.get('submission.render_mode', 'full')
+        
+        # Handle render_mode with proxy state detection when script is open
+        config_render_mode = config.get('submission.render_mode', 'full')
+        if render_mode:
+            # Explicit render_mode provided
+            self.render_mode = render_mode
+        elif script_is_open and not use_parser_instead_of_nuke:
+            # Script is open and no explicit render_mode - check proxy state
+            try:
+                import nuke
+                root_node = nuke.root()
+                is_proxy = root_node['proxy'].value()
+                if is_proxy:
+                    logger.warning("Script is open in proxy mode but no explicit render_mode was set. "
+                                 "Using 'proxy' render mode. To avoid this warning, explicitly set render_mode.")
+                    self.render_mode = 'proxy'
+                else:
+                    self.render_mode = config_render_mode
+            except Exception as e:
+                logger.debug(f"Could not detect proxy state from open script: {e}")
+                self.render_mode = config_render_mode
+        else:
+            # Use config default
+            self.render_mode = config_render_mode
+            
         self.render_order_dependencies = render_order_dependencies if isinstance(render_order_dependencies, bool) else config.get('submission.render_order_dependencies', False)
         self.job_dependencies = job_dependencies
         self.write_nodes_as_tasks = write_nodes_as_tasks if isinstance(write_nodes_as_tasks, bool) else config.get('submission.write_nodes_as_tasks', False)
@@ -734,6 +765,9 @@ class NukeSubmission:
         
         # Store views parameter
         self.views = views if views is not None else config.get('submission.views', None)
+        
+        # Store proxy_args parameter for dual render mode
+        self.proxy_args = proxy_args if proxy_args is not None else config.get('submission.proxy_args', {})
         
         # Script copying options
         self.copy_script = copy_script if copy_script is not None else config.get('submission.copy_script', False)
@@ -2393,7 +2427,13 @@ class NukeSubmission:
             auxiliary_files: Optional list of auxiliary files to include with the job
             
         Returns:
-            dict: Job tracking information
+            dict: Job tracking information containing:
+                - job_id (str): The Deadline job ID
+                - render_order (int): The render order value
+                - render_mode (str): The render mode extracted from plugin_info (full/proxy)
+                - plugin_info (dict): The plugin info used for submission
+                - job_info (dict): The job info used for submission
+                - deadline_return (Any): The raw return from the Deadline submission
             
         Raises:
             SubmissionError: If submission fails
@@ -2402,6 +2442,9 @@ class NukeSubmission:
             # Submit the job with auxiliary files if provided
             deadline_response = self.deadline.submit_job(job_info, plugin_info, auxiliary_files)
             job_id = deadline_response["job_id"]
+            
+            # Extract render_mode from plugin_info (default to 'Full' if not present)
+            render_mode_from_plugin = plugin_info.get('RenderMode', 'Full').lower()
             
             # Track job ID by render order
             if render_order not in self.jobs_by_render_order:
@@ -2412,6 +2455,7 @@ class NukeSubmission:
             job_data = {
                 "job_id": job_id,
                 "render_order": render_order,
+                "render_mode": render_mode_from_plugin,
                 "plugin_info": plugin_info,
                 "job_info": job_info,
                 "deadline_return": deadline_response
@@ -2466,6 +2510,7 @@ class NukeSubmission:
             List of dictionaries, each containing:
                 - job_id (str): The Deadline job ID
                 - render_order (int): The render order (0 if not fetched)
+                - render_mode (str): The render mode extracted from plugin_info (full/proxy)
                 - plugin_info (dict): The plugin info used for submission
                 - job_info (dict): The job info used for submission
                 - deadline_return (Any): The raw return from the Deadline submission
@@ -2473,6 +2518,34 @@ class NukeSubmission:
         Raises:
             SubmissionError: If submission fails
         """
+        # Handle the "both" render_mode by submitting two separate jobs
+        if self.render_mode.lower() == 'both':
+            logger.info("Render mode 'both' specified. Submitting two separate jobs for 'full' and 'proxy' modes.")
+            
+            # Create parameters for full render submission
+            full_params = self._get_init_params()
+            full_params['render_mode'] = 'full'
+            
+            # Create parameters for proxy render submission
+            proxy_params = self._get_init_params()
+            proxy_params['render_mode'] = 'proxy'
+            
+            # Apply proxy-specific overrides if provided
+            if self.proxy_args:
+                logger.info(f"Applying proxy-specific arguments: {list(self.proxy_args.keys())}")
+                proxy_params.update(self.proxy_args)
+            
+            # Create and submit full render job
+            full_submission = NukeSubmission(**full_params)
+            full_jobs = full_submission.submit()
+            
+            # Create and submit proxy render job
+            proxy_submission = NukeSubmission(**proxy_params)
+            proxy_jobs = proxy_submission.submit()
+            
+            # Combine and return the results
+            return full_jobs + proxy_jobs
+        
         try:
             # Initialize tracking structures
             self.jobs = []
@@ -3518,6 +3591,109 @@ class NukeSubmission:
             logger.warning(f"Failed to extract metadata from write node {write_node_name}: {e}")
             return {}, {}
 
+    def _get_init_params(self) -> Dict[str, Any]:
+        """Get all initialization parameters from the current instance.
+        
+        This method extracts all the parameters that were used to initialize this
+        NukeSubmission instance so they can be used to create new instances for
+        dual render mode submissions.
+        
+        Returns:
+            Dictionary containing all initialization parameters
+        """
+        return {
+            # nk2dl specific parameters
+            'script_path': str(self.script_path),
+            'script_is_open': self.script_is_open,
+            'use_parser_instead_of_nuke': self.use_parser_instead_of_nuke,
+            'submit_writes_alphabetically': self.submit_writes_alphabetically,
+            'submit_writes_in_render_order': self.submit_writes_in_render_order,
+            'submit_script_as_auxiliary_file': self.submit_script_as_auxiliary_file,
+            'render_settings_from_metadata': self.render_settings_from_metadata,
+            
+            # Build job parameters
+            'submission_is_build_job': self.submission_is_build_job,
+            'build_job_script_path': self.build_job_script_path,
+            'pre_build_job_script': self.pre_build_job_script,
+            'post_build_job_script': self.post_build_job_script,
+            'build_job_as_auxiliary_file': self.build_job_as_auxiliary_file,
+            'delete_build_job_script': self.delete_build_job_script,
+            
+            # Script copying and submission parameters
+            'copy_script': self.copy_script,
+            'copy_script_path': self.copy_script_path,
+            'submit_copied_script': self.submit_copied_script,
+            
+            # ScriptJob parameters
+            'script_job_script_path': self.script_job_script_path,
+            
+            # Machine list parameters
+            'machine_allow_list': self.machine_allow_list,
+            'machine_deny_list': self.machine_deny_list,
+            'machine_limit': self.machine_limit,
+            
+            # Job Info parameters
+            'job_name': self.job_name_template,
+            'batch_name': self.batch_name_template,
+            'priority': self.priority,
+            'pool': self.pool,
+            'group': self.group,
+            'chunk_size': self.chunk_size,
+            'department': self.department,
+            'user_name': self.user_name,
+            'comment': self.comment_template,
+            'concurrent_tasks': self.concurrent_tasks,
+            'extra_info': self.extra_info,
+            'frames': self.frames,
+            'job_dependencies': self.job_dependencies,
+            'on_job_complete': self.on_job_complete,
+            'submit_suspended': self.submit_suspended,
+            'limit_groups': self.limit_groups,
+            'task_timeout': self.task_timeout,
+            'enable_auto_timeout': self.enable_auto_timeout,
+            'limit_worker_tasks': self.limit_worker_tasks,
+            'pre_job_script': self.pre_job_script,
+            'post_job_script': self.post_job_script,
+            'pre_task_script': self.pre_task_script,
+            'post_task_script': self.post_task_script,
+            
+            # Plugin Info parameters
+            'output_file_path': self.output_file_path,
+            'parse_output_paths_to_deadline': self.parse_output_paths_to_deadline,
+            'nuke_version': self.nuke_version,
+            'use_nuke_x': self.use_nuke_x,
+            'batch_mode': self.batch_mode,
+            'threads': self.threads,
+            'use_gpu': self.use_gpu,
+            'gpu_override': self.gpu_override,
+            'ram_use': self.ram_use,
+            'enforce_render_order': self.enforce_render_order,
+            'stack_size': self.stack_size,
+            'continue_on_error': self.continue_on_error,
+            'reload_plugins': self.reload_plugins,
+            'performance_profiler': self.performance_profiler,
+            'performance_profiler_path': self.performance_profiler_path,
+            'write_nodes': self.write_nodes,
+            'render_mode': self.render_mode,
+            'write_nodes_as_tasks': self.write_nodes_as_tasks,
+            'write_nodes_as_separate_jobs': self.write_nodes_as_separate_jobs,
+            'render_order_dependencies': self.render_order_dependencies,
+            'use_node_frame_list': self.use_node_frame_list,
+            'views': self.views,
+            
+            # Dual render mode parameters
+            'proxy_args': self.proxy_args,
+            
+            # Graph Scope Variables parameters
+            'graph_scope_variables': self.graph_scope_variables,
+            
+            # Environment Variables parameters
+            'use_current_environment': self.use_current_environment,
+            'environment_keys': self.environment_keys,
+            'environment': self.environment,
+            'omit_environment_keys': self.omit_environment_keys,
+        }
+            
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
     """Submit a Nuke script to Deadline.
@@ -3643,7 +3819,7 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                              'Write3'  # Regular write node without overrides
                          ]
                          ```
-          - render_mode: Render mode (full, proxy, both). When set to "both", two separate submissions are created - one with "full" and one with "proxy". Note: The "both" option is only available in the submit_nuke_script function, not directly in NukeSubmission.
+          - render_mode: Render mode (full, proxy, both). When set to "both", two separate submissions are created - one with "full" and one with "proxy". 
           - proxy_args: Dictionary of arguments to override for the proxy submission when render_mode="both". 
                        These arguments will be applied only to the proxy submission, allowing different settings 
                        for proxy vs full renders. For example: proxy_args={'priority': 30, 'chunk_size': 20}.
@@ -3677,36 +3853,11 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
         List of dictionaries, each containing:
             - job_id (str): The Deadline job ID
             - render_order (int): The render order (0 if not fetched)
+            - render_mode (str): The render mode extracted from plugin_info (full/proxy)
             - plugin_info (dict): The plugin info used for submission
             - job_info (dict): The job info used for submission
             - deadline_return (Any): The raw return from the Deadline submission
     """
-    # Extract proxy_args if provided, pop it from kwargs so it doesn't get passed to NukeSubmission
-    proxy_args = kwargs.pop('proxy_args', {})
-
-    # Handle the "both" render_mode by submitting two separate jobs
-    if kwargs.get('render_mode', "").lower() == 'both':
-        logger.info("Render mode 'both' specified. Submitting two separate jobs for 'full' and 'proxy' modes.")
-        
-        # Make a copy of kwargs to avoid modifying the original
-        full_kwargs = kwargs.copy()
-        full_kwargs['render_mode'] = 'full'
-        
-        proxy_kwargs = kwargs.copy()
-        proxy_kwargs['render_mode'] = 'proxy'
-        
-        # Apply proxy-specific overrides if provided
-        if proxy_args:
-            logger.info(f"Applying proxy-specific arguments: {list(proxy_args.keys())}")
-            proxy_kwargs.update(proxy_args)
-        
-        # Submit jobs with full and proxy modes
-        full_jobs = submit_nuke_script(script_path, **full_kwargs)
-        proxy_jobs = submit_nuke_script(script_path, **proxy_kwargs)
-        
-        # Combine and return the results
-        return full_jobs + proxy_jobs
-
     if kwargs.get('submission_is_build_job', False):
         # WARNING: setting default to True will result in infinite job submissions
         submission = NukeSubmission(script_path=script_path, **kwargs)
