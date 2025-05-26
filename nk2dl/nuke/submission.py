@@ -2859,6 +2859,28 @@ class NukeSubmission:
                             
                             for key, value in plugin_overrides.items():
                                 plugin_info[key] = value
+                                
+                            # Extract and apply metadata settings if enabled
+                            if self.render_settings_from_metadata:
+                                logger.debug(f"Extracting metadata settings for single write node: {write_node}")
+                                metadata_job_overrides, metadata_plugin_overrides = self._extract_settings_from_metadata(write_node)
+                                
+                                logger.debug(f"Metadata job overrides for {write_node}: {metadata_job_overrides}")
+                                logger.debug(f"Metadata plugin overrides for {write_node}: {metadata_plugin_overrides}")
+                                
+                                # Apply metadata job overrides
+                                for key, value in metadata_job_overrides.items():
+                                    # Only apply if not already overridden by write_nodes config
+                                    if key not in job_overrides:
+                                        job_info[key] = value
+                                        logger.debug(f"Applied metadata job override: {key}={value}")
+                                
+                                # Apply metadata plugin overrides
+                                for key, value in metadata_plugin_overrides.items():
+                                    # Only apply if not already overridden by write_nodes config
+                                    if key not in plugin_overrides:
+                                        plugin_info[key] = value
+                                        logger.debug(f"Applied metadata plugin override: {key}={value}")
                         else:
                             write_node = None
                         
@@ -3447,7 +3469,11 @@ class NukeSubmission:
         Returns:
             Tuple of (job_info_overrides, plugin_info_overrides) dictionaries
         """
+        logger.debug(f"_extract_settings_from_metadata called for write node: {write_node_name}")
+        logger.debug(f"render_settings_from_metadata is: {self.render_settings_from_metadata}")
+        
         if not self.render_settings_from_metadata:
+            logger.debug("render_settings_from_metadata is False, returning empty overrides")
             return {}, {}
             
         # Ensure the script is open
