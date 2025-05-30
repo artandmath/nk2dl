@@ -1983,6 +1983,9 @@ class NukeSubmission:
             # Format: WriteNode=Write1,Write2,Write3
             # Use a comma-separated list for all write nodes
             plugin_info["WriteNode"] = ",".join(self.write_nodes)
+        elif self.write_nodes and len(self.write_nodes) == 1:
+            # For single write node submission
+            plugin_info["WriteNode"] = self.write_nodes[0]
         
         if self.output_file_path:
             plugin_info["OutputFilePath"] = self.output_file_path
