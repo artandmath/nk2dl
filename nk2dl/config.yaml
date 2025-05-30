@@ -63,3 +63,8 @@ submission:
   # Alternatively, define multiple copy locations:
   # script_copy0_path: "{outdir}/.farm/{nkstem}.nk"
   # script_copy1_path: "{nkdir}/archive/{nkstem}_{YYYY}-{MM}-{DD}.nk"
+
+  # Write node types
+  # Additional custom write node types (Write and DeepWrite are always included)
+  # Example: custom_write_classes: ["CustomWrite", "StudioWrite"] 
+  custom_write_classes: []

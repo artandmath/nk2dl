@@ -971,14 +971,19 @@ class NukeSubmission:
         
         Args:
             filter_types: Optional list of write node types to include.
-                         Defaults to ['Write', 'DeepWrite'] if None.
+                         Defaults to ['Write', 'DeepWrite'] plus any custom_write_classes from config.
                          
         Returns:
             List of write nodes matching the specified types
         """
         # Set default filter types if none provided
         if filter_types is None:
+            # Start with default write node types
             filter_types = ['Write', 'DeepWrite']
+            # Add any custom write classes from config
+            custom_classes = config.get('submission.custom_write_classes', [])
+            if custom_classes:
+                filter_types.extend(custom_classes)
         
         # Ensure the script is open
         nuke = self._ensure_script_can_be_parsed()

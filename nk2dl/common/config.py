@@ -125,6 +125,9 @@ class Config:
             
             # Environment variables
             'department': '',
+            
+            # Write node types
+            'custom_write_classes': [],  # Additional custom write node types (Write and DeepWrite are always included)
         }
     }
     
