@@ -1,0 +1,526 @@
+set cut_paste_input [stack 0]
+version 15.1 v1
+push $cut_paste_input
+Group {
+name Nk2dlSettings3
+knobChanged "this_node = nuke.thisNode()\nthis_knob = nuke.thisKnob()\n\nif '_override' in this_knob.name():\n    knob = this_node\[this_knob.name().replace(\"_override\",\"\")]\n    knob.setEnabled(this_knob.value())"
+selected true
+xpos 1444
+ypos 5072
+addUserKnob {20 nk2dl_metadata_tab l "Nk2dl Metadata Settings"}
+addUserKnob {20 nuke_plugin_group l "Nuke Plugin Settings" n 1}
+addUserKnob {3 stack_size l "Min RAM (GB)" t "Overides metadata key:\n\n<i>input/nk2dl/stack_size</i>"}
+stack_size 9
+addUserKnob {1 stack_size_spacer l "" -STARTLINE +DISABLED}
+stack_size_spacer input/nk2dl/stack_size
+addUserKnob {6 stack_size_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/stack_size</i>" -STARTLINE}
+addUserKnob {3 ram_use l "Max RAM (GB)" t "Overides metadata key:\n\n<i>input/nk2dl/ram_use</i>" +DISABLED}
+addUserKnob {1 ram_use_spacer l "" -STARTLINE +DISABLED}
+ram_use_spacer input/nk2dl/ram_use
+addUserKnob {6 ram_use_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/ram_use</i>" -STARTLINE}
+addUserKnob {3 threads l Threads t "Overides metadata key:\n\n<i>input/nk2dl/threads</i>" +DISABLED}
+addUserKnob {1 threads_spacer l "" -STARTLINE +DISABLED}
+threads_spacer input/nk2dl/threads
+addUserKnob {6 threads_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/threads</i>" -STARTLINE}
+addUserKnob {4 render_mode l "Render mode" t "Overides metadata key:\n\n<i>input/nk2dl/render_mode</i>" +DISABLED M {Full Proxy "Both (full and proxy)" "Script's proxy mode" "" ""}}
+addUserKnob {1 render_mode_spacer l "" -STARTLINE +DISABLED}
+render_mode_spacer input/nk2dl/render_mode
+addUserKnob {6 render_mode_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/render_mode</i>" -STARTLINE}
+addUserKnob {4 use_nuke_x l "Use Nuke X" t "Overides metadata key:\n\n<i>input/nk2dl/use_nuke_x</i>" +DISABLED M {no yes "when submitted from Nuke X"}}
+addUserKnob {1 use_nuke_x_spacer l "" -STARTLINE +DISABLED}
+use_nuke_x_spacer input/nk2dl/use_nuke_x
+addUserKnob {6 use_nuke_x_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/use_nuke_x</i>" -STARTLINE}
+addUserKnob {3 nuke_version_major l "Nuke version" t "Overides metadata key:\n\n<i>input/nk2dl/nuke_version</i>"}
+nuke_version_major 15
+addUserKnob {3 nuke_version_minor l . t "Overides metadata key:\n\n<i>input/nk2dl/nuke_version</i>" -STARTLINE}
+nuke_version_minor 2
+addUserKnob {1 nuke_version_spacer l "" -STARTLINE +DISABLED}
+nuke_version_spacer input/nk2dl/nuke_version
+addUserKnob {6 nuke_version_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/nuke_version</i>" -STARTLINE}
+addUserKnob {4 batch_mode l "Batch mode" t "Overides metadata key:\n\n<i>input/nk2dl/batch_mode</i>" +DISABLED M {no yes}}
+batch_mode yes
+addUserKnob {1 batch_mode_spacer l "" -STARTLINE +DISABLED}
+batch_mode_spacer input/nk2dl/batch_mode
+addUserKnob {6 batch_mode_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/batch_mode</i>" -STARTLINE}
+addUserKnob {4 reload_plugin l "Reload plugin per task" t "Overides metadata key:\n\n<i>input/nk2dl/reload_plugins</i>" +DISABLED M {no yes}}
+reload_plugin yes
+addUserKnob {1 reload_plugin_spacer l "" -STARTLINE +DISABLED}
+reload_plugin_spacer input/nk2dl/reload_plugins
+addUserKnob {6 reload_plugin_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/reload_plugins</i>" -STARTLINE}
+addUserKnob {4 enforce_render_order l "Enforce render order" t "Overides metadata key:\n\n<i>input/nk2dl/enforce_render_order</i>" +DISABLED M {no yes}}
+enforce_render_order yes
+addUserKnob {1 enforce_render_order_spacer l "" -STARTLINE +DISABLED}
+enforce_render_order_spacer input/nk2dl/enforce_render_order
+addUserKnob {6 enforce_render_order_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/enforce_render_order</i>" -STARTLINE}
+addUserKnob {4 continue_on_error l "Continue on error" t "Overides metadata key:\n\n<i>input/nk2dl/continue_on_error</i>" +DISABLED M {no yes}}
+continue_on_error yes
+addUserKnob {1 continue_on_error_spacer l "" -STARTLINE +DISABLED}
+continue_on_error_spacer input/nk2dl/continue_on_error
+addUserKnob {6 continue_on_error_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/continue_on_error</i>" -STARTLINE}
+addUserKnob {1 views l Views t "Overides metadata key:\n\n<i>input/nk2dl/views</i>" +DISABLED}
+addUserKnob {1 views_spacer l "" -STARTLINE +DISABLED}
+views_spacer input/nk2dl/views
+addUserKnob {6 views_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/views</i>" -STARTLINE}
+addUserKnob {4 use_gpu l "Use GPU" t "Overides metadata key:\n\n<i>input/nk2dl/use_gpu</i>" +DISABLED M {no yes}}
+use_gpu yes
+addUserKnob {1 use_gpu_spacer l "" -STARTLINE +DISABLED}
+use_gpu_spacer input/nk2dl/use_gpu
+addUserKnob {6 use_gpu_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/use_gpu</i>" -STARTLINE}
+addUserKnob {3 gpu_override l "GPU device" t "Overides metadata key:\n\n<i>input/nk2dl/gpu_override</i>" +DISABLED}
+addUserKnob {1 gpu_override_spacer l "" -STARTLINE +DISABLED}
+gpu_override_spacer input/nk2dl/gpu_override
+addUserKnob {6 gpu_override_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/gpu_override</i>" -STARTLINE}
+addUserKnob {20 nuke_plugin_endGroup l "" +STARTLINE n -1}
+addUserKnob {20 job_settings_group l "Job Settings" n 1}
+addUserKnob {1 frames l Frames t "Overides metadata key:\n\n<i>input/nk2dl/frames</i>" +DISABLED}
+addUserKnob {1 frames_spacer l "" -STARTLINE +DISABLED}
+frames_spacer input/nk2dl/frames
+addUserKnob {6 frames_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/frames</i>" -STARTLINE}
+addUserKnob {3 priority l Priority t "Overides metadata key:\n\n<i>input/nk2dl/priority</i>"}
+priority 50
+addUserKnob {1 priority_spacer l "" -STARTLINE +DISABLED}
+priority_spacer input/nk2dl/priority
+addUserKnob {6 priority_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/priority</i>" -STARTLINE}
+priority_override true
+addUserKnob {1 job_name l "Job name" t "Overides metadata key:\n\n<i>input/nk2dl/job_name</i>"}
+addUserKnob {1 job_name_spacer l "" -STARTLINE +DISABLED}
+job_name_spacer input/nk2dl/job_name
+addUserKnob {6 job_name_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/job_name</i>" -STARTLINE}
+job_name_override true
+addUserKnob {1 batch_name l "Batch name" t "Overides metadata key:\n\n<i>input/nk2dl/batch_name</i>" +DISABLED}
+addUserKnob {1 batch_name_spacer l "" -STARTLINE +DISABLED}
+batch_name_spacer input/nk2dl/batch_name
+addUserKnob {6 batch_name_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/batch_name</i>" -STARTLINE}
+addUserKnob {1 pool l Pool t "Overides metadata key:\n\n<i>input/nk2dl/pool</i>" +DISABLED}
+addUserKnob {1 pool_spacer l "" -STARTLINE +DISABLED}
+pool_spacer input/nk2dl/pool
+addUserKnob {6 pool_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/pool</i>" -STARTLINE}
+addUserKnob {1 group l Group t "Overides metadata key:\n\n<i>input/nk2dl/group</i>" +DISABLED}
+addUserKnob {1 group_spacer l "" -STARTLINE +DISABLED}
+group_spacer input/nk2dl/group
+addUserKnob {6 group_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/group</i>" -STARTLINE}
+addUserKnob {3 chunk_size l "Chunk size" t "Overides metadata key:\n\n<i>input/nk2dl/chunk_size</i>" +DISABLED}
+chunk_size 1
+addUserKnob {1 chunk_size_spacer l "" -STARTLINE +DISABLED}
+chunk_size_spacer input/nk2dl/chunk_size
+addUserKnob {6 chunk_size_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/chunk_size</i>" -STARTLINE}
+addUserKnob {3 concurrent_tasks l "Concurrent tasks" t "Overides metadata key:\n\n<i>input/nk2dl/concurrent_tasks</i>" +DISABLED}
+addUserKnob {1 concurrent_tasks_spacer l "" -STARTLINE +DISABLED}
+concurrent_tasks_spacer input/nk2dl/concurrent_tasks
+addUserKnob {6 concurrent_tasks_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/concurrent_tasks</i>" -STARTLINE}
+addUserKnob {4 limit_worker_tasks l "Use worker limit" t "Overides metadata key:\n\n<i>input/nk2dl/limit_worker_tasks</i>" +DISABLED M {no yes}}
+addUserKnob {1 limit_worker_tasks_spacer l "" -STARTLINE +DISABLED}
+limit_worker_tasks_spacer input/nk2dl/limit_worker_tasks
+addUserKnob {6 limit_worker_tasks_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/limit_worker_tasks</i>" -STARTLINE}
+addUserKnob {1 department l Department t "Overides metadata key:\n\n<i>input/nk2dl/department</i>" +DISABLED}
+addUserKnob {1 department_spacer l "" -STARTLINE +DISABLED}
+department_spacer input/nk2dl/department
+addUserKnob {6 department_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/department</i>" -STARTLINE}
+addUserKnob {1 user_name l "User name" t "Overides metadata key:\n\n<i>input/nk2dl/user_name</i>" +DISABLED}
+addUserKnob {1 user_name_spacer l "" -STARTLINE +DISABLED}
+user_name_spacer input/nk2dl/user_name
+addUserKnob {6 user_name_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/user_name</i>" -STARTLINE}
+addUserKnob {1 comment l Comment t "Overides metadata key:\n\n<i>input/nk2dl/comment</i>" +DISABLED}
+addUserKnob {1 comment_spacer l "" -STARTLINE +DISABLED}
+comment_spacer input/nk2dl/comment
+addUserKnob {6 comment_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/comment</i>" -STARTLINE}
+addUserKnob {1 job_dependencies l "Job dependencies" t "Overides metadata key:\n\n<i>input/nk2dl/job_dependencies</i>" +DISABLED}
+addUserKnob {1 job_dependencies_spacer l "" -STARTLINE +DISABLED}
+job_dependencies_spacer input/nk2dl/job_dependencies
+addUserKnob {6 job_dependencies_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/job_dependencies</i>" -STARTLINE}
+addUserKnob {4 on_job_complete l "On job complete" t "Overides metadata key:\n\n<i>input/nk2dl/on_job_complete</i>" +DISABLED M {Nothing Archive Delete}}
+addUserKnob {1 on_job_complete_spacer l "" -STARTLINE +DISABLED}
+on_job_complete_spacer input/nk2dl/on_job_complete
+addUserKnob {6 on_job_complete_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/on_job_complete</i>" -STARTLINE}
+addUserKnob {4 submit_suspended l "Submit suspended" t "Overides metadata key:\n\n<i>input/nk2dl/submit_suspended</i>" +DISABLED M {no yes}}
+addUserKnob {1 submit_suspended_spacer l "" -STARTLINE +DISABLED}
+submit_suspended_spacer input/nk2dl/submit_suspended
+addUserKnob {6 submit_suspended_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/submit_suspended</i>" -STARTLINE}
+addUserKnob {1 limit_groups l "Limit groups" t "Overides metadata key:\n\n<i>input/nk2dl/limit_groups</i>" +DISABLED}
+addUserKnob {1 limit_groups_spacer l "" -STARTLINE +DISABLED}
+limit_groups_spacer input/nk2dl/limit_groups
+addUserKnob {6 limit_groups_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/limit_groups</i>" -STARTLINE}
+addUserKnob {3 task_timeout l "Task timeout (seconds)" t "Overides metadata key:\n\n<i>input/nk2dl/task_timeout</i>" +DISABLED}
+addUserKnob {1 task_timeout_spacer l "" -STARTLINE +DISABLED}
+task_timeout_spacer input/nk2dl/task_timeout
+addUserKnob {6 task_timeout_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/task_timeout</i>" -STARTLINE}
+addUserKnob {4 enable_auto_timeout l "Enable auto timeout" t "Overides metadata key:\n\n<i>input/nk2dl/enable_auto_timeout</i>" M {no yes}}
+addUserKnob {1 enable_auto_timeout_spacer l "" -STARTLINE +DISABLED}
+enable_auto_timeout_spacer input/nk2dl/enable_auto_timeout
+addUserKnob {6 enable_auto_timeout_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/enable_auto_timeout</i>" -STARTLINE}
+enable_auto_timeout_override true
+addUserKnob {20 job_endGroup l "" +STARTLINE n -1}
+addUserKnob {20 script_settings_group l "Script Settings" n 1}
+addUserKnob {2 pre_job_script l "Pre job script" t "Overides metadata key:\n\n<i>input/nk2dl/pre_job_script</i>" +DISABLED}
+addUserKnob {1 pre_job_script_spacer l "" -STARTLINE +DISABLED}
+pre_job_script_spacer input/nk2dl/pre_job_script
+addUserKnob {6 pre_job_script_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/pre_job_script</i>" -STARTLINE}
+addUserKnob {2 post_job_script l "Post job script" t "Overides metadata key:\n\n<i>input/nk2dl/post_job_script</i>" +DISABLED}
+addUserKnob {1 post_job_script_spacer l "" -STARTLINE +DISABLED}
+post_job_script_spacer input/nk2dl/post_job_script
+addUserKnob {6 post_job_script_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/post_job_script</i>" -STARTLINE}
+addUserKnob {2 pre_task_script l "Pre task script" t "Overides metadata key:\n\n<i>input/nk2dl/pre_task_script</i>" +DISABLED}
+addUserKnob {1 pre_task_script_spacer l "" -STARTLINE +DISABLED}
+pre_task_script_spacer input/nk2dl/pre_task_script
+addUserKnob {6 pre_task_script_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/pre_task_script</i>" -STARTLINE}
+addUserKnob {2 post_task_script l "Post task script" t "Overides metadata key:\n\n<i>input/nk2dl/post_task_script</i>" +DISABLED}
+addUserKnob {1 post_task_script_spacer l "" -STARTLINE +DISABLED}
+post_task_script_spacer input/nk2dl/post_task_script
+addUserKnob {6 post_task_script_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/post_task_script</i>" -STARTLINE}
+addUserKnob {20 script_endGroup l "" +STARTLINE n -1}
+addUserKnob {20 advanced_group l "Advanced Settings" n 1}
+addUserKnob {4 performance_profiler l "Use performance profiler" t "Overides metadata key:\n\n<i>input/nk2dl/performance_profiler</i>" +DISABLED M {no yes}}
+addUserKnob {1 performance_profiler_spacer l "" -STARTLINE +DISABLED}
+performance_profiler_spacer input/nk2dl/performance_profiler
+addUserKnob {6 performance_profiler_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/performance_profiler</i>" -STARTLINE}
+addUserKnob {2 performance_profiler_path l "Performance profiler path" t "Overides metadata key:\n\n<i>input/nk2dl/performance_profiler_path</i>" +DISABLED}
+addUserKnob {26 performance_profiler_path_spacer l "" -STARTLINE T " "}
+addUserKnob {6 performance_profiler_path_override l "" t "Enable override for metadata key:\n\n<i>input/nk2dl/performance_profiler_path</i>" -STARTLINE}
+addUserKnob {20 advanced_endGroup l "" +STARTLINE n -1}
+addUserKnob {26 ""}
+addUserKnob {26 info l "" +STARTLINE T "<h3>NK2DL Metadata Settings v0.1</h3>\n<p>\nOverrides will take effect when<br> render_settings_from_metadata=True as an arg to <b>nk2dl.submit_nuke_script</b> or<br> render_settings_from_metadata: True in the <b>config</b>\n</p>"}
+}
+Input {
+inputs 0
+name Input1
+xpos 0
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/stack_size "\[value parent.stack_size]"}
+}
+name ModifyMetaData_StackSize
+xpos 0
+ypos 54
+disable {{!parent.stack_size_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/ram_use "\[value parent.ram_use]"}
+}
+name ModifyMetaData_RamUse
+xpos 0
+ypos 95
+disable {{!parent.ram_use_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/threads "\[value parent.threads]"}
+}
+name ModifyMetaData_Threads
+xpos 0
+ypos 136
+disable {{!parent.threads_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/render_mode "\[lindex {full proxy {both (full and proxy)} {script's proxy mode}} \[value parent.render_mode]]"}
+}
+name ModifyMetaData_RenderMode
+xpos 0
+ypos 177
+disable {{!parent.render_mode_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/use_nuke_x "\[lindex {no yes {when submitted from nuke x}} \[value parent.use_nuke_x]]"}
+}
+name ModifyMetaData_UseNukeX
+xpos 0
+ypos 218
+disable {{!parent.use_nuke_x_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/nuke_version "\[value parent.nuke_version_major].\[value parent.nuke_version_minor]"}
+}
+name ModifyMetaData_NukeVersion
+xpos 0
+ypos 259
+disable {{!parent.nuke_version_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/batch_mode "\[lindex {no yes} \[value parent.batch_mode]]"}
+}
+name ModifyMetaData_BatchMode
+xpos 0
+ypos 300
+disable {{!parent.batch_mode_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/reload_plugins "\[lindex {no yes} \[value parent.reload_plugin]]"}
+}
+name ModifyMetaData_ReloadPlugins
+xpos 0
+ypos 341
+disable {{!parent.reload_plugin_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/enforce_render_order "\[lindex {no yes} \[value parent.enforce_render_order]]"}
+}
+name ModifyMetaData_EnforceRenderOrder
+xpos 0
+ypos 382
+disable {{!parent.enforce_render_order_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/continue_on_error "\[lindex {no yes} \[value parent.continue_on_error]]"}
+}
+name ModifyMetaData_ContinueOnError
+xpos 0
+ypos 423
+disable {{!parent.continue_on_error_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/views "\[value parent.views]"}
+}
+name ModifyMetaData_Views
+xpos 0
+ypos 464
+disable {{!parent.views_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/use_gpu "\[lindex {no yes} \[value parent.use_gpu]]"}
+}
+name ModifyMetaData_UseGpu
+xpos 0
+ypos 505
+disable {{!parent.use_gpu_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/gpu_override "\[value parent.gpu_override]"}
+}
+name ModifyMetaData_GpuOverride
+xpos 0
+ypos 546
+disable {{!parent.gpu_override_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/frames "\[value parent.frames]"}
+}
+name ModifyMetaData_Frames
+xpos 0
+ypos 587
+disable {{!parent.frames_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/priority "\[value parent.priority]"}
+}
+name ModifyMetaData_Priority
+xpos 0
+ypos 628
+disable {{!parent.priority_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/job_name "\[value parent.job_name]"}
+}
+name ModifyMetaData_JobName
+xpos 0
+ypos 669
+disable {{!parent.job_name_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/batch_name "\[value parent.batch_name]"}
+}
+name ModifyMetaData_BatchName
+xpos 0
+ypos 710
+disable {{!parent.batch_name_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/pool "\[value parent.pool]"}
+}
+name ModifyMetaData_Pool
+xpos 0
+ypos 751
+disable {{!parent.pool_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/group "\[value parent.group]"}
+}
+name ModifyMetaData_Group
+xpos 0
+ypos 792
+disable {{!parent.group_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/chunk_size "\[value parent.chunk_size]"}
+}
+name ModifyMetaData_ChunkSize
+xpos 0
+ypos 833
+disable {{!parent.chunk_size_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/concurrent_tasks "\[value parent.concurrent_tasks]"}
+}
+name ModifyMetaData_ConcurrentTasks
+xpos 0
+ypos 874
+disable {{!parent.concurrent_tasks_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/limit_worker_tasks "\[lindex {no yes} \[value parent.limit_worker_tasks]]"}
+}
+name ModifyMetaData_LimitWorkerTasks
+xpos 0
+ypos 915
+disable {{!parent.limit_worker_tasks_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/department "\[value parent.department]"}
+}
+name ModifyMetaData_Department
+xpos 0
+ypos 956
+disable {{!parent.department_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/user_name "\[value parent.user_name]"}
+}
+name ModifyMetaData_UserName
+xpos 0
+ypos 997
+disable {{!parent.user_name_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/comment "\[value parent.comment]"}
+}
+name ModifyMetaData_Comment
+xpos 0
+ypos 1038
+disable {{!parent.comment_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/job_dependencies "\[value parent.job_dependencies]"}
+}
+name ModifyMetaData_JobDependencies
+xpos 0
+ypos 1079
+disable {{!parent.job_dependencies_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/on_job_complete "\[lindex {Nothing Archive Delete} \[value parent.on_job_complete]]"}
+}
+name ModifyMetaData_OnJobComplete
+xpos 0
+ypos 1120
+disable {{!parent.on_job_complete_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/submit_suspended "\[lindex {no yes} \[value parent.submit_suspended]]"}
+}
+name ModifyMetaData_SubmitSuspended
+xpos 0
+ypos 1161
+disable {{!parent.submit_suspended_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/limit_groups "\[value parent.limit_groups]"}
+}
+name ModifyMetaData_LimitGroups
+xpos 0
+ypos 1202
+disable {{!parent.limit_groups_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/task_timeout "\[value parent.task_timeout]"}
+}
+name ModifyMetaData_TaskTimeout
+xpos 0
+ypos 1243
+disable {{!parent.task_timeout_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/enable_auto_timeout "\[lindex {no yes} \[value parent.enable_auto_timeout]]"}
+}
+name ModifyMetaData_EnableAutoTimeout
+xpos 0
+ypos 1284
+disable {{!parent.enable_auto_timeout_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/pre_job_script "\[value parent.pre_job_script]"}
+}
+name ModifyMetaData_PreJobScript
+xpos 0
+ypos 1325
+disable {{!parent.pre_job_script_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/post_job_script "\[value parent.post_job_script]"}
+}
+name ModifyMetaData_PostJobScript
+xpos 0
+ypos 1366
+disable {{!parent.post_job_script_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/pre_task_script "\[value parent.pre_task_script]"}
+}
+name ModifyMetaData_PreTaskScript
+xpos 0
+ypos 1407
+disable {{!parent.pre_task_script_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/post_task_script "\[value parent.post_task_script]"}
+}
+name ModifyMetaData_PostTaskScript
+xpos 0
+ypos 1448
+disable {{!parent.post_task_script_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/performance_profiler "\[lindex {no yes} \[value parent.performance_profiler]]"}
+}
+name ModifyMetaData_PerformanceProfiler
+xpos 0
+ypos 1489
+disable {{!parent.performance_profiler_override}}
+}
+ModifyMetaData {
+metadata {
+ {set input/nk2dl/performance_profiler_path "\[value parent.performance_profiler_path]"}
+}
+name ModifyMetaData_PerformanceProfilerPath
+xpos 0
+ypos 1530
+disable {{!parent.performance_profiler_path_override}}
+}
+Output {
+name Output1
+xpos 0
+ypos 1571
+}
+end_group
