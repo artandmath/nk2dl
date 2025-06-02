@@ -3579,6 +3579,10 @@ class NukeSubmission:
             # Extract nk2dl metadata keys
             for key, value in metadata.items():
                 if key.startswith('input/nk2dl/'):
+                    # Skip empty string values to avoid overriding job/plugin entries
+                    if value == '':
+                        logger.debug(f"Skipping empty metadata value for key: {key}")
+                        continue
                     # Remove the 'input/nk2dl/' prefix
                     setting_key = key[len('input/nk2dl/'):]
                     metadata_settings[setting_key] = value
