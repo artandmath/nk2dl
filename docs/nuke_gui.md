@@ -13,7 +13,7 @@ The followng commands will be added to the render menu:
 
 ## Keeping the Thinkbox submitter available
 
-While nk2dl is in alpha state, you may still wish to keep the default Thinkbox submitter handy. This is how we are keeping both the nk2dl and Thinkbox submitters available:
+While nk2dl is in alpha state, you may still wish to keep the default Thinkbox submitter handy.Keep both the nk2dl and Thinkbox submitters available with the following, or re-purpose the setup functions from `setup_gui` to create your own menus that call the `nk2dl` commands:
 
 ```python
 import DeadlineNukeClient
