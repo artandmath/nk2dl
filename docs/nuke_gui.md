@@ -2,14 +2,16 @@
 
 ## Installation
 
-To install the nk2dl GUI, add the following to your `menu.py`:
+To install the nk2dl GUI into nuke, add the following to your `menu.py`:
 
 ```python
 from nk2dl import setup_gui
 ```
-This will add commands to your render menu
+The followng commands will be added to the render menu:
+- Submit Nuke to Deadline - `shift + F7`
+- Submit Selected Writes to Deadline - `alt + shift + F7`
 
-## Keeping Both Submitters Available
+## Keeping the Thinkbox submitter available
 
 While nk2dl is in alpha state, you may still wish to keep the default Thinkbox submitter handy. This is how we are keeping both the nk2dl and Thinkbox submitters available:
 
