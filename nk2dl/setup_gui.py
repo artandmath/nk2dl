@@ -1,11 +1,11 @@
-"""Auto-setup convenience module for nk2dl.
+"""Setup GUI convenience module for nk2dl.
 
 Import this module to automatically setup the nk2dl GUI in Nuke.
 
 Usage:
-    from nk2dl import auto_setup  # GUI is automatically setup
+    from nk2dl import setup_gui  # GUI is automatically setup
     # or
-    import nk2dl.auto_setup  # GUI is automatically setup
+    import nk2dl.setup_gui  # GUI is automatically setup
 """
 
 from .gui.menus import create_nk2dl_menu

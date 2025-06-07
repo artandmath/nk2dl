@@ -5,7 +5,7 @@
 To install the nk2dl GUI, add the following to your `menu.py`:
 
 ```python
-from nk2dl import auto_setup
+from nk2dl import setup_gui
 ```
 This will add commands to your render menu
 
@@ -19,5 +19,5 @@ menubar = nuke.menu("Nuke")
 render_menu = menubar.addMenu('Render')
 render_menu.addSeparator()
 render_menu.addCommand("Submit Nuke to Deadline (Thinkbox)", DeadlineNukeClient.main, "Ctrl+F7")
-from nk2dl import auto_setup
+from nk2dl import setup_gui
 ```
