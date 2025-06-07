@@ -4,6 +4,7 @@ This module provides the main public interfaces for submitting Nuke scripts to D
 """
 
 from .nuke.submission import submit_nuke_script as _submit_nuke_script
+from .gui.menus import create_nk2dl_menu
 
 def submit_nuke_script(script_path, **kwargs):
     """Submit a Nuke script to Deadline render farm.

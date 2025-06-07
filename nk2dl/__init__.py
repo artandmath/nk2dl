@@ -1,7 +1,12 @@
 """Nuke to Deadline Submitter (nk2dl)."""
 
+print("\nNuke to Deadline (nk2dl) v0.1")
+print("Copyright (c) 2025 Daniel Harkness. All Rights Reserved.\n")
+
 from .common.errors import NK2DLError
 from .api import submit_nuke_script
+from . import auto_setup
+
 
 # CLI entry point
 def cli_main():

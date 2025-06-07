@@ -15,6 +15,7 @@ The Nuke to Deadline toolset consists of 3 parts:
 - [Configuration Details](./docs/config.md)
 - [Deadline Connection](./docs/deadline_connection.md)
 - [Nuke Submission](./docs/nuke_submission.md)
+- [Nuke GUI](./docs/nuke_gui.md)
 - [Command Line Interface](./docs/commandline.md)
 - [Feature parity table](./docs/feature_parity.md)
 

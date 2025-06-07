@@ -2,7 +2,7 @@ set cut_paste_input [stack 0]
 version 15.1 v1
 push $cut_paste_input
 Group {
-name Nk2dlSettings3
+name Nk2dl_ModifyMetaDataGui1
 knobChanged "this_node = nuke.thisNode()\nthis_knob = nuke.thisKnob()\n\nif '_override' in this_knob.name():\n    knob = this_node\[this_knob.name().replace(\"_override\",\"\")]\n    knob.setEnabled(this_knob.value())"
 selected true
 xpos 1444
