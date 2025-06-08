@@ -32,7 +32,6 @@ The Nuke to Deadline toolset consists of 3 parts:
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The project aims to have feature parity with the default Deadline submitter on top of `nk2dl`'s other features. At this point in time there are parity features missing.
 - The project has no plans to implement Deadline draft.
-- Standard Writes only, DeepWrites and other kinds of write nodes to come.
 - nk2dl pulls a Nuke render license if it needs to call on the Nuke python module.
 - Connection to Deadline Web Service currently doesn't support SSL.
 - The [roadmap](./ROADMAP.md) sets out the path to overcome the caveats and implement planned features.
