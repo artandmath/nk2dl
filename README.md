@@ -30,9 +30,8 @@ The Nuke to Deadline toolset consists of 3 parts:
 - Interfaces to `nk2dl python` module and command line are subject to change.
 - The `nk2dl cli` command line will often be out of step with the python module during development. The command line implementation may outright not work when out of step.
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
-- The project aims to have feature parity with the default Deadline submitter on top of `nk2dl`'s other features. At this point in time there are parity features missing.
 - The project has no plans to implement Deadline draft.
-- nk2dl pulls a Nuke render license if it needs to call on the Nuke python module.
+- nk2dl pulls a Nuke render license if it needs to call on the Nuke python module outside of a Nuke interactive sesssion.
 - Connection to Deadline Web Service currently doesn't support SSL.
 - The [roadmap](./ROADMAP.md) sets out the path to overcome the caveats and implement planned features.
 - [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8)
