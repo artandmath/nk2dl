@@ -5,7 +5,7 @@ deadline:
   port: 8081
   ssl: false
   ssl_cert: null  # Path to SSL certificate
-  timeout: 5
+  timeout: 1  # seconds
   commandline_on_fail: true  # Whether to use command-line if web service fails
   
   # Command-line configuration

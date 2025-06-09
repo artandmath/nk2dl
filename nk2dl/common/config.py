@@ -57,7 +57,7 @@ class Config:
             'port': 8081,
             'ssl': False,
             'ssl_cert': None,  # Path to SSL certificate
-            'timeout': 5,
+            'timeout': 1, #seconds
             'commandline_on_fail': True,  # Whether to use command-line if web service fails
             
             # Command-line configuration
