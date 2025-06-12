@@ -5,7 +5,6 @@ print("Copyright (c) 2025 Daniel Harkness. All Rights Reserved.\n")
 
 from .common.errors import NK2DLError
 from .api import submit_nuke_script
-from . import setup_gui
 
 
 # CLI entry point

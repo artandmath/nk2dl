@@ -88,8 +88,8 @@ def create_toolbar_commands():
     
     # Define gizmo files
     gizmos = {
-        "Nk2dl_ModifyMetaData.nk": "ModifyMetaData",
-        "Nk2dl_ModifyMetaDataGui.nk": "ModifyMetaDataGui"
+        "Nk2dl_ModifyMetaData.nk": "Nk2dl_ModifyMetaData",
+        "Nk2dl_ModifyMetaDataGui.nk": "Nk2dl_ModifyMetaDataGui"
     }
     
     # Get the Nodes toolbar
