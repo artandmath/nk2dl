@@ -13,6 +13,7 @@ from pathlib import Path
 
 try:
     import nuke
+    import nukescripts
     NUKE_AVAILABLE = True
 except ImportError:
     NUKE_AVAILABLE = False
@@ -116,5 +117,41 @@ def create_toolbar_commands():
     logger.info("nk2dl toolbar commands created successfully")
     return True
 
+def create_dockable_panel():
+    """Create and register the dockable nk2dl panel.
+    
+    This function registers the nk2dl panel as a dockable panel in Nuke.
+    Users can access it from the Pane menu.
+
+    Returns:
+        True or None: True if panel was registered, or None if Nuke is not available.
+    """
+    if not NUKE_AVAILABLE:
+        logger.warning("Nuke not available, skipping panel creation")
+        return None
+    
+    try:
+        # Import the panel module
+        from .gui.panel import create_panel
+        
+        # Register the panel using the correct method for nukescripts.PythonPanel
+        # Add to the Pane menu
+        pane_menu = nuke.menu('Pane')
+        pane_menu.addCommand('Nuke to Deadline', create_panel)
+        
+        # Register the panel for saving/restoring with custom layouts
+        nukescripts.registerPanel('danielharkness.com.nk2dl.panel', create_panel)
+        
+        logger.info("nk2dl dockable panel registered successfully")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to register nk2dl panel: {str(e)}")
+        return None
+
+# Initialize all GUI components
+logger.info("Initializing nk2dl GUI components")
+
 create_render_menus()
 create_toolbar_commands()
+create_dockable_panel()
