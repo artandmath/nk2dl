@@ -14,9 +14,19 @@ from pathlib import Path
 try:
     import nuke
     import nukescripts
+    from nukescripts import panels
     NUKE_AVAILABLE = True
+    
+    # Detect Nuke version for appropriate PySide import
+    nuke_version = nuke.NUKE_VERSION_MAJOR
+    if nuke_version >= 16:
+        PYSIDE_VERSION = "PySide6"
+    else:
+        PYSIDE_VERSION = "PySide2"
+        
 except ImportError:
     NUKE_AVAILABLE = False
+    PYSIDE_VERSION = "Unknown"
 
 from .common.logging import setup_logging
 
@@ -120,8 +130,7 @@ def create_toolbar_commands():
 def create_dockable_panel():
     """Create and register the dockable nk2dl panel.
     
-    This function registers the nk2dl panel as a dockable panel in Nuke.
-    Users can access it from the Pane menu.
+    This function calls the registration function from the panel module.
 
     Returns:
         True or None: True if panel was registered, or None if Nuke is not available.
@@ -131,19 +140,9 @@ def create_dockable_panel():
         return None
     
     try:
-        # Import the panel module
-        from .gui.panel import create_panel
-        
-        # Register the panel using the correct method for nukescripts.PythonPanel
-        # Add to the Pane menu
-        pane_menu = nuke.menu('Pane')
-        pane_menu.addCommand('Nuke to Deadline', create_panel)
-        
-        # Register the panel for saving/restoring with custom layouts
-        nukescripts.registerPanel('danielharkness.com.nk2dl.panel', create_panel)
-        
-        logger.info("nk2dl dockable panel registered successfully")
-        return True
+        # Import and call the registration function from panel module
+        from .gui.panel import create_dockable_panel as register_panel
+        return register_panel()
         
     except Exception as e:
         logger.error(f"Failed to register nk2dl panel: {str(e)}")
