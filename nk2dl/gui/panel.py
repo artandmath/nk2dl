@@ -685,7 +685,7 @@ class Nk2dlPanel(QtWidgets.QWidget):
             print("Nuke to Deadline panel is in development, Use the 'Submit Selected Writes to Deadline' options from the Render menu")
 
 
-def create_dockable_panel():
+def register_panel():
     """Create and register the dockable nk2dl panel.
     
     This function registers the nk2dl panel as a dockable PySide widget in Nuke.
@@ -717,18 +717,3 @@ def create_dockable_panel():
     except Exception as e:
         logger.error(f"Failed to register nk2dl panel: {str(e)}")
         return None
-
-
-def create_panel():
-    """Create and return a new instance of the nk2dl panel.
-    
-    This function is used by the panel registration system.
-    
-    Returns:
-        Nk2dlPanel: A new panel instance, or None if Nuke is not available.
-    """
-    if not NUKE_AVAILABLE:
-        logger.warning("Nuke not available, cannot create panel")
-        return None
-        
-    return Nk2dlPanel()
