@@ -71,7 +71,6 @@ class Nk2dlPanel(QtWidgets.QWidget):
         
         # === JOB SETTINGS GROUP (Left) ===
         self.job_settings_group = QtWidgets.QGroupBox("Job Settings")
-        self.job_settings_group.setMinimumWidth(300)
         job_column = QtWidgets.QVBoxLayout()
         job_column.setContentsMargins(10, 10, 10, 10)  # Consistent margins
         job_column.setSpacing(5)  # Consistent spacing
@@ -79,101 +78,403 @@ class Nk2dlPanel(QtWidgets.QWidget):
         
         # === MACHINE SETTINGS GROUP (Right) ===
         self.machine_settings_group = QtWidgets.QGroupBox("Machine Settings")
-        self.machine_settings_group.setMinimumWidth(300)
         machine_column = QtWidgets.QVBoxLayout()
         machine_column.setContentsMargins(10, 10, 10, 10)  # Consistent margins
         machine_column.setSpacing(5)  # Consistent spacing
         self.machine_settings_group.setLayout(machine_column)
         
         # === JOB SETTINGS CONTENT ===
-        # Frames and basic settings (removed Job Information section)
-        basic_layout = QtWidgets.QGridLayout()
+        # Create a more sophisticated layout similar to Machine Settings
+        job_main_layout = QtWidgets.QVBoxLayout()
+        job_main_layout.setSpacing(8)
         
-        basic_layout.addWidget(QtWidgets.QLabel("Frames:"), 0, 0)
+        # First row: Pool + Secondary Pool
+        pool_row = QtWidgets.QHBoxLayout()
+        pool_row.setSpacing(10)
+        
+        pool_label = QtWidgets.QLabel("Pool")
+        pool_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        pool_label.setMinimumWidth(120)
+        pool_row.addWidget(pool_label)
+        
+        self.pool_combo = QtWidgets.QComboBox()
+        self.pool_combo.addItems(["comp", "render", "light", "fx"])
+        self.pool_combo.setFixedWidth(100)
+        pool_row.addWidget(self.pool_combo)
+        
+        # Vertical separator
+        separator1 = QtWidgets.QFrame()
+        separator1.setFrameShape(QtWidgets.QFrame.VLine)
+        separator1.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator1.setFixedWidth(1)
+        pool_row.addWidget(separator1)
+        
+        secondary_pool_label = QtWidgets.QLabel("Secondary Pool")
+        secondary_pool_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        pool_row.addWidget(secondary_pool_label)
+        
+        self.secondary_pool_combo = QtWidgets.QComboBox()
+        self.secondary_pool_combo.addItems(["", "comp", "render", "light", "fx"])
+        self.secondary_pool_combo.setFixedWidth(100)
+        pool_row.addWidget(self.secondary_pool_combo)
+        pool_row.addStretch()
+        
+        job_main_layout.addLayout(pool_row)
+        
+        # Second row: Group
+        group_row = QtWidgets.QHBoxLayout()
+        group_row.setSpacing(10)
+        
+        group_label = QtWidgets.QLabel("Group")
+        group_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        group_label.setMinimumWidth(120)
+        group_row.addWidget(group_label)
+        
+        self.group_combo = QtWidgets.QComboBox()
+        self.group_combo.addItems(["none", "comp_high", "comp_med", "render_high", "render_low"])
+        self.group_combo.setFixedWidth(150)
+        group_row.addWidget(self.group_combo)
+        group_row.addStretch()
+        
+        job_main_layout.addLayout(group_row)
+        
+        # Third row: Priority
+        priority_row = QtWidgets.QHBoxLayout()
+        priority_row.setSpacing(10)
+        
+        priority_label = QtWidgets.QLabel("Priority")
+        priority_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        priority_label.setMinimumWidth(120)
+        priority_row.addWidget(priority_label)
+        
+        self.priority_spin = QtWidgets.QSpinBox()
+        self.priority_spin.setMinimum(0)
+        self.priority_spin.setMaximum(100)
+        self.priority_spin.setValue(50)
+        self.priority_spin.setFixedWidth(60)
+        priority_row.addWidget(self.priority_spin)
+        priority_row.addStretch()
+        
+        job_main_layout.addLayout(priority_row)
+        
+        # Fourth row: Task Timeout + checkbox
+        timeout_row = QtWidgets.QHBoxLayout()
+        timeout_row.setSpacing(10)
+        
+        timeout_label = QtWidgets.QLabel("Task Timeout")
+        timeout_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        timeout_label.setMinimumWidth(120)
+        timeout_row.addWidget(timeout_label)
+        
+        self.task_timeout_spin = QtWidgets.QSpinBox()
+        self.task_timeout_spin.setMinimum(0)
+        self.task_timeout_spin.setMaximum(999)
+        self.task_timeout_spin.setValue(0)
+        self.task_timeout_spin.setFixedWidth(60)
+        timeout_row.addWidget(self.task_timeout_spin)
+        
+        # Vertical separator
+        separator2 = QtWidgets.QFrame()
+        separator2.setFrameShape(QtWidgets.QFrame.VLine)
+        separator2.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator2.setFixedWidth(1)
+        timeout_row.addWidget(separator2)
+        
+        self.enable_auto_timeout_check = QtWidgets.QCheckBox("Enable auto task timeout")
+        timeout_row.addWidget(self.enable_auto_timeout_check)
+        timeout_row.addStretch()
+        
+        job_main_layout.addLayout(timeout_row)
+        
+        # Fifth row: Frames dropdown + string input + Chunk Size
+        frames_row = QtWidgets.QHBoxLayout()
+        frames_row.setSpacing(10)
+        
+        frames_label = QtWidgets.QLabel("Frames")
+        frames_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        frames_label.setMinimumWidth(120)
+        frames_row.addWidget(frames_label)
+        
+        self.frames_combo = QtWidgets.QComboBox()
+        self.frames_combo.addItems(["Global", "Custom", "Input"])
+        self.frames_combo.setFixedWidth(80)
+        frames_row.addWidget(self.frames_combo)
+        
         self.frame_range_edit = QtWidgets.QLineEdit("1001-2315")
-        basic_layout.addWidget(self.frame_range_edit, 0, 1)
+        self.frame_range_edit.setMinimumWidth(150)
+        frames_row.addWidget(self.frame_range_edit)
         
-        basic_layout.addWidget(QtWidgets.QLabel("Chunk Size:"), 1, 0)
+        # Add Chunk Size to end of frames line
+        chunk_label = QtWidgets.QLabel("Chunk Size")
+        chunk_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        frames_row.addWidget(chunk_label)
+        
         self.chunk_size_spin = QtWidgets.QSpinBox()
         self.chunk_size_spin.setValue(1)
         self.chunk_size_spin.setMinimum(1)
-        basic_layout.addWidget(self.chunk_size_spin, 1, 1)
+        self.chunk_size_spin.setFixedWidth(60)
+        frames_row.addWidget(self.chunk_size_spin)
+        frames_row.addStretch()
         
-        basic_layout.addWidget(QtWidgets.QLabel("Threads:"), 2, 0)
+        job_main_layout.addLayout(frames_row)
+        
+        # Sixth row: Render Mode (removed separate chunk size row)
+        render_mode_row = QtWidgets.QHBoxLayout()
+        render_mode_row.setSpacing(10)
+        
+        render_mode_label = QtWidgets.QLabel("Render Mode")
+        render_mode_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        render_mode_label.setMinimumWidth(120)
+        render_mode_row.addWidget(render_mode_label)
+        
+        self.render_mode_combo = QtWidgets.QComboBox()
+        self.render_mode_combo.addItems(["Normal", "Draft", "Fast", "Preview"])
+        self.render_mode_combo.setFixedWidth(100)
+        render_mode_row.addWidget(self.render_mode_combo)
+        render_mode_row.addStretch()
+        
+        job_main_layout.addLayout(render_mode_row)
+        
+        # Seventh row: Views + checkbox
+        views_row = QtWidgets.QHBoxLayout()
+        views_row.setSpacing(10)
+        
+        views_label = QtWidgets.QLabel("Views")
+        views_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        views_label.setMinimumWidth(120)
+        views_row.addWidget(views_label)
+        
+        self.views_combo = QtWidgets.QComboBox()
+        self.views_combo.addItems(["All", "Main", "Left", "Right", "Custom"])
+        self.views_combo.setFixedWidth(100)
+        views_row.addWidget(self.views_combo)
+        
+        # Vertical separator
+        separator4 = QtWidgets.QFrame()
+        separator4.setFrameShape(QtWidgets.QFrame.VLine)
+        separator4.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator4.setFixedWidth(1)
+        views_row.addWidget(separator4)
+        
+        self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
+        views_row.addWidget(self.views_separate_jobs_check)
+        views_row.addStretch()
+        
+        job_main_layout.addLayout(views_row)
+        
+        # Eighth row: Use Nuke X + Use Batch Mode checkboxes
+        checkboxes_row = QtWidgets.QHBoxLayout()
+        checkboxes_row.setSpacing(10)
+        
+        # Empty label to maintain alignment
+        empty_label = QtWidgets.QLabel("")
+        empty_label.setMinimumWidth(120)
+        checkboxes_row.addWidget(empty_label)
+        
+        self.render_nukex_check = QtWidgets.QCheckBox("Use Nuke X")
+        checkboxes_row.addWidget(self.render_nukex_check)
+        
+        self.use_batch_mode_check = QtWidgets.QCheckBox("Use batch mode")
+        checkboxes_row.addWidget(self.use_batch_mode_check)
+        checkboxes_row.addStretch()
+        
+        job_main_layout.addLayout(checkboxes_row)
+        
+        job_column.addLayout(job_main_layout)
+        job_column.addStretch()
+        
+        # === MACHINE SETTINGS CONTENT ===
+        # Create a more sophisticated layout with fixed widget sizes
+        machine_main_layout = QtWidgets.QVBoxLayout()
+        machine_main_layout.setSpacing(8)
+        
+        # First row: Threads
+        threads_row = QtWidgets.QHBoxLayout()
+        threads_row.setSpacing(10)
+        
+        threads_label = QtWidgets.QLabel("Threads")
+        threads_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        threads_label.setMinimumWidth(120)  # Fixed label width
+        threads_row.addWidget(threads_label)
+        
         self.threads_spin = QtWidgets.QSpinBox()
         self.threads_spin.setMinimum(1)
         self.threads_spin.setMaximum(64)
         self.threads_spin.setValue(4)
-        basic_layout.addWidget(self.threads_spin, 2, 1)
+        self.threads_spin.setFixedWidth(60)  # Fixed widget width
+        threads_row.addWidget(self.threads_spin)
+        threads_row.addStretch()  # Push everything to left
         
-        job_column.addLayout(basic_layout)
+        machine_main_layout.addLayout(threads_row)
         
-        # Divider
-        divider1 = QtWidgets.QFrame()
-        divider1.setFrameShape(QtWidgets.QFrame.HLine)
-        divider1.setFrameShadow(QtWidgets.QFrame.Sunken)
-        job_column.addWidget(divider1)
+        # Second row: Min RAM + Max RAM
+        ram_row = QtWidgets.QHBoxLayout()
+        ram_row.setSpacing(10)
         
-        # Checkboxes (moved up to replace removed job info section)
-        self.render_nukex_check = QtWidgets.QCheckBox("Render with NukeX")
-        job_column.addWidget(self.render_nukex_check)
+        min_ram_label = QtWidgets.QLabel("Min RAM (GB)")
+        min_ram_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        min_ram_label.setMinimumWidth(120)  # Same fixed label width
+        ram_row.addWidget(min_ram_label)
         
-        self.use_batch_mode_check = QtWidgets.QCheckBox("Use Batch Mode")
-        job_column.addWidget(self.use_batch_mode_check)
-        
-        # Add stretch to job column
-        job_column.addStretch()
-        
-        # === MACHINE SETTINGS CONTENT ===
-        # GPU and Hardware settings
-        gpu_layout = QtWidgets.QGridLayout()
-        
-        gpu_layout.addWidget(QtWidgets.QLabel("GPU Override:"), 0, 0)
-        self.gpu_override_spin = QtWidgets.QSpinBox()
-        self.gpu_override_spin.setMinimum(-1)
-        self.gpu_override_spin.setMaximum(16)
-        self.gpu_override_spin.setValue(-1)
-        gpu_layout.addWidget(self.gpu_override_spin, 0, 1)
-        
-        self.use_gpu_check = QtWidgets.QCheckBox("Use GPU")
-        gpu_layout.addWidget(self.use_gpu_check, 1, 0, 1, 2)  # Span both columns
-        
-        gpu_layout.addWidget(QtWidgets.QLabel("Render Mode:"), 2, 0)
-        self.render_mode_combo = QtWidgets.QComboBox()
-        self.render_mode_combo.addItems(["Normal", "Draft", "Fast", "Preview"])
-        gpu_layout.addWidget(self.render_mode_combo, 2, 1)
-        
-        machine_column.addLayout(gpu_layout)
-        
-        # Divider
-        divider2 = QtWidgets.QFrame()
-        divider2.setFrameShape(QtWidgets.QFrame.HLine)
-        divider2.setFrameShadow(QtWidgets.QFrame.Sunken)
-        machine_column.addWidget(divider2)
-        
-        # RAM settings
-        ram_layout = QtWidgets.QGridLayout()
-        
-        ram_layout.addWidget(QtWidgets.QLabel("Max RAM (GB):"), 0, 0)
-        self.max_ram_spin = QtWidgets.QSpinBox()
-        self.max_ram_spin.setMinimum(1)
-        self.max_ram_spin.setMaximum(512)
-        self.max_ram_spin.setValue(16)
-        ram_layout.addWidget(self.max_ram_spin, 0, 1)
-        
-        ram_layout.addWidget(QtWidgets.QLabel("Min RAM (GB):"), 1, 0)
         self.min_ram_spin = QtWidgets.QSpinBox()
         self.min_ram_spin.setMinimum(1)
         self.min_ram_spin.setMaximum(64)
-        self.min_ram_spin.setValue(4)
-        ram_layout.addWidget(self.min_ram_spin, 1, 1)
+        self.min_ram_spin.setValue(0)
+        self.min_ram_spin.setFixedWidth(60)  # Fixed widget width
+        ram_row.addWidget(self.min_ram_spin)
         
-        machine_column.addLayout(ram_layout)
+        # Vertical separator
+        separator5 = QtWidgets.QFrame()
+        separator5.setFrameShape(QtWidgets.QFrame.VLine)
+        separator5.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator5.setFixedWidth(1)
+        ram_row.addWidget(separator5)
+        
+        self.max_ram_spin = QtWidgets.QSpinBox()
+        self.max_ram_spin.setMinimum(1)
+        self.max_ram_spin.setMaximum(512)
+        self.max_ram_spin.setValue(0)
+        self.max_ram_spin.setFixedWidth(60)  # Fixed widget width
+        ram_row.addWidget(self.max_ram_spin)
+        
+        max_ram_label = QtWidgets.QLabel("Max RAM (GB)")
+        max_ram_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
+        ram_row.addWidget(max_ram_label)
+        ram_row.addStretch()  # Push everything to left
+        
+        machine_main_layout.addLayout(ram_row)
+        
+        # Third row: GPU Device + GPU Override + Use GPU
+        gpu_row = QtWidgets.QHBoxLayout()
+        gpu_row.setSpacing(10)
+        
+        gpu_device_label = QtWidgets.QLabel("GPU Device")
+        gpu_device_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        gpu_device_label.setMinimumWidth(120)  # Fixed label width
+        gpu_row.addWidget(gpu_device_label)
+        
+        self.gpu_override_spin = QtWidgets.QSpinBox()
+        self.gpu_override_spin.setMinimum(0)
+        self.gpu_override_spin.setMaximum(16)
+        self.gpu_override_spin.setValue(0)
+        self.gpu_override_spin.setFixedWidth(60)  # Fixed widget width
+        gpu_row.addWidget(self.gpu_override_spin)
+        
+        # Vertical separator
+        separator6 = QtWidgets.QFrame()
+        separator6.setFrameShape(QtWidgets.QFrame.VLine)
+        separator6.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator6.setFixedWidth(1)
+        gpu_row.addWidget(separator6)
+        
+        self.use_gpu_check = QtWidgets.QCheckBox("Use GPU")
+        gpu_row.addWidget(self.use_gpu_check)
+        gpu_row.addStretch()  # Push everything to left
+        
+        machine_main_layout.addLayout(gpu_row)
+        
+        # Fourth row: Concurrent Tasks + checkbox
+        concurrent_row = QtWidgets.QHBoxLayout()
+        concurrent_row.setSpacing(10)
+        
+        concurrent_label = QtWidgets.QLabel("Concurrent Tasks")
+        concurrent_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        concurrent_label.setMinimumWidth(120)  # Same fixed label width
+        concurrent_row.addWidget(concurrent_label)
+        
+        self.concurrent_tasks_spin = QtWidgets.QSpinBox()
+        self.concurrent_tasks_spin.setMinimum(1)
+        self.concurrent_tasks_spin.setMaximum(64)
+        self.concurrent_tasks_spin.setValue(2)
+        self.concurrent_tasks_spin.setFixedWidth(60)  # Fixed widget width
+        concurrent_row.addWidget(self.concurrent_tasks_spin)
+        
+        # Vertical separator
+        separator7 = QtWidgets.QFrame()
+        separator7.setFrameShape(QtWidgets.QFrame.VLine)
+        separator7.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator7.setFixedWidth(1)
+        concurrent_row.addWidget(separator7)
+        
+        self.limit_tasks_check = QtWidgets.QCheckBox("Limit tasks to worker's task limit")
+        concurrent_row.addWidget(self.limit_tasks_check)
+        concurrent_row.addStretch()  # Push everything to left
+        
+        machine_main_layout.addLayout(concurrent_row)
+        
+        # Fifth row: Machine Limit + checkbox
+        limit_row = QtWidgets.QHBoxLayout()
+        limit_row.setSpacing(10)
+        
+        machine_limit_label = QtWidgets.QLabel("Machine Limit")
+        machine_limit_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        machine_limit_label.setMinimumWidth(120)  # Same fixed label width
+        limit_row.addWidget(machine_limit_label)
+        
+        self.machine_limit_spin = QtWidgets.QSpinBox()
+        self.machine_limit_spin.setMinimum(0)
+        self.machine_limit_spin.setMaximum(999)
+        self.machine_limit_spin.setValue(0)
+        self.machine_limit_spin.setFixedWidth(60)  # Fixed widget width
+        limit_row.addWidget(self.machine_limit_spin)
+        
+        # Vertical separator
+        separator8 = QtWidgets.QFrame()
+        separator8.setFrameShape(QtWidgets.QFrame.VLine)
+        separator8.setFrameShadow(QtWidgets.QFrame.Sunken)
+        separator8.setFixedWidth(1)
+        limit_row.addWidget(separator8)
+        
+        self.machine_deny_list_check = QtWidgets.QCheckBox("Machine list is a deny list")
+        limit_row.addWidget(self.machine_deny_list_check)
+        limit_row.addStretch()  # Push everything to left
+        
+        machine_main_layout.addLayout(limit_row)
+        
+        # Sixth row: Machine List + Browse button
+        machine_list_row = QtWidgets.QHBoxLayout()
+        machine_list_row.setSpacing(10)
+        
+        machine_list_label = QtWidgets.QLabel("Machine List")
+        machine_list_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        machine_list_label.setMinimumWidth(120)  # Same fixed label width
+        machine_list_row.addWidget(machine_list_label)
+        
+        self.machine_list_edit = QtWidgets.QLineEdit()
+        self.machine_list_edit.setMinimumWidth(300)  # Fixed minimum width
+        machine_list_row.addWidget(self.machine_list_edit)
+        
+        self.machine_list_browse_btn = QtWidgets.QPushButton("Browse")
+        self.machine_list_browse_btn.setFixedWidth(80)  # Fixed button width
+        machine_list_row.addWidget(self.machine_list_browse_btn)
+        
+        machine_main_layout.addLayout(machine_list_row)
+        
+        # Seventh row: Limits + Browse button
+        limits_row = QtWidgets.QHBoxLayout()
+        limits_row.setSpacing(10)
+        
+        limits_label = QtWidgets.QLabel("Limits")
+        limits_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        limits_label.setMinimumWidth(120)  # Same fixed label width
+        limits_row.addWidget(limits_label)
+        
+        self.limits_edit = QtWidgets.QLineEdit()
+        self.limits_edit.setMinimumWidth(300)  # Fixed minimum width
+        limits_row.addWidget(self.limits_edit)
+        
+        self.limits_browse_btn = QtWidgets.QPushButton("Browse")
+        self.limits_browse_btn.setFixedWidth(80)  # Fixed button width
+        limits_row.addWidget(self.limits_browse_btn)
+        
+        machine_main_layout.addLayout(limits_row)
+        
+        machine_column.addLayout(machine_main_layout)
         machine_column.addStretch()
         
-        # Add both group boxes to the horizontal layout
-        self.content_layout.addWidget(self.job_settings_group)
-        self.content_layout.addWidget(self.machine_settings_group)
+        # Add both group boxes to the horizontal layout with equal stretch
+        self.content_layout.addWidget(self.job_settings_group, 1)  # Stretch factor 1
+        self.content_layout.addWidget(self.machine_settings_group, 1)  # Stretch factor 1
         
         # Add the settings container to main panel layout
         self.layout().addWidget(self.settings_container)
