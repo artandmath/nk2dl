@@ -273,11 +273,11 @@ class Nk2dlPanel(QtWidgets.QWidget):
         
         # Sample data - updated to include new columns
         sample_data = [
-            ("3999", "Write4", "PartCloth_comp2k_v01.%04d.exr", "3", "1350-1650", "comp", "workstations", "50"),
-            ("3100", "Write30", "PartMP08Out_comp2k_v02.%04d.exr", "3", "1350-1650", "comp", "workstations", "40"),
-            ("3050", "Write27", "PartPreBank_comp2k_v01.%04d.exr", "5", "1570-1620", "comp", "workstations", "30"),
-            ("3000", "Write9", "PartGlassTexture_comp2k_v01.%04d.exr", "8", "1350-1650", "render", "workstations", "60"),
-            ("2999", "Write3", "PartBKOC_comp2k_v01.%04d.exr", "1", "1100-1400", "render", "workstations", "20"),
+            ("3999", "Write4", "Some_path1_v002.%04d.exr", "3", "1350-1650", "comp", "workstations", "50"),
+            ("3100", "Write30", "Some_path3_v002.%04d.exr", "3", "1350-1650", "comp", "workstations", "40"),
+            ("3050", "Write27", "Some_path5_v002.%04d.exr", "5", "1570-1620", "comp", "workstations", "30"),
+            ("3000", "Write9", "Some_path6_v002.%04d.exr", "8", "1350-1650", "render", "workstations", "60"),
+            ("2999", "Write3", "Some_path9_v002.%04d.exr", "1", "1100-1400", "render", "workstations", "20"),
         ]
         
         self.render_table.setRowCount(len(sample_data))
