@@ -25,6 +25,528 @@ from ..common.logging import setup_logging
 logger = setup_logging('nk2dl.gui.panel')
 
 
+class PinnedRowTableWidget(QtWidgets.QTableWidget):
+    """Custom QTableWidget that supports pinned rows at the top."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.pinned_row_count = 0
+        self.original_sort_enabled = True
+        
+    def setPinnedRowCount(self, count):
+        """Set the number of rows that should be pinned at the top."""
+        self.pinned_row_count = count
+        
+    def sortByColumn(self, column, order):
+        """Override sorting to exclude pinned rows."""
+        if self.pinned_row_count == 0:
+            super().sortByColumn(column, order)
+            return
+            
+        # Temporarily disable sorting to extract pinned rows
+        self.setSortingEnabled(False)
+        
+        # Store pinned rows data
+        pinned_rows_data = []
+        for row in range(self.pinned_row_count):
+            row_data = []
+            for col in range(self.columnCount()):
+                item = self.item(row, col)
+                if item:
+                    row_data.append(item.clone())
+                else:
+                    row_data.append(None)
+            pinned_rows_data.append(row_data)
+        
+        # Create a temporary table for sorting non-pinned rows
+        temp_table = QtWidgets.QTableWidget()
+        temp_table.setColumnCount(self.columnCount())
+        temp_table.setRowCount(self.rowCount() - self.pinned_row_count)
+        
+        # Copy non-pinned data to temp table
+        for row in range(self.pinned_row_count, self.rowCount()):
+            for col in range(self.columnCount()):
+                item = self.item(row, col)
+                if item:
+                    temp_table.setItem(row - self.pinned_row_count, col, item.clone())
+        
+        # Sort the temp table
+        temp_table.setSortingEnabled(True)
+        temp_table.sortByColumn(column, order)
+        
+        # Clear current table and repopulate with pinned rows first
+        self.setRowCount(0)
+        self.setRowCount(len(pinned_rows_data) + temp_table.rowCount())
+        
+        # Restore pinned rows
+        for row, row_data in enumerate(pinned_rows_data):
+            for col, item in enumerate(row_data):
+                if item:
+                    self.setItem(row, col, item)
+        
+        # Add sorted non-pinned rows
+        for row in range(temp_table.rowCount()):
+            for col in range(temp_table.columnCount()):
+                item = temp_table.item(row, col)
+                if item:
+                    self.setItem(row + self.pinned_row_count, col, item.clone())
+        
+        # Style pinned rows
+        self._style_pinned_rows()
+        
+        # Re-enable sorting
+        self.setSortingEnabled(self.original_sort_enabled)
+    
+    def _style_pinned_rows(self):
+        """Apply different styling to pinned rows."""
+        for row in range(self.pinned_row_count):
+            for col in range(self.columnCount()):
+                item = self.item(row, col)
+                if item:
+                    # Set a different background color for pinned rows
+                    item.setBackground(QtGui.QColor(200, 230, 255))  # Light blue
+                    item.setForeground(QtGui.QColor(0, 0, 0))  # Black text
+                    # Make text bold
+                    font = item.font()
+                    font.setBold(True)
+                    item.setFont(font)
+                    # Make Order, Node and Filename columns non-editable in master row
+                    if col in [0, 1, 2]:  # Order, Node and Filename columns
+                        item.setFlags(item.flags() & ~QtCore.Qt.ItemIsEditable)
+                        item.setBackground(QtGui.QColor(220, 220, 220))  # Gray out non-editable
+                    else:
+                        item.setFlags(item.flags() | QtCore.Qt.ItemIsEditable)
+    
+    def selectRow(self, row):
+        """Override to allow selection of pinned rows for editing."""
+        super().selectRow(row)
+    
+    def setCurrentCell(self, row, column):
+        """Override to allow focusing pinned rows for editing."""
+        super().setCurrentCell(row, column)
+
+    def setSortingEnabled(self, enabled):
+        """Override to track original sorting state."""
+        self.original_sort_enabled = enabled
+        super().setSortingEnabled(enabled)
+
+
+class RotatedHeaderView(QtWidgets.QHeaderView):
+    """Custom header view that displays text at 45-degree angle to save space."""
+    
+    def __init__(self, orientation, parent=None):
+        super().__init__(orientation, parent)
+        self.setMinimumSectionSize(60)  # Minimum width for rotated text
+        
+    def paintSection(self, painter, rect, logicalIndex):
+        """Paint section with rotated text, divider lines, and brighter styling."""
+        painter.save()
+        
+        # Fill background with brighter color to match table background
+        header_color = self.palette().color(QtGui.QPalette.Base)
+        painter.fillRect(rect, header_color)
+        
+        # Draw border/divider lines
+        painter.setPen(QtGui.QPen(self.palette().color(QtGui.QPalette.Mid), 1))
+        painter.drawRect(rect.adjusted(0, 0, -1, -1))  # Border around section
+        
+        # Get the section text
+        text = self.model().headerData(logicalIndex, self.orientation(), QtCore.Qt.DisplayRole)
+        if not text:
+            painter.restore()
+            return
+        
+        # Handle two-line headers (split on newline)
+        lines = str(text).split('\n')
+        is_multiline = len(lines) > 1
+        
+        # Set up font and pen for text
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        
+        # Use dark text color for contrast against bright background
+        text_color = self.palette().color(QtGui.QPalette.Text)
+        painter.setPen(text_color)
+        
+        # Calculate rotation point with different padding for single vs multi-line
+        if is_multiline:
+            # Multi-line headers: closer to single-line positioning
+            painter.translate(rect.x() + 15, rect.bottom() - 8)
+        else:
+            # Single-line headers use original padding
+            painter.translate(rect.x() + 13, rect.bottom() - 6)
+            
+        painter.rotate(-45)  # 45 degrees counter-clockwise
+        
+        # Draw the rotated text (handle multiple lines)
+        if is_multiline:
+            # Two-line header: draw with minimal spacing
+            line_height = painter.fontMetrics().height()
+            line_spacing = int(line_height * 0.1)  # Reduced to 10% of line height for tighter spacing
+            
+            painter.drawText(0, -(line_height + line_spacing), lines[0])  # First line higher with minimal spacing
+            painter.drawText(0, -line_spacing, lines[1])                  # Second line with minimal spacing from baseline
+        else:
+            # Single line header (unchanged)
+            painter.drawText(0, 0, lines[0])
+        
+        painter.restore()
+        
+    def _calculate_max_text_width(self):
+        """Calculate the maximum text width across all headers."""
+        if not self.model():
+            return 100  # Default fallback
+        
+        # Use bold font for measurement since headers are bold
+        font = self.font()
+        font.setBold(True)
+        font_metrics = QtGui.QFontMetrics(font)
+        max_width = 0
+        
+        # Check all header sections
+        for i in range(self.model().columnCount()):
+            text = self.model().headerData(i, self.orientation(), QtCore.Qt.DisplayRole)
+            if text:
+                # Handle multi-line text by checking each line
+                lines = str(text).split('\n')
+                for line in lines:
+                    # Use width() for better compatibility across Qt versions
+                    try:
+                        text_width = font_metrics.horizontalAdvance(line)
+                    except AttributeError:
+                        # Fallback for older Qt versions
+                        text_width = font_metrics.width(line)
+                    max_width = max(max_width, text_width)
+        
+        return max_width if max_width > 0 else 100  # Fallback to 100px minimum
+        
+    def sizeHint(self):
+        """Return dynamic size hint based on longest header text."""
+        # Calculate maximum text width across all headers
+        max_text_width = self._calculate_max_text_width()
+        
+        # Check if we have any multi-line headers
+        has_multiline = False
+        if self.model():
+            for i in range(self.model().columnCount()):
+                text = self.model().headerData(i, self.orientation(), QtCore.Qt.DisplayRole)
+                if text and '\n' in str(text):
+                    has_multiline = True
+                    break
+        
+        # For 45-degree rotation, calculate space needed
+        diagonal_width = int(max_text_width * 0.707)  # Width component
+        text_height = int(max_text_width * 0.2)       # Estimated text height
+        diagonal_height = int(text_height * 0.707)    # Height component
+        
+        total_diagonal = diagonal_width + diagonal_height
+        
+        if has_multiline:
+            # Reduced padding for two-line headers: 16px top/bottom (closer to single-line)
+            total_height = total_diagonal + 16
+            # Reduced minimum height for readability
+            min_height = 50
+        else:
+            # Original padding for single-line headers: 12px top/bottom
+            total_height = total_diagonal + 12
+            # Original minimum height for single lines
+            min_height = 42
+            
+        final_height = max(total_height, min_height)
+        
+        return QtCore.QSize(90, final_height)  # Dynamic height, fixed width
+
+    def refreshHeaderSize(self):
+        """Force the header to recalculate its size based on current data."""
+        self.updateGeometry()
+        if self.parent():
+            self.parent().updateGeometry()
+
+
+class MasterFallbackDelegate(QtWidgets.QStyledItemDelegate):
+    """Custom delegate that shows master row values as placeholder text in blank cells."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.master_row_index = 0
+    
+    def paint(self, painter, option, index):
+        """Custom paint method to show master row values as placeholders."""
+        # Get the actual cell value
+        actual_value = index.data(QtCore.Qt.DisplayRole)
+        
+        # Skip if this is the master row or if cell has actual content
+        if index.row() == self.master_row_index or (actual_value and actual_value.strip()):
+            super().paint(painter, option, index)
+            return
+        
+        # Skip Node and Filename columns as they don't use master fallback
+        if index.column() in [1, 2]:
+            super().paint(painter, option, index)
+            return
+        
+        # Get master row value for this column
+        master_index = index.model().index(self.master_row_index, index.column())
+        master_value = master_index.data(QtCore.Qt.DisplayRole)
+        
+        if master_value:
+            # Save current painter state
+            painter.save()
+            
+            # Set up placeholder text style
+            placeholder_color = QtGui.QColor(128, 128, 128)  # Grey color
+            painter.setPen(placeholder_color)
+            
+            font = painter.font()
+            font.setItalic(True)
+            painter.setFont(font)
+            
+            # Draw the placeholder text
+            text_rect = option.rect.adjusted(4, 0, -4, 0)  # Add some padding
+            painter.drawText(text_rect, QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter, master_value)
+            
+            # Restore painter state
+            painter.restore()
+        else:
+            # No master value, draw normally
+            super().paint(painter, option, index)
+    
+    def createEditor(self, parent, option, index):
+        """Create editor for the cell."""
+        # Skip master row Order, Node and Filename columns
+        if (index.row() == self.master_row_index and index.column() in [0, 1, 2]):
+            return None
+        return super().createEditor(parent, option, index)
+    
+    def setEditorData(self, editor, index):
+        """Set data in the editor - only use actual cell value, not placeholder."""
+        actual_value = index.data(QtCore.Qt.DisplayRole)
+        if hasattr(editor, 'setText'):
+            # Only set the actual cell value, not the placeholder
+            editor.setText(actual_value if actual_value else "")
+        else:
+            super().setEditorData(editor, index)
+
+
+class GroupedHeaderView(QtWidgets.QHeaderView):
+    """Custom header view that displays grouped headers with categories spanning multiple columns."""
+    
+    def __init__(self, orientation, parent=None):
+        super().__init__(orientation, parent)
+        self.groups = []  # List of (group_name, start_col, end_col)
+        self.group_height = 25  # Height for group headers
+        
+    def setGroups(self, groups):
+        """Set the group definitions.
+        
+        Args:
+            groups (list): List of tuples (group_name, start_column, end_column)
+        """
+        self.groups = groups
+        self.updateGeometry()
+        
+    def sizeHint(self):
+        """Return size hint with extra height for grouped headers."""
+        base_hint = super().sizeHint()
+        if self.groups:
+            # Add extra height for group row
+            return QtCore.QSize(base_hint.width(), base_hint.height() + self.group_height)
+        return base_hint
+    
+    def resizeEvent(self, event):
+        """Override resize event to prevent automatic column resizing."""
+        # Call parent but don't let it auto-resize columns
+        super().resizeEvent(event)
+        logger.debug(f"GroupedHeaderView resizeEvent: {event.size()}")
+        
+    def sectionResized(self, logicalIndex, oldSize, newSize):
+        """Override to log when sections are resized."""
+        super().sectionResized(logicalIndex, oldSize, newSize)
+        logger.debug(f"GroupedHeaderView section {logicalIndex} resized from {oldSize}px to {newSize}px")
+        
+    def paintSection(self, painter, rect, logicalIndex):
+        """Paint section with grouped headers."""
+        painter.save()
+        
+        # Fill background
+        header_color = self.palette().color(QtGui.QPalette.Base)
+        painter.fillRect(rect, header_color)
+        
+        # Only draw borders for individual sections if we don't have groups
+        # (groups will handle all border drawing)
+        if not self.groups:
+            painter.setPen(QtGui.QPen(self.palette().color(QtGui.QPalette.Mid), 1))
+            painter.drawRect(rect.adjusted(0, 0, -1, -1))
+        
+        # Get the section text
+        text = self.model().headerData(logicalIndex, self.orientation(), QtCore.Qt.DisplayRole)
+        if not text:
+            painter.restore()
+            return
+        
+        # Set up font and colors
+        font = painter.font()
+        painter.setFont(font)
+        text_color = self.palette().color(QtGui.QPalette.Text)
+        painter.setPen(text_color)
+        
+        # Calculate text area (leave space for group header at top)
+        text_rect = rect
+        if self.groups:
+            text_rect = rect.adjusted(0, self.group_height, 0, 0)
+        
+        # Add horizontal padding for secondary columns (skip primary column 0)
+        if logicalIndex > 0:
+            text_rect = text_rect.adjusted(4, 0, -4, 0)  # 4px left and right padding for secondary GSV headers
+        
+        # Draw the column text
+        painter.drawText(text_rect, QtCore.Qt.AlignCenter, str(text))
+        
+        painter.restore()
+        
+    def paintEvent(self, event):
+        """Paint the entire header including groups and consistent borders."""
+        # Paint normal sections first
+        super().paintEvent(event)
+        
+        if not self.groups:
+            return
+            
+        painter = QtGui.QPainter(self.viewport())
+        painter.save()
+        
+        # Set up consistent border style
+        border_pen = QtGui.QPen(self.palette().color(QtGui.QPalette.Mid), 1)
+        painter.setPen(border_pen)
+        
+        # Draw vertical lines between all columns
+        for i in range(self.count()):
+            if i > 0:  # Don't draw line before first column
+                x = self.sectionPosition(i)
+                painter.drawLine(x, 0, x, self.height())
+        
+        # Draw horizontal line separating groups from individual columns
+        painter.drawLine(0, self.group_height, self.width(), self.group_height)
+        
+        # Draw outer border
+        painter.drawRect(0, 0, self.width() - 1, self.height() - 1)
+        
+        # Set up font for group headers
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        
+        # Use darker text for group headers
+        text_color = self.palette().color(QtGui.QPalette.Text)
+        painter.setPen(text_color)
+        
+        # Draw group headers with backgrounds
+        for group_name, start_col, end_col in self.groups:
+            # Calculate the span rectangle
+            start_x = self.sectionPosition(start_col)
+            end_x = self.sectionPosition(end_col) + self.sectionSize(end_col)
+            
+            group_rect = QtCore.QRect(start_x, 0, end_x - start_x, self.group_height)
+            
+            # Fill group header background with slightly different color
+            group_color = self.palette().color(QtGui.QPalette.Button)
+            painter.fillRect(group_rect, group_color)
+            
+            # Draw group text with horizontal padding
+            text_rect = group_rect.adjusted(3, 0, -3, 0)
+            painter.drawText(text_rect, QtCore.Qt.AlignCenter, group_name)
+        
+        # Re-draw group borders to ensure they're on top
+        painter.setPen(border_pen)
+        for group_name, start_col, end_col in self.groups:
+            start_x = self.sectionPosition(start_col)
+            end_x = self.sectionPosition(end_col) + self.sectionSize(end_col)
+            
+            # Draw vertical borders around groups
+            if start_col > 1:  # Don't draw line after primary column
+                painter.drawLine(start_x, 0, start_x, self.group_height)
+            painter.drawLine(end_x, 0, end_x, self.group_height)
+        
+        # Draw bottom border of group headers (divider line below Resolution/Format)
+        painter.drawLine(0, self.group_height, self.width(), self.group_height)
+        
+        painter.restore()
+
+
+class CenteredCheckboxDelegate(QtWidgets.QStyledItemDelegate):
+    """Custom delegate that centers checkboxes in tree widget columns."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+    
+    def paint(self, painter, option, index):
+        """Paint the item with centered checkbox."""
+        # Only modify secondary columns (column > 0)
+        if index.column() == 0:
+            super().paint(painter, option, index)
+            return
+        
+        # For checkbox columns, center the checkbox
+        if index.flags() & QtCore.Qt.ItemIsUserCheckable:
+            # Calculate centered position for checkbox
+            checkbox_size = 16  # Standard checkbox size
+            checkbox_x = option.rect.x() + (option.rect.width() - checkbox_size) // 2
+            checkbox_y = option.rect.y() + (option.rect.height() - checkbox_size) // 2
+            
+            # Create centered rect for checkbox
+            checkbox_rect = QtCore.QRect(checkbox_x, checkbox_y, checkbox_size, checkbox_size)
+            
+            # Create new option with centered rect
+            centered_option = QtWidgets.QStyleOptionViewItem(option)
+            centered_option.rect = checkbox_rect
+            
+            # Draw only the checkbox indicator
+            checkbox_option = QtWidgets.QStyleOptionButton()
+            checkbox_option.rect = checkbox_rect
+            checkbox_option.state = QtWidgets.QStyle.State_Enabled
+            
+            # Set checkbox state based on item's check state
+            check_state = index.data(QtCore.Qt.CheckStateRole)
+            if check_state == QtCore.Qt.Checked:
+                checkbox_option.state |= QtWidgets.QStyle.State_On
+            elif check_state == QtCore.Qt.PartiallyChecked:
+                checkbox_option.state |= QtWidgets.QStyle.State_NoChange
+            else:
+                checkbox_option.state |= QtWidgets.QStyle.State_Off
+            
+            # Draw the centered checkbox
+            style = option.widget.style() if option.widget else QtWidgets.QApplication.style()
+            style.drawControl(QtWidgets.QStyle.CE_CheckBox, checkbox_option, painter, option.widget)
+        else:
+            super().paint(painter, option, index)
+    
+    def editorEvent(self, event, model, option, index):
+        """Handle mouse events for centered checkboxes."""
+        # Only handle secondary columns
+        if index.column() == 0:
+            return super().editorEvent(event, model, option, index)
+        
+        # Handle checkbox clicks
+        if (event.type() == QtCore.QEvent.MouseButtonRelease and 
+            index.flags() & QtCore.Qt.ItemIsUserCheckable):
+            
+            # Calculate if click was in checkbox area
+            checkbox_size = 16
+            checkbox_x = option.rect.x() + (option.rect.width() - checkbox_size) // 2
+            checkbox_y = option.rect.y() + (option.rect.height() - checkbox_size) // 2
+            checkbox_rect = QtCore.QRect(checkbox_x, checkbox_y, checkbox_size, checkbox_size)
+            
+            if checkbox_rect.contains(event.pos()):
+                # Toggle checkbox state
+                current_state = index.data(QtCore.Qt.CheckStateRole)
+                new_state = QtCore.Qt.Unchecked if current_state == QtCore.Qt.Checked else QtCore.Qt.Checked
+                model.setData(index, new_state, QtCore.Qt.CheckStateRole)
+                return True
+        
+        return super().editorEvent(event, model, option, index)
+
+
 class Nk2dlPanel(QtWidgets.QWidget):
     """Advanced nk2dl panel using version-appropriate PySide for Nuke.
     
@@ -506,25 +1028,38 @@ class Nk2dlPanel(QtWidgets.QWidget):
                     self.content_layout.setSpacing(15)  # Less spacing when side by side
     
     def _create_tabbed_interface(self):
-        """Create the tabbed interface for Render Order, Console, and Extra Settings."""
+        """Create the tabbed interface for Node Settings, GSVs, Extra Settings, and Console."""
         # Create tab widget
         self.tab_widget = QtWidgets.QTabWidget()
         self.tab_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         
-        # Render Order tab
-        self._create_render_order_tab()
+        # Node Settings tab (formerly Render Order)
+        self._create_node_settings_tab()
         
-        # Console tab
-        self._create_console_tab()
+        # GSVs tab (only for Nuke 15.1+)
+        if NUKE_AVAILABLE and self._is_nuke_15_1_or_later():
+            self._create_gsvs_tab()
         
         # Extra Settings tab
         self._create_extra_settings_tab()
         
+        # Console tab (moved to last)
+        self._create_console_tab()
+        
         # Add tab widget to main layout
         self.layout().addWidget(self.tab_widget)
     
-    def _create_render_order_tab(self):
-        """Create the Render Order tab with table and controls."""
+    def _is_nuke_15_1_or_later(self):
+        """Check if Nuke version is 15.1 or later."""
+        try:
+            major = nuke.NUKE_VERSION_MAJOR
+            minor = nuke.NUKE_VERSION_MINOR
+            return (major > 15) or (major == 15 and minor >= 1)
+        except:
+            return False
+    
+    def _create_node_settings_tab(self):
+        """Create the Node Settings tab with table and controls (formerly Render Order)."""
         render_order_widget = QtWidgets.QWidget()
         render_order_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         render_order_layout = QtWidgets.QVBoxLayout()
@@ -534,19 +1069,19 @@ class Nk2dlPanel(QtWidgets.QWidget):
         button_layout = QtWidgets.QHBoxLayout()
         
         self.update_btn = QtWidgets.QPushButton("Update")
-        self.update_btn.clicked.connect(lambda: print("Update clicked"))
+        self.update_btn.clicked.connect(self._on_update_clicked)
         button_layout.addWidget(self.update_btn)
         
         self.all_btn = QtWidgets.QPushButton("All")
-        self.all_btn.clicked.connect(lambda: print("All clicked"))
+        self.all_btn.clicked.connect(self._on_all_clicked)
         button_layout.addWidget(self.all_btn)
         
         self.clear_btn = QtWidgets.QPushButton("Clear")
-        self.clear_btn.clicked.connect(lambda: print("Clear clicked"))
+        self.clear_btn.clicked.connect(self._on_clear_clicked)
         button_layout.addWidget(self.clear_btn)
         
         self.selection_btn = QtWidgets.QPushButton("Selection")
-        self.selection_btn.clicked.connect(lambda: print("Selection clicked"))
+        self.selection_btn.clicked.connect(self._on_selection_clicked)
         button_layout.addWidget(self.selection_btn)
         
         self.inside_groups_check = QtWidgets.QCheckBox("Inside groups")
@@ -566,19 +1101,22 @@ class Nk2dlPanel(QtWidgets.QWidget):
         render_order_layout.addLayout(button_layout)
         
         # Render Order Table
-        self.render_table = QtWidgets.QTableWidget()
+        self.render_table = PinnedRowTableWidget()
         self.render_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        headers = ["RenderOrder", "Node Name", "Filename", "Chunk Size", "Frames", "Pool", "Group", "Priority"]
+        headers = ["Order", "Node", "Filename", "Chunk", "Frames", "Pool", "Group", "Priority"]
         self.render_table.setColumnCount(len(headers))
         self.render_table.setHorizontalHeaderLabels(headers)
         
-        # Sample data - updated to include new columns
+        # Sample data - updated to include new columns with blank cells for fallback
         sample_data = [
-            ("3999", "Write4", "Some_path1_v002.%04d.exr", "3", "1350-1650", "comp", "workstations", "50"),
-            ("3100", "Write30", "Some_path3_v002.%04d.exr", "3", "1350-1650", "comp", "workstations", "40"),
-            ("3050", "Write27", "Some_path5_v002.%04d.exr", "5", "1570-1620", "comp", "workstations", "30"),
-            ("3000", "Write9", "Some_path6_v002.%04d.exr", "8", "1350-1650", "render", "workstations", "60"),
-            ("2999", "Write3", "Some_path9_v002.%04d.exr", "1", "1100-1400", "render", "workstations", "20"),
+            # Master control row (will be styled differently and editable)
+            ("All", "All", "All", "5", "1001-2315", "comp", "workstations", "50"),
+            # Regular data rows - some cells blank to demonstrate fallback to master values
+            ("3999", "Write4", "Some_path1_v002.%04d.exr", "", "1350-1650", "", "", ""),
+            ("3100", "Write30", "Some_path3_v002.%04d.exr", "3", "", "comp", "workstations", "40"),
+            ("3050", "Write27", "Some_path5_v002.%04d.exr", "", "1570-1620", "", "", ""),
+            ("3000", "Write9", "Some_path6_v002.%04d.exr", "8", "1350-1650", "render", "", "60"),
+            ("2999", "Write3", "Some_path9_v002.%04d.exr", "", "", "", "workstations", ""),
         ]
         
         self.render_table.setRowCount(len(sample_data))
@@ -586,11 +1124,31 @@ class Nk2dlPanel(QtWidgets.QWidget):
             for col, value in enumerate(data):
                 self.render_table.setItem(row, col, QtWidgets.QTableWidgetItem(str(value)))
         
+        # Set the first row as pinned master control row
+        self.render_table.setPinnedRowCount(1)
+        
+        # Apply custom delegate to show master row values as placeholders
+        self.fallback_delegate = MasterFallbackDelegate(self.render_table)
+        self.render_table.setItemDelegate(self.fallback_delegate)
+        
+        # Apply rotated header view to save space and fit more data
+        rotated_header = RotatedHeaderView(QtCore.Qt.Horizontal, self.render_table)
+        self.render_table.setHorizontalHeader(rotated_header)
+        
+        # Connect itemChanged to refresh placeholders when master row changes
+        self.render_table.itemChanged.connect(self._on_master_row_changed)
+        
+        # Force header to recalculate size after data is set
+        rotated_header.refreshHeaderSize()
+        
         # Table properties
         self.render_table.setAlternatingRowColors(True)
         self.render_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
         self.render_table.setSortingEnabled(True)
         self.render_table.resizeColumnsToContents()
+        
+        # Apply initial styling to pinned row
+        self.render_table._style_pinned_rows()
         
         render_order_layout.addWidget(self.render_table)
         
@@ -598,8 +1156,788 @@ class Nk2dlPanel(QtWidgets.QWidget):
         render_order_layout.setStretchFactor(self.render_table, 1)
         
         # Add render order tab
-        self.tab_widget.addTab(render_order_widget, "Render Order")
+        self.tab_widget.addTab(render_order_widget, "Node Settings")
     
+    def _create_gsvs_tab(self):
+        """Create the GSVs tab with Primary GSVs as tree hierarchy and Secondary GSVs as columns."""
+        gsvs_widget = QtWidgets.QWidget()
+        gsvs_layout = QtWidgets.QVBoxLayout()
+        gsvs_layout.setContentsMargins(15, 15, 15, 15)
+        gsvs_layout.setSpacing(10)
+        gsvs_widget.setLayout(gsvs_layout)
+        
+        # GSVs input fields on one line
+        input_layout = QtWidgets.QHBoxLayout()
+        
+        # Primary GSVs (tree hierarchy)
+        input_layout.addWidget(QtWidgets.QLabel("Primary GSVs:"))
+        self.primary_gsvs_field = QtWidgets.QLineEdit()
+        self.primary_gsvs_field.setPlaceholderText("Sequence, Shotcode...")
+        self.primary_gsvs_field.setText("Sequence, Shotcode")
+        self.primary_gsvs_field.textChanged.connect(self._on_gsvs_text_changed)
+        input_layout.addWidget(self.primary_gsvs_field)
+        
+        # Secondary GSVs (columns)
+        input_layout.addWidget(QtWidgets.QLabel("Secondary GSVs:"))
+        self.secondary_gsvs_field = QtWidgets.QLineEdit()
+        self.secondary_gsvs_field.setPlaceholderText("Resolution, Format...")
+        self.secondary_gsvs_field.setText("Resolution, Format")
+        self.secondary_gsvs_field.textChanged.connect(self._on_gsvs_text_changed)
+        input_layout.addWidget(self.secondary_gsvs_field)
+        
+        # Refresh button
+        refresh_hierarchy_btn = QtWidgets.QPushButton("Refresh Hierarchy")
+        refresh_hierarchy_btn.clicked.connect(self._update_gsvs_hierarchy)
+        input_layout.addWidget(refresh_hierarchy_btn)
+        
+        gsvs_layout.addLayout(input_layout)
+        
+        # Tree widget for hierarchical GSVs with additional columns
+        self.gsvs_tree = QtWidgets.QTreeWidget()
+        self.gsvs_tree.setRootIsDecorated(True)
+        self.gsvs_tree.setSelectionMode(QtWidgets.QAbstractItemView.NoSelection)
+        self.gsvs_tree.setAlternatingRowColors(True)  # Enable alternating row colors
+        self.gsvs_tree.itemChanged.connect(self._on_tree_item_changed)
+        
+        gsvs_layout.addWidget(self.gsvs_tree)
+        
+        # Control buttons
+        controls_layout = QtWidgets.QHBoxLayout()
+        
+        expand_all_btn = QtWidgets.QPushButton("Expand All")
+        expand_all_btn.clicked.connect(self.gsvs_tree.expandAll)
+        controls_layout.addWidget(expand_all_btn)
+        
+        collapse_all_btn = QtWidgets.QPushButton("Collapse All")
+        collapse_all_btn.clicked.connect(self.gsvs_tree.collapseAll)
+        controls_layout.addWidget(collapse_all_btn)
+        
+        controls_layout.addStretch()
+        
+        check_all_btn = QtWidgets.QPushButton("Check All")
+        check_all_btn.clicked.connect(self._check_all_items)
+        controls_layout.addWidget(check_all_btn)
+        
+        uncheck_all_btn = QtWidgets.QPushButton("Uncheck All")
+        uncheck_all_btn.clicked.connect(self._uncheck_all_items)
+        controls_layout.addWidget(uncheck_all_btn)
+        
+        gsvs_layout.addLayout(controls_layout)
+        
+        # Store the hierarchy data
+        self.primary_gsv_levels = []
+        self.secondary_gsv_levels = []
+        self.secondary_gsv_data = {
+            'Resolution': ['Full', 'Proxy'],
+            'Format': ['EXR', 'MOV', 'DWAA']
+        }
+        self.gsv_data = {}
+        
+        # Initialize with default hierarchy
+        self._create_sample_gsv_data()
+        self._update_gsvs_hierarchy()
+        
+        # Add GSVs tab
+        self.tab_widget.addTab(gsvs_widget, "GSVs")
+    
+    def _create_sample_gsv_data(self):
+        """Create sample hierarchical GSV data structure."""
+        # Primary GSV hierarchy (tree structure)
+        self.gsv_data = {
+            'Sequence': {
+                'seq010': {
+                    'Shotcode': {
+                        'sh001': {},
+                        'sh002': {},
+                        'sh003': {}
+                    }
+                },
+                'seq020': {
+                    'Shotcode': {
+                        'sh010': {},
+                        'sh011': {},
+                        'sh012': {}
+                    }
+                },
+                'seq030': {
+                    'Shotcode': {
+                        'sh020': {},
+                        'sh021': {}
+                    }
+                }
+            }
+        }
+        
+        # Secondary GSV data (column values)
+        self.secondary_gsv_data = {
+            'Resolution': ['Full', 'Proxy'],
+            'Format': ['EXR', 'MOV', 'DWAA']
+        }
+    
+    def _on_gsvs_text_changed(self):
+        """Handle changes to either GSV text field - update hierarchy after a short delay."""
+        # Use a timer to avoid updating on every keystroke
+        if hasattr(self, '_gsvs_update_timer'):
+            self._gsvs_update_timer.stop()
+        
+        self._gsvs_update_timer = QtCore.QTimer()
+        self._gsvs_update_timer.setSingleShot(True)
+        self._gsvs_update_timer.timeout.connect(self._update_gsvs_hierarchy)
+        self._gsvs_update_timer.start(500)  # 500ms delay
+    
+    def _update_gsvs_hierarchy(self):
+        """Update the GSV hierarchy tree and columns based on the text fields."""
+        # Store current header view to preserve it
+        current_header = self.gsvs_tree.header() if hasattr(self.gsvs_tree, 'header') else None
+        is_grouped_header = isinstance(current_header, GroupedHeaderView)
+        
+        # Clear existing tree
+        self.gsvs_tree.clear()
+        
+        # Parse the Primary GSVs text field
+        primary_text = self.primary_gsvs_field.text().strip()
+        secondary_text = self.secondary_gsvs_field.text().strip()
+        
+        if not primary_text:
+            return
+        
+        # Split by comma and clean up level names
+        self.primary_gsv_levels = [level.strip() for level in primary_text.split(',') if level.strip()]
+        self.secondary_gsv_levels = [level.strip() for level in secondary_text.split(',') if level.strip()]
+        
+        # Set up tree headers with simple format
+        headers = ["Primary GSVs"]
+        
+        # Calculate the maximum text width for secondary columns
+        max_text_width = 0
+        font_metrics = QtGui.QFontMetrics(self.gsvs_tree.font())
+        
+        # Add secondary GSV columns with simple format
+        for secondary_gsv in self.secondary_gsv_levels:
+            if secondary_gsv in self.secondary_gsv_data:
+                for value in self.secondary_gsv_data[secondary_gsv]:
+                    headers.append(value)
+                    # Calculate width for this text
+                    try:
+                        text_width = font_metrics.horizontalAdvance(value)
+                    except AttributeError:
+                        # Fallback for older Qt versions
+                        text_width = font_metrics.width(value)
+                    max_text_width = max(max_text_width, text_width)
+        
+        self.gsvs_tree.setHeaderLabels(headers)
+        self.gsvs_tree.setColumnCount(len(headers))
+        
+        # Apply grouped header view if we have secondary columns
+        if len(headers) > 1:
+            # Only create new header if we don't have one or it's not grouped
+            if not is_grouped_header:
+                grouped_header = GroupedHeaderView(QtCore.Qt.Horizontal, self.gsvs_tree)
+                self.gsvs_tree.setHeader(grouped_header)
+            else:
+                grouped_header = current_header
+            
+            # Calculate groups for secondary GSVs
+            groups = []
+            col_index = 1  # Start after Primary GSVs column
+            
+            for secondary_gsv in self.secondary_gsv_levels:
+                if secondary_gsv in self.secondary_gsv_data:
+                    values = self.secondary_gsv_data[secondary_gsv]
+                    if len(values) > 1:
+                        # Create group spanning multiple columns
+                        start_col = col_index
+                        end_col = col_index + len(values) - 1
+                        groups.append((secondary_gsv, start_col, end_col))
+                    col_index += len(values)
+            
+            grouped_header.setGroups(groups)
+        
+        # Build the tree structure
+        if self.primary_gsv_levels:
+            self._build_tree_structure()
+            
+            # Expand first level by default
+            self.gsvs_tree.expandToDepth(0)
+            
+            # Set up column sizing and alignment
+            self._setup_column_properties(max_text_width)
+            
+            # Force column widths after everything is set up
+            self._force_column_widths()
+            
+            # Use a timer to force widths again after UI is fully rendered
+            QtCore.QTimer.singleShot(100, self._delayed_force_column_widths)
+    
+    def _force_column_widths(self):
+        """Force column widths after all setup is complete."""
+        header = self.gsvs_tree.header()
+        
+        # Force primary column width
+        primary_width = self._calculate_primary_column_width()
+        header.resizeSection(0, primary_width)
+        
+        # Force secondary column widths
+        secondary_width = self._calculate_secondary_column_width()
+        for i in range(1, self.gsvs_tree.columnCount()):
+            header.resizeSection(i, secondary_width)
+            # Also try setting maximum width to prevent expansion
+            header.setMaximumSectionSize(secondary_width)
+        
+        # Force update
+        self.gsvs_tree.updateGeometry()
+        header.updateGeometry()
+        
+        logger.info(f"Forced column widths: primary={primary_width}px, secondary={secondary_width}px for {self.gsvs_tree.columnCount()-1} columns")
+    
+    def _delayed_force_column_widths(self):
+        """Force column widths after a delay to ensure they stick."""
+        header = self.gsvs_tree.header()
+        secondary_width = self._calculate_secondary_column_width()
+        
+        # Force secondary columns to be narrow
+        for i in range(1, self.gsvs_tree.columnCount()):
+            # Set both resize section and maximum section size
+            header.resizeSection(i, secondary_width)
+            header.setMaximumSectionSize(secondary_width)
+            header.setMinimumSectionSize(secondary_width)  # Also set minimum to lock the width
+        
+        logger.info(f"Delayed force: locked secondary columns to {secondary_width}px (min=max={secondary_width}px)")
+    
+    def _setup_column_properties(self, max_text_width):
+        """Set up column properties including width, alignment, and resize behavior."""
+        header = self.gsvs_tree.header()
+        
+        # Set up each column independently
+        for i in range(self.gsvs_tree.columnCount()):
+            if i == 0:
+                # Primary GSVs column - completely independent sizing
+                header.setSectionResizeMode(i, QtWidgets.QHeaderView.Interactive)
+                
+                # Calculate and set primary column width independently
+                primary_width = self._calculate_primary_column_width()
+                header.resizeSection(i, primary_width)
+                header.setMinimumSectionSize(primary_width)
+                
+                logger.info(f"Primary column width set to: {primary_width}px")
+                
+            else:
+                # Secondary GSV columns - completely independent sizing
+                header.setSectionResizeMode(i, QtWidgets.QHeaderView.Fixed)
+                
+                # Calculate secondary column width independently (no dependency on primary)
+                secondary_width = self._calculate_secondary_column_width()
+                header.resizeSection(i, secondary_width)
+                
+                logger.info(f"Secondary column {i} width set to: {secondary_width}px")
+        
+        # Center align checkboxes in secondary columns using stylesheet
+        checkbox_style = """
+            QTreeWidget::item {
+                padding-top: 2px;
+                padding-bottom: 2px;
+            }
+            QTreeWidget::item:hover {
+                background-color: rgba(255, 255, 255, 20);
+            }
+            QTreeWidget::item:selected {
+                background-color: transparent;
+                border: none;
+            }
+            QTreeWidget::item:selected:active {
+                background-color: transparent;
+            }
+            QTreeWidget::item:selected:!active {
+                background-color: transparent;
+            }
+        """
+        
+        self.gsvs_tree.setStyleSheet(checkbox_style)
+        
+        # Apply centered checkbox delegate
+        self.centered_delegate = CenteredCheckboxDelegate(self.gsvs_tree)
+        self.gsvs_tree.setItemDelegate(self.centered_delegate)
+    
+    def _calculate_secondary_column_width(self):
+        """Calculate the optimal width for secondary GSV columns based on their content only."""
+        # Use a fresh font metrics calculation
+        font = self.gsvs_tree.font()
+        font_metrics = QtGui.QFontMetrics(font)
+        max_width = 0
+        longest_value = ""
+        
+        # Only look at actual secondary GSV values - completely independent calculation
+        all_values = []
+        for secondary_gsv in self.secondary_gsv_levels:
+            if secondary_gsv in self.secondary_gsv_data:
+                all_values.extend(self.secondary_gsv_data[secondary_gsv])
+        
+        # Find the longest value among all secondary GSV values
+        for value in all_values:
+            value_str = str(value)
+            try:
+                text_width = font_metrics.horizontalAdvance(value_str)
+            except AttributeError:
+                # Fallback for older Qt versions
+                text_width = font_metrics.width(value_str)
+            
+            if text_width > max_width:
+                max_width = text_width
+                longest_value = value_str
+        
+        # Fallback if no values found
+        if max_width == 0:
+            max_width = 20
+            longest_value = "N/A"
+        
+        # Add padding for checkbox centering AND header text padding
+        checkbox_padding = 6  # Minimal padding for checkbox centering
+        header_text_padding = 8  # 4px left + 4px right for header text padding
+        total_padding = checkbox_padding + header_text_padding
+        final_width = max_width + total_padding
+        
+        # Very small minimum to ensure narrow columns
+        min_width = 35  # Reduced to be very narrow
+        calculated_width = max(final_width, min_width)
+        
+        # Debug output
+        logger.info(f"Secondary column width: text='{longest_value}' ({max_width}px), checkbox_pad={checkbox_padding}px, header_pad={header_text_padding}px, total={calculated_width}px")
+        
+        return calculated_width
+    
+    def _calculate_primary_column_width(self):
+        """Calculate the optimal width for the primary GSVs column based on content."""
+        if not hasattr(self, 'gsvs_tree') or not self.gsvs_tree.model():
+            return 150  # Default fallback
+        
+        # Use bold font for measurement since tree items may be bold
+        font = self.gsvs_tree.font()
+        font_metrics = QtGui.QFontMetrics(font)
+        max_width = 0
+        
+        # Check the header text width
+        header_text = "Primary GSVs"
+        try:
+            header_width = font_metrics.horizontalAdvance(header_text)
+        except AttributeError:
+            # Fallback for older Qt versions
+            header_width = font_metrics.width(header_text)
+        max_width = max(max_width, header_width)
+        
+        # Check all tree items recursively
+        def check_item_width(item, indent_level=0):
+            nonlocal max_width
+            if item:
+                # Calculate text width including indentation
+                text = item.text(0)
+                if text:
+                    try:
+                        text_width = font_metrics.horizontalAdvance(text)
+                    except AttributeError:
+                        text_width = font_metrics.width(text)
+                    
+                    # Add indentation (approximately 20px per level)
+                    indented_width = text_width + (indent_level * 20)
+                    max_width = max(max_width, indented_width)
+                
+                # Check children
+                for i in range(item.childCount()):
+                    check_item_width(item.child(i), indent_level + 1)
+        
+        # Check all top-level items
+        for i in range(self.gsvs_tree.topLevelItemCount()):
+            check_item_width(self.gsvs_tree.topLevelItem(i), 0)
+        
+        # Add padding for tree decorations, checkboxes, and margins
+        padding = 60  # Space for expand/collapse icons, checkboxes, and margins
+        final_width = max_width + padding
+        
+        # Ensure minimum and maximum bounds
+        min_width = 120  # Absolute minimum for usability
+        max_width_limit = 300  # Don't make it too wide
+        
+        return max(min_width, min(final_width, max_width_limit))
+    
+    def _build_tree_structure(self):
+        """Build the tree structure from the Primary GSV data."""
+        if not self.primary_gsv_levels:
+            return
+        
+        # Start with the first level (root level)
+        self._build_tree_level(self.gsv_data, None, 0)
+    
+    def _build_tree_level(self, data, parent_item, level_index):
+        """Recursively build tree levels for Primary GSVs.
+        
+        Args:
+            data (dict): Current level data
+            parent_item (QTreeWidgetItem): Parent tree item (None for root)
+            level_index (int): Current level in primary hierarchy
+        """
+        if level_index >= len(self.primary_gsv_levels):
+            return
+        
+        level_name = self.primary_gsv_levels[level_index]
+        
+        if level_name not in data:
+            return
+        
+        level_data = data[level_name]
+        
+        # Handle dictionary data (has sub-levels)
+        if isinstance(level_data, dict):
+            for item_key, item_data in sorted(level_data.items()):
+                # Create tree item
+                tree_item = QtWidgets.QTreeWidgetItem()
+                tree_item.setText(0, item_key)
+                
+                # Add checkbox to primary column (column 0)
+                tree_item.setFlags(tree_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                tree_item.setCheckState(0, QtCore.Qt.Unchecked)
+                
+                # Store metadata for primary column
+                tree_item.setData(0, QtCore.Qt.UserRole, {
+                    'level': level_name,
+                    'value': item_key,
+                    'level_index': level_index,
+                    'is_primary': True
+                })
+                
+                # Add checkboxes for secondary GSVs
+                column_index = 1
+                for secondary_gsv in self.secondary_gsv_levels:
+                    if secondary_gsv in self.secondary_gsv_data:
+                        for value in self.secondary_gsv_data[secondary_gsv]:
+                            tree_item.setFlags(tree_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                            tree_item.setCheckState(column_index, QtCore.Qt.Unchecked)
+                            
+                            # Store metadata for secondary columns
+                            tree_item.setData(column_index, QtCore.Qt.UserRole, {
+                                'secondary_gsv': secondary_gsv,
+                                'secondary_value': value,
+                                'is_primary': False
+                            })
+                            column_index += 1
+                
+                # Add to parent or root
+                if parent_item:
+                    parent_item.addChild(tree_item)
+                else:
+                    self.gsvs_tree.addTopLevelItem(tree_item)
+                
+                # Recursively build child levels
+                self._build_tree_level(item_data, tree_item, level_index + 1)
+    
+    def _on_tree_item_changed(self, item, column):
+        """Handle tree item checkbox state changes.
+        
+        Args:
+            item (QTreeWidgetItem): The item that changed
+            column (int): Column index that changed
+        """
+        # Get item metadata
+        item_data = item.data(column, QtCore.Qt.UserRole)
+        if not item_data:
+            return
+        
+        # Block signals to prevent recursion
+        self.gsvs_tree.blockSignals(True)
+        
+        try:
+            # Get the new check state
+            check_state = item.checkState(column)
+            
+            if column == 0:
+                # Handle primary GSV column (column 0)
+                level = item_data.get('level', 'Unknown')
+                value = item_data.get('value', 'Unknown')
+                checked = check_state == QtCore.Qt.Checked
+                
+                # Update all children for primary column
+                self._update_children_primary_gsv(item, check_state)
+                
+                # Update parent state for primary column
+                self._update_parent_primary_gsv(item)
+                
+                logger.info(f"Primary GSV {level}:{value} = {checked}")
+                
+            else:
+                # Handle secondary GSV column changes
+                if not item_data.get('is_primary', True):
+                    secondary_gsv = item_data.get('secondary_gsv')
+                    secondary_value = item_data.get('secondary_value')
+                    
+                    # Update all children with the same secondary GSV column
+                    self._update_children_secondary_gsv(item, column, check_state)
+                    
+                    # Update parent state for this column
+                    self._update_parent_secondary_gsv(item, column)
+                    
+                    # Log the change
+                    primary_data = item.data(0, QtCore.Qt.UserRole)
+                    primary_value = primary_data.get('value', 'Unknown') if primary_data else 'Unknown'
+                    checked = check_state == QtCore.Qt.Checked
+                    logger.info(f"GSV {primary_value}.{secondary_gsv}:{secondary_value} = {checked}")
+        
+        finally:
+            # Re-enable signals
+            self.gsvs_tree.blockSignals(False)
+    
+    def _update_children_primary_gsv(self, parent_item, check_state):
+        """Update all children of an item for the primary GSV column (column 0).
+        
+        Args:
+            parent_item (QTreeWidgetItem): Parent item
+            check_state (Qt.CheckState): New check state
+        """
+        for i in range(parent_item.childCount()):
+            child = parent_item.child(i)
+            child.setCheckState(0, check_state)
+            # Recursively update grandchildren
+            self._update_children_primary_gsv(child, check_state)
+    
+    def _update_parent_primary_gsv(self, child_item):
+        """Update parent check state for the primary GSV column (column 0).
+        
+        Args:
+            child_item (QTreeWidgetItem): Child item that was changed
+        """
+        parent = child_item.parent()
+        if not parent:
+            return
+        
+        # Count checked and unchecked children for column 0
+        total_children = parent.childCount()
+        checked_children = 0
+        
+        for i in range(total_children):
+            child = parent.child(i)
+            if child.checkState(0) == QtCore.Qt.Checked:
+                checked_children += 1
+        
+        # Set parent state based on children
+        if checked_children == 0:
+            parent.setCheckState(0, QtCore.Qt.Unchecked)
+        elif checked_children == total_children:
+            parent.setCheckState(0, QtCore.Qt.Checked)
+        else:
+            parent.setCheckState(0, QtCore.Qt.PartiallyChecked)
+        
+        # Recursively update grandparent
+        self._update_parent_primary_gsv(parent)
+    
+    def _update_children_secondary_gsv(self, parent_item, column, check_state):
+        """Update all children of an item for a specific secondary GSV column.
+        
+        Args:
+            parent_item (QTreeWidgetItem): Parent item
+            column (int): Column index
+            check_state (Qt.CheckState): New check state
+        """
+        for i in range(parent_item.childCount()):
+            child = parent_item.child(i)
+            child.setCheckState(column, check_state)
+            # Recursively update grandchildren
+            self._update_children_secondary_gsv(child, column, check_state)
+    
+    def _update_parent_secondary_gsv(self, child_item, column):
+        """Update parent check state for a specific secondary GSV column.
+        
+        Args:
+            child_item (QTreeWidgetItem): Child item that was changed
+            column (int): Column index
+        """
+        parent = child_item.parent()
+        if not parent:
+            return
+        
+        # Count checked and unchecked children for this column
+        total_children = parent.childCount()
+        checked_children = 0
+        
+        for i in range(total_children):
+            child = parent.child(i)
+            if child.checkState(column) == QtCore.Qt.Checked:
+                checked_children += 1
+        
+        # Set parent state based on children
+        if checked_children == 0:
+            parent.setCheckState(column, QtCore.Qt.Unchecked)
+        elif checked_children == total_children:
+            parent.setCheckState(column, QtCore.Qt.Checked)
+        else:
+            parent.setCheckState(column, QtCore.Qt.PartiallyChecked)
+        
+        # Recursively update grandparent
+        self._update_parent_secondary_gsv(parent, column)
+    
+    def _check_all_items(self):
+        """Check all items in all columns."""
+        self.gsvs_tree.blockSignals(True)
+        try:
+            self._set_all_items_check_state(QtCore.Qt.Checked)
+        finally:
+            self.gsvs_tree.blockSignals(False)
+    
+    def _uncheck_all_items(self):
+        """Uncheck all items in all columns."""
+        self.gsvs_tree.blockSignals(True)
+        try:
+            self._set_all_items_check_state(QtCore.Qt.Unchecked)
+        finally:
+            self.gsvs_tree.blockSignals(False)
+    
+    def _set_all_items_check_state(self, check_state):
+        """Set check state for all items in all columns.
+        
+        Args:
+            check_state (Qt.CheckState): State to set all items to
+        """
+        # Iterate through all top-level items
+        for i in range(self.gsvs_tree.topLevelItemCount()):
+            item = self.gsvs_tree.topLevelItem(i)
+            self._set_item_and_children_check_state(item, check_state)
+    
+    def _set_item_and_children_check_state(self, item, check_state):
+        """Recursively set check state for an item and all its children in all columns.
+        
+        Args:
+            item (QTreeWidgetItem): Item to update
+            check_state (Qt.CheckState): State to set
+        """
+        # Set check state for all columns (including primary column 0)
+        for column in range(self.gsvs_tree.columnCount()):
+            item.setCheckState(column, check_state)
+        
+        # Recursively update children
+        for i in range(item.childCount()):
+            child = item.child(i)
+            self._set_item_and_children_check_state(child, check_state)
+    
+    def _get_selected_gsvs(self):
+        """Get the currently selected GSV values.
+        
+        Returns:
+            dict: Dictionary with primary GSV paths and their selected secondary GSVs
+        """
+        selected_gsvs = {}
+        
+        # Iterate through all items and collect checked secondary GSVs
+        self._collect_checked_secondary_gsvs(selected_gsvs)
+        
+        return selected_gsvs
+    
+    def _collect_checked_secondary_gsvs(self, result_dict, parent_item=None):
+        """Recursively collect checked secondary GSVs from the tree.
+        
+        Args:
+            result_dict (dict): Dictionary to store results
+            parent_item (QTreeWidgetItem): Parent item (None for root level)
+        """
+        if parent_item is None:
+            # Start with top-level items
+            for i in range(self.gsvs_tree.topLevelItemCount()):
+                item = self.gsvs_tree.topLevelItem(i)
+                self._collect_item_secondary_gsvs(item, result_dict)
+                # Check children
+                self._collect_checked_secondary_gsvs(result_dict, item)
+        else:
+            # Check children of current item
+            for i in range(parent_item.childCount()):
+                child = parent_item.child(i)
+                self._collect_item_secondary_gsvs(child, result_dict)
+                # Check grandchildren
+                self._collect_checked_secondary_gsvs(result_dict, child)
+    
+    def _collect_item_secondary_gsvs(self, item, result_dict):
+        """Collect checked primary and secondary GSVs for a specific item.
+        
+        Args:
+            item (QTreeWidgetItem): Tree item to check
+            result_dict (dict): Dictionary to store results
+        """
+        # Build the primary GSV path for this item
+        path_parts = []
+        current_item = item
+        while current_item:
+            primary_data = current_item.data(0, QtCore.Qt.UserRole)
+            if primary_data and primary_data.get('is_primary'):
+                path_parts.insert(0, f"{primary_data.get('level')}:{primary_data.get('value')}")
+            current_item = current_item.parent()
+        
+        path_key = "/".join(path_parts)
+        
+        # Check if this item has any selections (primary or secondary)
+        has_selections = False
+        checked_data = {}
+        
+        # Check primary GSV (column 0)
+        if item.checkState(0) == QtCore.Qt.Checked:
+            primary_data = item.data(0, QtCore.Qt.UserRole)
+            if primary_data and primary_data.get('is_primary'):
+                level = primary_data.get('level')
+                value = primary_data.get('value')
+                if level and value:
+                    checked_data['primary'] = f"{level}:{value}"
+                    has_selections = True
+        
+        # Check all secondary GSV columns for this item
+        checked_secondary = {}
+        for column in range(1, self.gsvs_tree.columnCount()):
+            if item.checkState(column) == QtCore.Qt.Checked:
+                column_data = item.data(column, QtCore.Qt.UserRole)
+                if column_data:
+                    secondary_gsv = column_data.get('secondary_gsv')
+                    secondary_value = column_data.get('secondary_value')
+                    if secondary_gsv and secondary_value:
+                        if secondary_gsv not in checked_secondary:
+                            checked_secondary[secondary_gsv] = []
+                        checked_secondary[secondary_gsv].append(secondary_value)
+                        has_selections = True
+        
+        if checked_secondary:
+            checked_data['secondary'] = checked_secondary
+        
+        if has_selections:
+            result_dict[path_key] = checked_data
+
+    def _get_effective_table_values(self):
+        """Get effective values from the table, using master row as fallback for blank cells.
+        
+        Returns:
+            List of dictionaries, one per data row (excluding master row).
+            Each dict contains the effective values for that row.
+        """
+        if not hasattr(self, 'render_table') or self.render_table.rowCount() < 2:
+            return []
+        
+        # Get master row values (row 0)
+        master_values = {}
+        headers = ["Order", "Node", "Filename", "Chunk", "Frames", "Pool", "Group", "Priority"]
+        
+        for col, header in enumerate(headers):
+            master_item = self.render_table.item(0, col)
+            master_values[header] = master_item.text() if master_item else ""
+        
+        # Process each data row (starting from row 1)
+        effective_values = []
+        for row in range(1, self.render_table.rowCount()):
+            row_values = {}
+            
+            for col, header in enumerate(headers):
+                cell_item = self.render_table.item(row, col)
+                cell_value = cell_item.text().strip() if cell_item else ""
+                
+                # Use cell value if not blank, otherwise fallback to master value
+                if cell_value:
+                    row_values[header] = cell_value
+                else:
+                    row_values[header] = master_values[header]
+            
+            effective_values.append(row_values)
+        
+        return effective_values
+
     def _create_console_tab(self):
         """Create the Console tab for output."""
         console_widget = QtWidgets.QWidget()
@@ -678,11 +2016,60 @@ class Nk2dlPanel(QtWidgets.QWidget):
         self.layout().addLayout(bottom_layout)
     
     def _on_render_clicked(self):
-        """Handle render button click - show development message."""
+        """Handle render button click - demonstrate the effective values system."""
+        # Get effective values to demonstrate the fallback system
+        effective_values = self._get_effective_table_values()
+        
+        # Create a demo message showing how values are resolved
+        demo_message = "Effective Values (Master Fallback System):\n\n"
+        
+        for i, row_values in enumerate(effective_values, 1):
+            demo_message += f"Row {i} ({row_values['Node']}):\n"
+            for key, value in row_values.items():
+                if key not in ['Node', 'Filename']:  # Skip non-configurable fields
+                    demo_message += f"  {key}: {value}\n"
+            demo_message += "\n"
+        
+        demo_message += "\nNote: Blank cells use master row values.\nFilled cells use their own values."
+        
+        if NUKE_AVAILABLE:
+            nuke.message(demo_message)
+        else:
+            print(demo_message)
+
+    def _on_update_clicked(self):
+        """Handle update button click - show development message."""
         if NUKE_AVAILABLE:
             nuke.message('Nuke to Deadline panel is in development and not ready for production use.\n\nUse the "Submit Selected Writes to Deadline" option from the Render menu.')
         else:
             print("Nuke to Deadline panel is in development, Use the 'Submit Selected Writes to Deadline' options from the Render menu")
+
+    def _on_all_clicked(self):
+        """Handle all button click - show development message."""
+        if NUKE_AVAILABLE:
+            nuke.message('Nuke to Deadline panel is in development and not ready for production use.\n\nUse the "Submit Selected Writes to Deadline" option from the Render menu.')
+        else:
+            print("Nuke to Deadline panel is in development, Use the 'Submit Selected Writes to Deadline' options from the Render menu")
+
+    def _on_clear_clicked(self):
+        """Handle clear button click - show development message."""
+        if NUKE_AVAILABLE:
+            nuke.message('Nuke to Deadline panel is in development and not ready for production use.\n\nUse the "Submit Selected Writes to Deadline" option from the Render menu.')
+        else:
+            print("Nuke to Deadline panel is in development, Use the 'Submit Selected Writes to Deadline' options from the Render menu")
+
+    def _on_selection_clicked(self):
+        """Handle selection button click - show development message."""
+        if NUKE_AVAILABLE:
+            nuke.message('Nuke to Deadline panel is in development and not ready for production use.\n\nUse the "Submit Selected Writes to Deadline" option from the Render menu.')
+        else:
+            print("Nuke to Deadline panel is in development, Use the 'Submit Selected Writes to Deadline' options from the Render menu")
+
+    def _on_master_row_changed(self, item):
+        """Handle master row change - refresh placeholders."""
+        # Only refresh if the master row (row 0) was changed
+        if item and item.row() == 0:
+            self.render_table.viewport().update()
 
 
 def register_panel():
