@@ -42,7 +42,7 @@ class Sizes:
     FILTER_EDIT_WIDTH = 150
     
     # Responsive behavior
-    RESPONSIVE_BREAKPOINT = 1300  # Width below which settings stack vertically
+    RESPONSIVE_BREAKPOINT = 1250  # Width below which settings stack vertically
 
 
 class Colors:
