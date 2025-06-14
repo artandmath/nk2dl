@@ -710,10 +710,9 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _create_table(self):
         """Create the node settings table."""
-        from .widgets import PinnedRowTableWidget
-        from .delegates import MasterFallbackDelegate
+        from .widgets import StandardTableWidget
         
-        self.render_table = PinnedRowTableWidget()
+        self.render_table = StandardTableWidget()
         self.render_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         
         # Set up table headers
@@ -721,25 +720,14 @@ class NodeSettingsView(QtWidgets.QWidget):
         self.render_table.setColumnCount(len(headers))
         self.render_table.setHorizontalHeaderLabels(headers)
         
-        # Set the first row as pinned master control row
-        self.render_table.setPinnedRowCount(1)
-        
-        # Apply custom delegate to show master row values as placeholders
-        self.fallback_delegate = MasterFallbackDelegate(self.render_table)
-        self.render_table.setItemDelegate(self.fallback_delegate)
-        
         # Connect table signals
         self.render_table.itemChanged.connect(self._on_table_item_changed)
         
-        # Table properties
-        self.render_table.setAlternatingRowColors(True)
-        self.render_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
-        self.render_table.setSortingEnabled(True)
+        # Table properties are already set in StandardTableWidget constructor
     
     def _connect_signals(self):
         """Connect model signals to view updates."""
         self.table_model.dataChanged.connect(self._on_model_data_changed)
-        self.table_model.masterRowChanged.connect(self._on_master_row_changed)
     
     def _load_data_from_model(self):
         """Load data from the model into the table."""
@@ -756,24 +744,18 @@ class NodeSettingsView(QtWidgets.QWidget):
                 value = row_data.get(header, "")
                 item = QtWidgets.QTableWidgetItem(str(value))
                 
-                # Apply styling for dropdown columns
+                # Apply standard styling for dropdown columns
                 if self.table_model.is_dropdown_column(col):
                     self._apply_dropdown_styling(item, value, row)
                 
                 self.render_table.setItem(row, col, item)
-        
-        # Apply initial styling to pinned row
-        self.render_table._style_pinned_rows()
         
         # Resize columns to content
         self.render_table.resizeColumnsToContents()
     
     def _apply_dropdown_styling(self, item, value, row):
         """Apply styling to dropdown column items."""
-        if str(value) == "" and row != 0:  # Empty string means inherit from master row
-            # Grey out inherited values in unpinned rows
-            item.setForeground(QtGui.QBrush(QtGui.QColor(136, 136, 136)))  # #888888
-        elif str(value) in ["Yes", "No", "Full", "Proxy", "Both", "Script"]:
+        if str(value) in ["Yes", "No", "Full", "Proxy", "Both", "Script"]:
             # White text for explicit values
             item.setForeground(QtGui.QBrush(QtGui.QColor(255, 255, 255)))  # White
         else:
@@ -800,11 +782,6 @@ class NodeSettingsView(QtWidgets.QWidget):
         """Handle model data changes."""
         # Refresh the table display
         self._load_data_from_model()
-    
-    def _on_master_row_changed(self):
-        """Handle master row changes."""
-        # Refresh placeholders when master row changes
-        self.render_table.viewport().update()
     
     def _on_filter_changed(self, text):
         """Handle filter text changes."""
@@ -834,8 +811,8 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _on_clear_clicked(self):
         """Handle clear button click."""
-        # Clear all data except master row
-        self.table_model.clear_data()
+        # Clear all data
+        self.table_model.set_data([])
     
     def _on_selection_clicked(self):
         """Handle selection button click."""
@@ -858,7 +835,7 @@ class NodeSettingsView(QtWidgets.QWidget):
         Returns:
             list: List of effective row values
         """
-        return self.table_model.get_effective_table_values()
+        return self.table_model.get_data()
 
 
 class GSVView(QtWidgets.QWidget):

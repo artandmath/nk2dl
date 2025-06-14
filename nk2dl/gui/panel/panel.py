@@ -169,7 +169,6 @@ class Nk2dlPanel(QtWidgets.QWidget):
         """Connect signals between models and views."""
         # Connect table model changes to console logging
         self.table_model.dataChanged.connect(self._on_table_data_changed)
-        self.table_model.masterRowChanged.connect(self._on_master_row_changed)
         
         # Connect GSV model changes to console logging
         if self.gsv_view:
@@ -187,15 +186,14 @@ class Nk2dlPanel(QtWidgets.QWidget):
         """Load sample data for demonstration."""
         from .constants import GSVDefaults
         
-        # Load sample table data
+        # Load sample table data - all rows now have explicit values
         sample_table_data = [
-            # Master control row
             {
-                "Order": "All", "Node": "All", "Filename": "All", "Chunk": "5", 
-                "Frames": "1001-2315", "Priority": "50", "NodesFrames": "Yes", 
-                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Full", 
-                "NukeX": "Yes", "BatchMode": "Yes", "Reloadplugin": "Yes",
-                # Machine settings columns with sample data
+                "Order": "3999", "Node": "Write4", "Filename": "Some_path1_v002.%04d.exr", 
+                "Chunk": "5", "Frames": "1350-1650", "Priority": "50", "NodesFrames": "Yes", 
+                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Full", "NukeX": "Yes", 
+                "BatchMode": "Yes", "Reloadplugin": "Yes",
+                # Machine settings columns with explicit values
                 "Pool": GSVDefaults.SAMPLE_MACHINE_DATA["pool"],
                 "SecondaryPool": GSVDefaults.SAMPLE_MACHINE_DATA["secondary_pool"],
                 "Group": GSVDefaults.SAMPLE_MACHINE_DATA["group"],
@@ -209,56 +207,81 @@ class Nk2dlPanel(QtWidgets.QWidget):
                 "MachineList": GSVDefaults.SAMPLE_MACHINE_DATA["machine_list"],
                 "Limits": GSVDefaults.SAMPLE_MACHINE_DATA["limits"]
             },
-            # Regular data rows - some cells blank to demonstrate fallback
-            {
-                "Order": "3999", "Node": "Write4", "Filename": "Some_path1_v002.%04d.exr", 
-                "Chunk": "", "Frames": "1350-1650", "Priority": "", "NodesFrames": "", 
-                "TaskTimeout": "", "AutoTimeout": "", "RenderMode": "", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": "",
-                # Machine settings columns - blank to inherit from master row
-                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
-                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
-                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
-            },
             {
                 "Order": "3100", "Node": "Write30", "Filename": "Some_path3_v002.%04d.exr", 
-                "Chunk": "3", "Frames": "", "Priority": "40", "NodesFrames": "", 
-                "TaskTimeout": "10", "AutoTimeout": "", "RenderMode": "Proxy", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": "",
-                # Machine settings columns - blank to inherit from master row
-                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
-                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
-                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
+                "Chunk": "3", "Frames": "1001-2315", "Priority": "40", "NodesFrames": "No", 
+                "TaskTimeout": "10", "AutoTimeout": "No", "RenderMode": "Proxy", "NukeX": "No", 
+                "BatchMode": "No", "Reloadplugin": "No",
+                # Machine settings columns with explicit values
+                "Pool": "lighting",
+                "SecondaryPool": "render",
+                "Group": "high_priority",
+                "Threads": "4",
+                "MinRam": "16",
+                "MaxRam": "64",
+                "UseGPU": "No",
+                "GPUId": "0",
+                "ConcurrentTasks": "2",
+                "WorkerTaskLimit": "No",
+                "MachineList": "",
+                "Limits": ""
             },
             {
                 "Order": "3050", "Node": "Write27", "Filename": "Some_path5_v002.%04d.exr", 
-                "Chunk": "", "Frames": "1570-1620", "Priority": "", "NodesFrames": "", 
-                "TaskTimeout": "", "AutoTimeout": "", "RenderMode": "", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": "",
-                # Machine settings columns - blank to inherit from master row
-                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
-                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
-                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
+                "Chunk": "1", "Frames": "1570-1620", "Priority": "30", "NodesFrames": "Yes", 
+                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Full", "NukeX": "Yes", 
+                "BatchMode": "Yes", "Reloadplugin": "Yes",
+                # Machine settings columns with explicit values
+                "Pool": "comp",
+                "SecondaryPool": "",
+                "Group": "none",
+                "Threads": "8",
+                "MinRam": "8",
+                "MaxRam": "32",
+                "UseGPU": "Yes",
+                "GPUId": "1",
+                "ConcurrentTasks": "4",
+                "WorkerTaskLimit": "Yes",
+                "MachineList": "render01,render02",
+                "Limits": "nuke_license:2"
             },
             {
                 "Order": "3000", "Node": "Write9", "Filename": "Some_path6_v002.%04d.exr", 
                 "Chunk": "8", "Frames": "1350-1650", "Priority": "60", "NodesFrames": "No", 
-                "TaskTimeout": "", "AutoTimeout": "No", "RenderMode": "Both", "NukeX": "No", 
+                "TaskTimeout": "5", "AutoTimeout": "No", "RenderMode": "Both", "NukeX": "No", 
                 "BatchMode": "No", "Reloadplugin": "No",
-                # Machine settings columns - blank to inherit from master row
-                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
-                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
-                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
+                # Machine settings columns with explicit values
+                "Pool": "fx",
+                "SecondaryPool": "general",
+                "Group": "weekend",
+                "Threads": "16",
+                "MinRam": "32",
+                "MaxRam": "128",
+                "UseGPU": "Yes",
+                "GPUId": "2",
+                "ConcurrentTasks": "1",
+                "WorkerTaskLimit": "No",
+                "MachineList": "workstation03",
+                "Limits": "arnold_license:1"
             },
             {
                 "Order": "2999", "Node": "Write3", "Filename": "Some_path9_v002.%04d.exr", 
-                "Chunk": "", "Frames": "", "Priority": "", "NodesFrames": "", 
-                "TaskTimeout": "", "AutoTimeout": "", "RenderMode": "", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": "",
-                # Machine settings columns - blank to inherit from master row
-                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
-                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
-                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
+                "Chunk": "2", "Frames": "1001-2315", "Priority": "20", "NodesFrames": "Yes", 
+                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Script", "NukeX": "Yes", 
+                "BatchMode": "Yes", "Reloadplugin": "Yes",
+                # Machine settings columns with explicit values
+                "Pool": "render",
+                "SecondaryPool": "comp",
+                "Group": "overnight",
+                "Threads": "6",
+                "MinRam": "12",
+                "MaxRam": "48",
+                "UseGPU": "No",
+                "GPUId": "0",
+                "ConcurrentTasks": "3",
+                "WorkerTaskLimit": "Yes",
+                "MachineList": "",
+                "Limits": ""
             }
         ]
         
@@ -266,7 +289,7 @@ class Nk2dlPanel(QtWidgets.QWidget):
         
         # Log sample data loading
         self.console_view.log_info("Sample table data loaded")
-        self.console_view.log_info(f"Loaded {len(sample_table_data)} rows with master row fallback")
+        self.console_view.log_info(f"Loaded {len(sample_table_data)} rows with explicit values")
         
         logger.info("Sample data loaded into models")
     
@@ -283,10 +306,6 @@ class Nk2dlPanel(QtWidgets.QWidget):
     def _on_table_data_changed(self):
         """Handle table data changes."""
         self.console_view.log_info("Table data updated")
-    
-    def _on_master_row_changed(self):
-        """Handle master row changes."""
-        self.console_view.log_info("Master row values changed - fallback values updated")
     
     def _on_gsv_hierarchy_changed(self):
         """Handle GSV hierarchy changes."""

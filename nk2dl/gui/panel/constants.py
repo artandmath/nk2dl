@@ -82,7 +82,7 @@ class TableColumns:
     HEADERS = [
         "Order", "Node", "Filename", "Chunk", "Frames", "Priority", 
         "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", 
-        "NukeX", "BatchMode", "Reloadplugin", "Pool", "SecondaryPool", 
+        "NukeX", "BatchMode", "ReloadPlugin", "Pool", "SecondaryPool", 
         "Group", "Threads", "MinRam", "MaxRam", "UseGPU", "GPUId", 
         "ConcurrentTasks", "WorkerTaskLimit", "MachineList", "Limits"
     ]

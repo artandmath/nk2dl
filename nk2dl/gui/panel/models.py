@@ -36,22 +36,19 @@ from .constants import TableColumns
 
 
 class TableDataModel(QtCore.QObject):
-    """Model for managing table data with master row fallback logic.
+    """Model for managing table data.
     
     This model handles the logic for the node settings table, including:
-    - Master row values as defaults for other rows
-    - Effective value calculation (cell value or master fallback)
+    - Data storage and retrieval
     - Data validation for different column types
     - Change notifications
     """
     
     # Signals
     dataChanged = QtCore.Signal()
-    masterRowChanged = QtCore.Signal()
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.master_row_index = 0
         self._data = []  # List of dictionaries, one per row
         self._headers = TableColumns.HEADERS.copy()
         
@@ -97,14 +94,14 @@ class TableDataModel(QtCore.QObject):
         return self._headers.copy()
     
     def get_cell_value(self, row, column):
-        """Get the raw cell value (may be empty).
+        """Get the cell value.
         
         Args:
             row (int): Row index
             column (int): Column index
             
         Returns:
-            str: Raw cell value or empty string
+            str: Cell value or empty string
         """
         if row < 0 or row >= len(self._data) or column < 0 or column >= len(self._headers):
             return ""
@@ -128,73 +125,7 @@ class TableDataModel(QtCore.QObject):
         
         if old_value != value:
             self._data[row][header] = value
-            
-            # Emit appropriate signals
-            if row == self.master_row_index:
-                self.masterRowChanged.emit()
-            else:
-                self.dataChanged.emit()
-    
-    def get_effective_value(self, row, column):
-        """Get the effective value for a cell (with master row fallback).
-        
-        Args:
-            row (int): Row index
-            column (int): Column index
-            
-        Returns:
-            str: Effective value (cell value or master row fallback)
-        """
-        if row < 0 or row >= len(self._data) or column < 0 or column >= len(self._headers):
-            return ""
-        
-        # Get the actual cell value
-        cell_value = self.get_cell_value(row, column)
-        
-        # If cell has a value or this is the master row, return it
-        if cell_value.strip() or row == self.master_row_index:
-            return cell_value
-        
-        # Skip Node and Filename columns for fallback (they don't inherit)
-        if column in [1, 2]:  # Node, Filename
-            return cell_value
-        
-        # Get master row value as fallback
-        master_value = self.get_cell_value(self.master_row_index, column)
-        return master_value if master_value.strip() else cell_value
-    
-    def get_effective_table_values(self):
-        """Get effective values from the table, using master row as fallback for blank cells.
-        
-        Returns:
-            List of dictionaries, one per data row (excluding master row).
-            Each dict contains the effective values for that row.
-        """
-        if len(self._data) < 2:  # Need at least master row + 1 data row
-            return []
-        
-        # Get master row values
-        master_values = {}
-        for col, header in enumerate(self._headers):
-            master_values[header] = self.get_cell_value(self.master_row_index, col)
-        
-        # Process each data row (starting from row 1, skipping master row)
-        effective_values = []
-        for row in range(1, len(self._data)):
-            row_values = {}
-            
-            for col, header in enumerate(self._headers):
-                cell_value = self.get_cell_value(row, col)
-                
-                # Use cell value if not blank, otherwise fallback to master value
-                if cell_value.strip():
-                    row_values[header] = cell_value
-                else:
-                    row_values[header] = master_values[header]
-            
-            effective_values.append(row_values)
-        
-        return effective_values
+            self.dataChanged.emit()
     
     def is_dropdown_column(self, column):
         """Check if a column is a dropdown column.
@@ -241,19 +172,8 @@ class TableDataModel(QtCore.QObject):
         header = self._headers[column]
         return header == "RenderMode"
     
-    def is_master_row_editable(self, column):
-        """Check if a column is editable in the master row.
-        
-        Args:
-            column (int): Column index
-            
-        Returns:
-            bool: True if column is editable in master row
-        """
-        return column not in TableColumns.MASTER_NON_EDITABLE
-    
     def validate_cell_value(self, row, column, value):
-        """Validate a cell value for a specific column type.
+        """Validate a cell value for the given row and column.
         
         Args:
             row (int): Row index
@@ -264,62 +184,35 @@ class TableDataModel(QtCore.QObject):
             tuple: (is_valid, error_message)
         """
         if column < 0 or column >= len(self._headers):
-            return False, "Invalid column"
+            return False, "Invalid column index"
         
         header = self._headers[column]
         
-        # Yes/No columns
+        # Yes/No dropdown columns
         if header in TableColumns.YES_NO_COLUMNS:
-            if row == self.master_row_index:
-                # Master row: only Yes/No allowed
-                if value not in TableColumns.YES_NO_VALUES:
-                    return False, f"Master row {header} must be Yes or No"
-            else:
-                # Data rows: Yes/No or empty (for inheritance)
-                if value and value not in TableColumns.YES_NO_VALUES:
-                    return False, f"{header} must be Yes, No, or empty"
+            if value.strip() in ["", "Yes", "No"]:
+                return True, ""
+            return False, f"{header} must be Yes or No (or blank)"
         
-        # RenderMode column
-        elif header == "RenderMode":
-            if row == self.master_row_index:
-                # Master row: only render mode values allowed
-                if value not in TableColumns.RENDER_MODE_VALUES:
-                    return False, f"Master row RenderMode must be one of: {', '.join(TableColumns.RENDER_MODE_VALUES)}"
-            else:
-                # Data rows: render mode values or empty (for inheritance)
-                if value and value not in TableColumns.RENDER_MODE_VALUES:
-                    return False, f"RenderMode must be one of: {', '.join(TableColumns.RENDER_MODE_VALUES)} or empty"
+        # RenderMode dropdown column
+        if header == "RenderMode":
+            if value.strip() in ["", "Full", "Proxy", "Both", "Script"]:
+                return True, ""
+            return False, f"RenderMode must be one of: {', '.join(TableColumns.RENDER_MODE_VALUES)} (or blank)"
         
-        # TaskTimeout column (integer)
-        elif header == "TaskTimeout":
-            if value:
-                try:
-                    timeout_val = int(value)
-                    if timeout_val < 0 or timeout_val > 999:
-                        return False, "TaskTimeout must be between 0 and 999"
-                except ValueError:
-                    return False, "TaskTimeout must be a number"
+        # Integer columns
+        if header in ["TaskTimeout", "Priority", "Chunk"]:
+            if value.strip() == "":
+                return True, ""
+            try:
+                int_val = int(value)
+                if int_val < 0:
+                    return False, f"{header} must be non-negative"
+                return True, ""
+            except ValueError:
+                return False, f"{header} must be a valid integer"
         
-        # Priority column (integer)
-        elif header == "Priority":
-            if value:
-                try:
-                    priority_val = int(value)
-                    if priority_val < 0 or priority_val > 100:
-                        return False, "Priority must be between 0 and 100"
-                except ValueError:
-                    return False, "Priority must be a number"
-        
-        # Chunk column (integer)
-        elif header == "Chunk":
-            if value:
-                try:
-                    chunk_val = int(value)
-                    if chunk_val < 1:
-                        return False, "Chunk must be 1 or greater"
-                except ValueError:
-                    return False, "Chunk must be a number"
-        
+        # All other columns - accept any text
         return True, ""
     
     def add_row(self, row_data=None):
@@ -329,7 +222,7 @@ class TableDataModel(QtCore.QObject):
             row_data (dict, optional): Initial data for the row
             
         Returns:
-            int: Index of the new row
+            int: Index of the added row
         """
         if row_data is None:
             row_data = {}
@@ -356,49 +249,9 @@ class TableDataModel(QtCore.QObject):
         if row < 0 or row >= len(self._data):
             return False
         
-        # Don't allow removing the master row
-        if row == self.master_row_index:
-            return False
-        
         self._data.pop(row)
-        
-        # Adjust master row index if necessary
-        if row < self.master_row_index:
-            self.master_row_index -= 1
-        
         self.dataChanged.emit()
         return True
-    
-    def clear_data(self):
-        """Clear all data except master row."""
-        if len(self._data) > 1:
-            master_row = self._data[self.master_row_index].copy()
-            self._data = [master_row]
-            self.master_row_index = 0
-            self.dataChanged.emit()
-    
-    def get_master_row_data(self):
-        """Get the master row data.
-        
-        Returns:
-            dict: Master row data
-        """
-        if self.master_row_index < len(self._data):
-            return self._data[self.master_row_index].copy()
-        return {}
-    
-    def set_master_row_data(self, data):
-        """Set the master row data.
-        
-        Args:
-            data (dict): Master row data
-        """
-        if self.master_row_index < len(self._data):
-            # Update master row with provided data
-            for header in self._headers:
-                self._data[self.master_row_index][header] = data.get(header, "")
-            
-            self.masterRowChanged.emit()
 
 
 class GSVHierarchyModel(QtCore.QObject):
