@@ -31,7 +31,7 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from .constants import Colors
+from .constants import Colors, TableColumns
 
 
 class ColoredGroupBox(QtWidgets.QGroupBox):
@@ -42,11 +42,11 @@ class ColoredGroupBox(QtWidgets.QGroupBox):
         self.border_color = QtGui.QColor(border_color)
         self.border_width = 2
         
-        # Use very dark grey variations for title backgrounds
-        if border_color == "#4A90E2":  # Blue border
-            self.title_bg_color = QtGui.QColor("#2A2633")  # Very dark grey with blue tint
-        elif border_color == "#8E44AD":  # Purple border
-            self.title_bg_color = QtGui.QColor("#332633")  # Very dark grey with purple tint
+        # Use background color constants for consistency with pinned rows
+        if border_color == Colors.JOB_SETTINGS_COLOR:  # Blue border
+            self.title_bg_color = QtGui.QColor(Colors.JOB_SETTINGS_BACKGROUND)
+        elif border_color == Colors.MACHINE_SETTINGS_COLOR:  # Purple border
+            self.title_bg_color = QtGui.QColor(Colors.MACHINE_SETTINGS_BACKGROUND)
         else:
             self.title_bg_color = QtGui.QColor("#262626")  # Default very dark grey
     
@@ -115,10 +115,55 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
         super().__init__(parent)
         self.pinned_row_count = 0
         self.original_sort_enabled = True
+        self.current_sort_column = -1
+        self.current_sort_order = QtCore.Qt.AscendingOrder
+        self._sorting_in_progress = False
+        
+        if NUKE_AVAILABLE:
+            nuke.tprint("PinnedRowTableWidget created")
+        else:
+            print("PinnedRowTableWidget created")
+        
+        # Connect to header clicks to ensure our custom sorting is used
+        self.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
         
     def setPinnedRowCount(self, count):
         """Set the number of rows that should be pinned at the top."""
+        if NUKE_AVAILABLE:
+            nuke.tprint(f"setPinnedRowCount called with count={count}")
+        else:
+            print(f"setPinnedRowCount called with count={count}")
+        
         self.pinned_row_count = count
+        
+        # Reconfigure sorting behavior based on pinned row count
+        if count > 0:
+            if NUKE_AVAILABLE:
+                nuke.tprint(f"Setting up custom sorting for {count} pinned rows")
+            else:
+                print(f"Setting up custom sorting for {count} pinned rows")
+            
+            # Completely disable Qt's built-in sorting
+            super().setSortingEnabled(False)
+            
+            # Disconnect all existing header signals to avoid conflicts
+            try:
+                self.horizontalHeader().sectionClicked.disconnect()
+            except:
+                pass
+            
+            # Make header clickable and connect our custom handler
+            self.horizontalHeader().setSectionsClickable(True)
+            self.horizontalHeader().setSortIndicatorShown(True)
+            self.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
+            
+            if NUKE_AVAILABLE:
+                nuke.tprint("Custom header click handler connected")
+            else:
+                print("Custom header click handler connected")
+        else:
+            # Re-enable normal sorting if no pinned rows
+            super().setSortingEnabled(self.original_sort_enabled)
     
     def paintEvent(self, event):
         """Custom paint event to draw the table and then add group borders on top."""
@@ -151,25 +196,41 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
     
     def _draw_row_group_borders(self, painter, row):
         """Draw group borders for a specific row."""
-        # Define the blue group columns (3-12: Chunk through Reloadplugin)
-        group_start_col = 3
-        group_end_col = 12
+        from .constants import TableColumns
         
+        # Define the blue group columns (3-12: Chunk through Reloadplugin)
+        blue_group_start_col = 3
+        blue_group_end_col = 12
+        
+        # Define the purple group columns (machine settings)
+        purple_group_start_col = min(TableColumns.MACHINE_SETTINGS_COLUMNS)
+        purple_group_end_col = max(TableColumns.MACHINE_SETTINGS_COLUMNS)
+        
+        # Draw blue group border
+        self._draw_group_border(painter, row, blue_group_start_col, blue_group_end_col, 'blue')
+        
+        # Draw purple group border
+        self._draw_group_border(painter, row, purple_group_start_col, purple_group_end_col, 'purple')
+    
+    def _draw_group_border(self, painter, row, group_start_col, group_end_col, border_group):
+        """Draw a specific group border."""
         # Check if we have enough columns
         if self.columnCount() <= group_end_col:
             return
         
         # Check if any cell in the group has border data
         has_border_group = False
+        border_color = None
         for col in range(group_start_col, group_end_col + 1):
             item = self.item(row, col)
             if item:
                 border_data = item.data(QtCore.Qt.UserRole + 1)
-                if border_data and border_data.get('border_group') == 'blue':
+                if border_data and border_data.get('border_group') == border_group:
                     has_border_group = True
+                    border_color = border_data.get('border_color', QtGui.QColor("#4A90E2"))
                     break
         
-        if not has_border_group:
+        if not has_border_group or not border_color:
             return
         
         # Calculate the group rectangle
@@ -189,6 +250,15 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
             row_height
         )
         
+        # Save current painter state
+        painter.save()
+        
+        # Set up the pen for this group border
+        pen = QtGui.QPen(border_color, 3)
+        pen.setJoinStyle(QtCore.Qt.MiterJoin)
+        painter.setPen(pen)
+        painter.setRenderHint(QtGui.QPainter.Antialiasing, False)
+        
         # Draw the border rectangle
         # Adjust to draw exactly on the edges
         pen_width = painter.pen().width()
@@ -202,71 +272,146 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
         )
         
         painter.drawRect(border_rect)
+        
+        # Restore painter state
+        painter.restore()
     
     def sortByColumn(self, column, order):
         """Override sorting to exclude pinned rows."""
+        if NUKE_AVAILABLE:
+            nuke.tprint(f"sortByColumn called: column {column}, order {'DESC' if order == QtCore.Qt.DescendingOrder else 'ASC'}")
+        else:
+            print(f"sortByColumn called: column {column}, order {'DESC' if order == QtCore.Qt.DescendingOrder else 'ASC'}")
+        
+        # Prevent recursion during sorting
+        if self._sorting_in_progress:
+            return
+        
         if self.pinned_row_count == 0:
             super().sortByColumn(column, order)
             return
+        
+        # Set flag to prevent recursion
+        self._sorting_in_progress = True
+        
+        try:
+            if NUKE_AVAILABLE:
+                nuke.tprint("Starting sort process...")
+            else:
+                print("Starting sort process...")
             
-        # Temporarily disable sorting to extract pinned rows
-        self.setSortingEnabled(False)
-        
-        # Store pinned rows data
-        pinned_rows_data = []
-        for row in range(self.pinned_row_count):
+            # Get all row data as (index, data) tuples
             row_data = []
-            for col in range(self.columnCount()):
-                item = self.item(row, col)
-                if item:
-                    row_data.append(item.clone())
+            for row in range(self.rowCount()):
+                row_items = []
+                for col in range(self.columnCount()):
+                    item = self.item(row, col)
+                    row_items.append(item.text() if item else "")
+                row_data.append((row, row_items))
+            
+            if NUKE_AVAILABLE:
+                nuke.tprint(f"Total rows: {len(row_data)}, Pinned: {self.pinned_row_count}")
+            else:
+                print(f"Total rows: {len(row_data)}, Pinned: {self.pinned_row_count}")
+            
+            # Separate pinned and non-pinned rows
+            pinned_rows = row_data[:self.pinned_row_count]
+            non_pinned_rows = row_data[self.pinned_row_count:]
+            
+            # Show before sort
+            if non_pinned_rows:
+                if NUKE_AVAILABLE:
+                    nuke.tprint(f"Before sort - first non-pinned row col {column}: '{non_pinned_rows[0][1][column] if column < len(non_pinned_rows[0][1]) else 'N/A'}'")
                 else:
-                    row_data.append(None)
-            pinned_rows_data.append(row_data)
+                    print(f"Before sort - first non-pinned row col {column}: '{non_pinned_rows[0][1][column] if column < len(non_pinned_rows[0][1]) else 'N/A'}'")
+            
+            # Sort non-pinned rows by the specified column
+            def sort_key(row_tuple):
+                _, row_items = row_tuple
+                if column >= len(row_items):
+                    return ""
+                text = row_items[column]
+                # Try numeric sort first
+                try:
+                    return float(text) if text.strip() else 0.0
+                except ValueError:
+                    return text.lower()
+            
+            if NUKE_AVAILABLE:
+                nuke.tprint("About to sort...")
+            else:
+                print("About to sort...")
+            
+            non_pinned_rows.sort(key=sort_key, reverse=(order == QtCore.Qt.DescendingOrder))
+            
+            if NUKE_AVAILABLE:
+                nuke.tprint("Sort completed, now updating table...")
+            else:
+                print("Sort completed, now updating table...")
+            
+            # Show after sort
+            if non_pinned_rows:
+                if NUKE_AVAILABLE:
+                    nuke.tprint(f"After sort - first non-pinned row col {column}: '{non_pinned_rows[0][1][column] if column < len(non_pinned_rows[0][1]) else 'N/A'}'")
+                else:
+                    print(f"After sort - first non-pinned row col {column}: '{non_pinned_rows[0][1][column] if column < len(non_pinned_rows[0][1]) else 'N/A'}'")
+            
+            # Rebuild the table: pinned rows first, then sorted non-pinned rows
+            all_sorted_rows = pinned_rows + non_pinned_rows
+            
+            # Clear and rebuild table data
+            self.blockSignals(True)
+            
+            if NUKE_AVAILABLE:
+                nuke.tprint("Updating table items...")
+            else:
+                print("Updating table items...")
+            
+            # Update each row with sorted data
+            for new_row, (original_row, row_items) in enumerate(all_sorted_rows):
+                for col, text in enumerate(row_items):
+                    item = QtWidgets.QTableWidgetItem(text)
+                    self.setItem(new_row, col, item)
+            
+            self.blockSignals(False)
+            
+            if NUKE_AVAILABLE:
+                nuke.tprint("About to apply pinned row styling...")
+            else:
+                print("About to apply pinned row styling...")
+            
+        except Exception as e:
+            if NUKE_AVAILABLE:
+                nuke.tprint(f"ERROR in sortByColumn: {str(e)}")
+                import traceback
+                nuke.tprint(f"Traceback: {traceback.format_exc()}")
+            else:
+                print(f"ERROR in sortByColumn: {str(e)}")
+                import traceback
+                print(f"Traceback: {traceback.format_exc()}")
+        finally:
+            self._sorting_in_progress = False
         
-        # Create a temporary table for sorting non-pinned rows
-        temp_table = QtWidgets.QTableWidget()
-        temp_table.setColumnCount(self.columnCount())
-        temp_table.setRowCount(self.rowCount() - self.pinned_row_count)
-        
-        # Copy non-pinned data to temp table
-        for row in range(self.pinned_row_count, self.rowCount()):
-            for col in range(self.columnCount()):
-                item = self.item(row, col)
-                if item:
-                    temp_table.setItem(row - self.pinned_row_count, col, item.clone())
-        
-        # Sort the temp table
-        temp_table.setSortingEnabled(True)
-        temp_table.sortByColumn(column, order)
-        
-        # Clear current table and repopulate with pinned rows first
-        self.setRowCount(0)
-        self.setRowCount(len(pinned_rows_data) + temp_table.rowCount())
-        
-        # Restore pinned rows
-        for row, row_data in enumerate(pinned_rows_data):
-            for col, item in enumerate(row_data):
-                if item:
-                    self.setItem(row, col, item)
-        
-        # Add sorted non-pinned rows
-        for row in range(temp_table.rowCount()):
-            for col in range(temp_table.columnCount()):
-                item = temp_table.item(row, col)
-                if item:
-                    self.setItem(row + self.pinned_row_count, col, item.clone())
-        
-        # Style pinned rows
-        self._style_pinned_rows()
-        
-        # Re-enable sorting
-        self.setSortingEnabled(self.original_sort_enabled)
+        # Reapply pinned row styling
+        try:
+            self._style_pinned_rows()
+            if NUKE_AVAILABLE:
+                nuke.tprint("Sort process fully completed")
+            else:
+                print("Sort process fully completed")
+        except Exception as e:
+            if NUKE_AVAILABLE:
+                nuke.tprint(f"ERROR in _style_pinned_rows: {str(e)}")
+            else:
+                print(f"ERROR in _style_pinned_rows: {str(e)}")
     
     def _style_pinned_rows(self):
         """Apply different styling to pinned rows with blue borders and default backgrounds."""
-        job_settings_blue = QtGui.QColor("#4A90E2")  # Same blue as job settings
-        job_settings_bg = QtGui.QColor("#2A2633")  # Same background as Job Settings title
+        # Use consistent color constants for both settings panels and pinned rows
+        job_settings_blue = QtGui.QColor(Colors.PINNED_JOB_BORDER)
+        job_settings_bg = QtGui.QColor(Colors.PINNED_JOB_BACKGROUND)
+        machine_settings_purple = QtGui.QColor(Colors.PINNED_MACHINE_BORDER)
+        machine_settings_bg = QtGui.QColor(Colors.PINNED_MACHINE_BACKGROUND)
         very_dark_grey = QtGui.QColor("#1A1A1A")  # Very dark grey for "All" cells
         grey_text = QtGui.QColor("#888888")  # Grey text for "All" cells
         
@@ -316,6 +461,18 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
                                 'border_color': job_settings_blue,
                                 'group_start_col': 3,
                                 'group_end_col': 12
+                            })
+                        # Define which columns belong to the machine settings group (columns 13-24)
+                        elif col in TableColumns.MACHINE_SETTINGS_COLUMNS:  # Machine settings columns
+                            # Use Machine Settings background color for machine settings cells
+                            item.setBackground(QtGui.QBrush(machine_settings_bg))
+                            item.setForeground(QtGui.QBrush())  # Default text color
+                            
+                            item.setData(QtCore.Qt.UserRole + 1, {
+                                'border_group': 'purple',
+                                'border_color': machine_settings_purple,
+                                'group_start_col': min(TableColumns.MACHINE_SETTINGS_COLUMNS),
+                                'group_end_col': max(TableColumns.MACHINE_SETTINGS_COLUMNS)
                             })
                         else:
                             # Use default background for non-group columns
@@ -412,9 +569,37 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
         super().setCurrentCell(row, column)
 
     def setSortingEnabled(self, enabled):
-        """Override to track original sorting state."""
+        """Override to track original sorting state and disable Qt's built-in sorting for pinned rows."""
+        if NUKE_AVAILABLE:
+            nuke.tprint(f"setSortingEnabled called: enabled={enabled}, pinned_count={self.pinned_row_count}")
+        else:
+            print(f"setSortingEnabled called: enabled={enabled}, pinned_count={self.pinned_row_count}")
+        
         self.original_sort_enabled = enabled
-        super().setSortingEnabled(enabled)
+        
+        if self.pinned_row_count > 0:
+            if NUKE_AVAILABLE:
+                nuke.tprint("Using custom sorting due to pinned rows")
+            else:
+                print("Using custom sorting due to pinned rows")
+            # Force custom sorting when we have pinned rows
+            super().setSortingEnabled(False)
+            self.horizontalHeader().setSectionsClickable(True)
+            self.horizontalHeader().setSortIndicatorShown(True)
+            
+            # Ensure our handler is connected
+            try:
+                self.horizontalHeader().sectionClicked.disconnect()
+            except:
+                pass
+            self.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
+        else:
+            if NUKE_AVAILABLE:
+                nuke.tprint("Using normal Qt sorting")
+            else:
+                print("Using normal Qt sorting")
+            # Normal behavior when no pinned rows
+            super().setSortingEnabled(enabled)
     
     def mousePressEvent(self, event):
         """Override to enable single-click editing for dropdown columns."""
@@ -439,6 +624,47 @@ class PinnedRowTableWidget(QtWidgets.QTableWidget):
         
         # Call parent for normal behavior
         super().mousePressEvent(event)
+
+    def _on_header_clicked(self, logical_index):
+        """Handle header clicks to trigger custom sorting."""
+        if NUKE_AVAILABLE:
+            nuke.tprint(f"Header clicked: column {logical_index}")
+        else:
+            print(f"Header clicked: column {logical_index}")
+        
+        # Prevent recursion during sorting
+        if self._sorting_in_progress:
+            return
+        
+        if self.pinned_row_count == 0:
+            # No pinned rows, use default sorting
+            return
+        
+        if NUKE_AVAILABLE:
+            nuke.tprint(f"Processing sort for column {logical_index}")
+        else:
+            print(f"Processing sort for column {logical_index}")
+        
+        # Determine sort order - toggle if same column, otherwise ascending
+        if logical_index == self.current_sort_column:
+            # Same column - toggle order
+            if self.current_sort_order == QtCore.Qt.AscendingOrder:
+                new_order = QtCore.Qt.DescendingOrder
+            else:
+                new_order = QtCore.Qt.AscendingOrder
+        else:
+            # Different column - start with ascending
+            new_order = QtCore.Qt.AscendingOrder
+        
+        # Update tracking variables
+        self.current_sort_column = logical_index
+        self.current_sort_order = new_order
+        
+        # Call our custom sort method (don't set flag here, let sortByColumn handle it)
+        self.sortByColumn(logical_index, new_order)
+        
+        # Update the header visual indicator
+        self.horizontalHeader().setSortIndicator(logical_index, new_order)
 
 
 class GroupedHeaderView(QtWidgets.QHeaderView):

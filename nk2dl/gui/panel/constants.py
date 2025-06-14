@@ -17,7 +17,7 @@ class Settings:
     POOL_OPTIONS = ["comp", "lighting", "fx", "render", "general"]
     
     # Group options for machine settings
-    # Placeholder for actual gr options, which will be populated from Deadline
+    # Placeholder for actual group options, which will be populated from Deadline
     GROUP_OPTIONS = ["none", "high_priority", "overnight", "weekend"]
 
 
@@ -25,10 +25,14 @@ class Sizes:
     """Size and dimension constants for UI components."""
     
     # Settings panel dimensions
-    SETTINGS_LABEL_WIDTH = 90
+    SETTINGS_LABEL_WIDTH = 110
     SETTINGS_SPACING = 20
     SETTINGS_MARGIN = 15
     SETTINGS_BOTTOM_MARGIN = 20
+    
+    # Group box minimum widths
+    JOB_SETTINGS_MIN_WIDTH = 650  # Minimum width for job settings box
+    MACHINE_SETTINGS_MIN_WIDTH = 650  # Minimum width for machine settings box
     
     # Control dimensions
     SPINBOX_WIDTH = 60
@@ -38,7 +42,7 @@ class Sizes:
     FILTER_EDIT_WIDTH = 150
     
     # Responsive behavior
-    RESPONSIVE_BREAKPOINT = 800  # Width below which settings stack vertically
+    RESPONSIVE_BREAKPOINT = 1300  # Width below which settings stack vertically
 
 
 class Colors:
@@ -47,6 +51,10 @@ class Colors:
     # Group box colors
     JOB_SETTINGS_COLOR = "#4A90E2"      # Blue
     MACHINE_SETTINGS_COLOR = "#8E44AD"   # Purple
+    
+    # Settings panel background colors (for group box titles)
+    JOB_SETTINGS_BACKGROUND = "#2A2633"      # Dark grey with blue tint
+    MACHINE_SETTINGS_BACKGROUND = "#332633"  # Dark grey with purple tint
     
     # Text colors
     INHERITED_TEXT_COLOR = "#888888"     # Grey for inherited values
@@ -59,6 +67,12 @@ class Colors:
     CONSOLE_WARNING = "#ffaa00"          # Orange for warnings
     CONSOLE_ERROR = "#ff4444"            # Red for errors
     CONSOLE_SUCCESS = "#44ff44"          # Green for success
+    
+    # Pinned row styling (using same colors as settings panels)
+    PINNED_JOB_BACKGROUND = JOB_SETTINGS_BACKGROUND      # Same as job settings title
+    PINNED_JOB_BORDER = JOB_SETTINGS_COLOR               # Same as job settings border
+    PINNED_MACHINE_BACKGROUND = MACHINE_SETTINGS_BACKGROUND  # Same as machine settings title
+    PINNED_MACHINE_BORDER = MACHINE_SETTINGS_COLOR       # Same as machine settings border
 
 
 class TableColumns:
@@ -68,7 +82,9 @@ class TableColumns:
     HEADERS = [
         "Order", "Node", "Filename", "Chunk", "Frames", "Priority", 
         "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", 
-        "NukeX", "BatchMode", "Reloadplugin"
+        "NukeX", "BatchMode", "Reloadplugin", "Pool", "SecondaryPool", 
+        "Group", "Threads", "MinRam", "MaxRam", "UseGPU", "GPUId", 
+        "ConcurrentTasks", "WorkerTaskLimit", "MachineList", "Limits"
     ]
     
     # Dropdown columns (columns that have dropdown editors)
@@ -78,7 +94,12 @@ class TableColumns:
         9: ["Full", "Proxy", "Both", "Script"],  # RenderMode
         10: ["Yes", "No"],                   # NukeX
         11: ["Yes", "No"],                   # BatchMode
-        12: ["Yes", "No"]                    # Reloadplugin
+        12: ["Yes", "No"],                   # Reloadplugin
+        13: Settings.POOL_OPTIONS,           # Pool
+        14: Settings.POOL_OPTIONS,           # SecondaryPool
+        15: Settings.GROUP_OPTIONS,          # Group
+        19: ["Yes", "No"],                   # UseGPU
+        22: ["Yes", "No"]                    # WorkerTaskLimit
     }
     
     # Column widths (optional, for initial sizing)
@@ -95,8 +116,23 @@ class TableColumns:
         9: 90,   # RenderMode
         10: 70,  # NukeX
         11: 90,  # BatchMode
-        12: 100  # Reloadplugin
+        12: 100, # Reloadplugin
+        13: 80,  # Pool
+        14: 100, # SecondaryPool
+        15: 80,  # Group
+        16: 70,  # Threads
+        17: 70,  # MinRam
+        18: 70,  # MaxRam
+        19: 70,  # UseGPU
+        20: 70,  # GPUId
+        21: 100, # ConcurrentTasks
+        22: 110, # WorkerTaskLimit
+        23: 120, # MachineList
+        24: 80   # Limits
     }
+    
+    # Machine settings columns (for styling pinned rows)
+    MACHINE_SETTINGS_COLUMNS = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 
 class GSVDefaults:
@@ -115,6 +151,22 @@ class GSVDefaults:
     SAMPLE_SECONDARY_DATA = {
         "Resolution": ["1920x1080", "2048x1556", "4096x3112"],
         "Format": ["exr", "dpx", "jpg"]
+    }
+    
+    # Sample machine settings data for testing pinned rows
+    SAMPLE_MACHINE_DATA = {
+        "pool": "comp",
+        "secondary_pool": "lighting", 
+        "group": "high_priority",
+        "threads": 8,
+        "min_ram": 8,
+        "max_ram": 32,
+        "use_gpu": True,
+        "gpu_id": 1,
+        "concurrent_tasks": 4,
+        "worker_task_limit": True,
+        "machine_list": "render01,render02,render03",
+        "limits": "nuke_license:4"
     }
 
 
@@ -165,7 +217,20 @@ class DefaultValues:
         "reload_plugin": False,
         "separate_tasks": False,
         "separate_jobs": False,
-        "views_separate_jobs": False
+        "views_separate_jobs": False,
+        # Machine settings defaults for node table
+        "pool": "comp",
+        "secondary_pool": "",
+        "group": "none",
+        "threads": 4,
+        "min_ram": 0,
+        "max_ram": 0,
+        "use_gpu": False,
+        "gpu_id": 0,
+        "concurrent_tasks": 2,
+        "worker_task_limit": False,
+        "machine_list": "",
+        "limits": ""
     }
     
     # Machine settings defaults

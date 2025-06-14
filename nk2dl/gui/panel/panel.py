@@ -29,7 +29,7 @@ from ...common.logging import setup_logging
 # Import all the extracted components
 from .models import TableDataModel, GSVHierarchyModel, SettingsModel
 from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
-from .constants import Sizes
+from .constants import Sizes, DefaultValues, GSVDefaults
 
 # Create a module-specific logger
 logger = setup_logging('nk2dl.gui.panel.panel')
@@ -185,6 +185,8 @@ class Nk2dlPanel(QtWidgets.QWidget):
     
     def _load_sample_data(self):
         """Load sample data for demonstration."""
+        from .constants import GSVDefaults
+        
         # Load sample table data
         sample_table_data = [
             # Master control row
@@ -192,38 +194,71 @@ class Nk2dlPanel(QtWidgets.QWidget):
                 "Order": "All", "Node": "All", "Filename": "All", "Chunk": "5", 
                 "Frames": "1001-2315", "Priority": "50", "NodesFrames": "Yes", 
                 "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Full", 
-                "NukeX": "Yes", "BatchMode": "Yes", "Reloadplugin": "Yes"
+                "NukeX": "Yes", "BatchMode": "Yes", "Reloadplugin": "Yes",
+                # Machine settings columns with sample data
+                "Pool": GSVDefaults.SAMPLE_MACHINE_DATA["pool"],
+                "SecondaryPool": GSVDefaults.SAMPLE_MACHINE_DATA["secondary_pool"],
+                "Group": GSVDefaults.SAMPLE_MACHINE_DATA["group"],
+                "Threads": str(GSVDefaults.SAMPLE_MACHINE_DATA["threads"]),
+                "MinRam": str(GSVDefaults.SAMPLE_MACHINE_DATA["min_ram"]),
+                "MaxRam": str(GSVDefaults.SAMPLE_MACHINE_DATA["max_ram"]),
+                "UseGPU": "Yes" if GSVDefaults.SAMPLE_MACHINE_DATA["use_gpu"] else "No",
+                "GPUId": str(GSVDefaults.SAMPLE_MACHINE_DATA["gpu_id"]),
+                "ConcurrentTasks": str(GSVDefaults.SAMPLE_MACHINE_DATA["concurrent_tasks"]),
+                "WorkerTaskLimit": "Yes" if GSVDefaults.SAMPLE_MACHINE_DATA["worker_task_limit"] else "No",
+                "MachineList": GSVDefaults.SAMPLE_MACHINE_DATA["machine_list"],
+                "Limits": GSVDefaults.SAMPLE_MACHINE_DATA["limits"]
             },
             # Regular data rows - some cells blank to demonstrate fallback
             {
                 "Order": "3999", "Node": "Write4", "Filename": "Some_path1_v002.%04d.exr", 
                 "Chunk": "", "Frames": "1350-1650", "Priority": "", "NodesFrames": "", 
                 "TaskTimeout": "", "AutoTimeout": "", "RenderMode": "", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": ""
+                "BatchMode": "", "Reloadplugin": "",
+                # Machine settings columns - blank to inherit from master row
+                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
+                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
+                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
             },
             {
                 "Order": "3100", "Node": "Write30", "Filename": "Some_path3_v002.%04d.exr", 
                 "Chunk": "3", "Frames": "", "Priority": "40", "NodesFrames": "", 
                 "TaskTimeout": "10", "AutoTimeout": "", "RenderMode": "Proxy", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": ""
+                "BatchMode": "", "Reloadplugin": "",
+                # Machine settings columns - blank to inherit from master row
+                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
+                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
+                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
             },
             {
                 "Order": "3050", "Node": "Write27", "Filename": "Some_path5_v002.%04d.exr", 
                 "Chunk": "", "Frames": "1570-1620", "Priority": "", "NodesFrames": "", 
                 "TaskTimeout": "", "AutoTimeout": "", "RenderMode": "", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": ""
+                "BatchMode": "", "Reloadplugin": "",
+                # Machine settings columns - blank to inherit from master row
+                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
+                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
+                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
             },
             {
                 "Order": "3000", "Node": "Write9", "Filename": "Some_path6_v002.%04d.exr", 
                 "Chunk": "8", "Frames": "1350-1650", "Priority": "60", "NodesFrames": "No", 
                 "TaskTimeout": "", "AutoTimeout": "No", "RenderMode": "Both", "NukeX": "No", 
-                "BatchMode": "No", "Reloadplugin": "No"
+                "BatchMode": "No", "Reloadplugin": "No",
+                # Machine settings columns - blank to inherit from master row
+                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
+                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
+                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
             },
             {
                 "Order": "2999", "Node": "Write3", "Filename": "Some_path9_v002.%04d.exr", 
                 "Chunk": "", "Frames": "", "Priority": "", "NodesFrames": "", 
                 "TaskTimeout": "", "AutoTimeout": "", "RenderMode": "", "NukeX": "", 
-                "BatchMode": "", "Reloadplugin": ""
+                "BatchMode": "", "Reloadplugin": "",
+                # Machine settings columns - blank to inherit from master row
+                "Pool": "", "SecondaryPool": "", "Group": "", "Threads": "", 
+                "MinRam": "", "MaxRam": "", "UseGPU": "", "GPUId": "", 
+                "ConcurrentTasks": "", "WorkerTaskLimit": "", "MachineList": "", "Limits": ""
             }
         ]
         
@@ -277,63 +312,8 @@ class Nk2dlPanel(QtWidgets.QWidget):
         self.console_view.log_info("Extra settings updated")
     
     def _on_render_clicked(self):
-        """Handle render button click - demonstrate the integrated system."""
-        self.console_view.log_info("=== RENDER SUBMISSION STARTED ===")
-        
-        # Get effective values from table model
-        effective_values = self.node_settings_view.get_effective_values()
-        self.console_view.log_success(f"Retrieved {len(effective_values)} effective table rows")
-        
-        # Get settings from models
-        job_settings = self.settings_model.get_all_job_settings()
-        machine_settings = self.settings_model.get_all_machine_settings()
-        extra_settings = self.settings_model.get_all_extra_settings()
-        
-        self.console_view.log_success("Retrieved all settings from models")
-        
-        # Get GSV selections if available
-        if self.gsv_view:
-            selected_gsvs = self.gsv_view.get_selected_gsvs()
-            self.console_view.log_success(f"Retrieved {len(selected_gsvs)} GSV selections")
-        
-        # Validate settings
-        job_valid, job_errors = self.settings_model.validate_job_settings()
-        machine_valid, machine_errors = self.settings_model.validate_machine_settings()
-        
-        if not job_valid:
-            for error in job_errors:
-                self.console_view.log_error(f"Job Settings: {error}")
-        
-        if not machine_valid:
-            for error in machine_errors:
-                self.console_view.log_error(f"Machine Settings: {error}")
-        
-        if job_valid and machine_valid:
-            self.console_view.log_success("All settings validation passed")
-            self.console_view.log_info("Ready for Deadline submission")
-            
-            # Simulate progress
-            self.progress_bar.setValue(25)
-            self.console_view.log_info("Preparing submission files...")
-            
-            QtCore.QTimer.singleShot(500, lambda: self._continue_render_simulation(50))
-        else:
-            self.console_view.log_error("Validation failed - fix errors before submitting")
-    
-    def _continue_render_simulation(self, progress):
-        """Continue the render simulation."""
-        self.progress_bar.setValue(progress)
-        
-        if progress == 50:
-            self.console_view.log_info("Connecting to Deadline...")
-            QtCore.QTimer.singleShot(500, lambda: self._continue_render_simulation(75))
-        elif progress == 75:
-            self.console_view.log_info("Submitting jobs...")
-            QtCore.QTimer.singleShot(500, lambda: self._continue_render_simulation(100))
-        elif progress == 100:
-            self.console_view.log_success("=== SUBMISSION COMPLETE ===")
-            self.console_view.log_success("Jobs submitted successfully to Deadline")
-            QtCore.QTimer.singleShot(2000, lambda: self.progress_bar.setValue(0))
+        """Handle render button click - show development message."""
+        nuke.message("Nuke to Deadline panel is still under development.\n\nUse the \"Submit Write Nodes to Deadline\" feature from the render menu.")
     
     # Public API methods for external access
     def get_table_model(self):

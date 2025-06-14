@@ -75,6 +75,7 @@ class SettingsView(QtWidgets.QWidget):
     def _create_job_settings_group(self):
         """Create the Job Settings group box and controls."""
         self.job_settings_group = ColoredGroupBox("Job Settings", "#4A90E2")
+        self.job_settings_group.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH)
         job_layout = QtWidgets.QVBoxLayout()
         job_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 25, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_MARGIN)
         job_layout.setSpacing(8)
@@ -261,6 +262,7 @@ class SettingsView(QtWidgets.QWidget):
     def _create_machine_settings_group(self):
         """Create the Machine Settings group box and controls."""
         self.machine_settings_group = ColoredGroupBox("Machine Settings", "#8E44AD")
+        self.machine_settings_group.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH)
         machine_layout = QtWidgets.QVBoxLayout()
         machine_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 25, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_MARGIN)
         machine_layout.setSpacing(8)
@@ -338,13 +340,6 @@ class SettingsView(QtWidgets.QWidget):
         self.min_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         ram_row.addWidget(self.min_ram_spin)
         
-        # Vertical separator
-        separator5 = QtWidgets.QFrame()
-        separator5.setFrameShape(QtWidgets.QFrame.VLine)
-        separator5.setFrameShadow(QtWidgets.QFrame.Sunken)
-        separator5.setFixedWidth(1)
-        ram_row.addWidget(separator5)
-        
         self.max_ram_spin = QtWidgets.QSpinBox()
         self.max_ram_spin.setMinimum(0)
         self.max_ram_spin.setMaximum(512)
@@ -373,13 +368,6 @@ class SettingsView(QtWidgets.QWidget):
         self.gpu_override_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         gpu_row.addWidget(self.gpu_override_spin)
         
-        # Vertical separator
-        separator6 = QtWidgets.QFrame()
-        separator6.setFrameShape(QtWidgets.QFrame.VLine)
-        separator6.setFrameShadow(QtWidgets.QFrame.Sunken)
-        separator6.setFixedWidth(1)
-        gpu_row.addWidget(separator6)
-        
         self.use_gpu_check = QtWidgets.QCheckBox("Use GPU")
         gpu_row.addWidget(self.use_gpu_check)
         gpu_row.addStretch()
@@ -401,13 +389,6 @@ class SettingsView(QtWidgets.QWidget):
         self.concurrent_tasks_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         concurrent_row.addWidget(self.concurrent_tasks_spin)
         
-        # Vertical separator
-        separator7 = QtWidgets.QFrame()
-        separator7.setFrameShape(QtWidgets.QFrame.VLine)
-        separator7.setFrameShadow(QtWidgets.QFrame.Sunken)
-        separator7.setFixedWidth(1)
-        concurrent_row.addWidget(separator7)
-        
         self.limit_tasks_check = QtWidgets.QCheckBox("Limit tasks to worker's task limit")
         concurrent_row.addWidget(self.limit_tasks_check)
         concurrent_row.addStretch()
@@ -428,13 +409,6 @@ class SettingsView(QtWidgets.QWidget):
         self.machine_limit_spin.setMaximum(999)
         self.machine_limit_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         limit_row.addWidget(self.machine_limit_spin)
-        
-        # Vertical separator
-        separator8 = QtWidgets.QFrame()
-        separator8.setFrameShape(QtWidgets.QFrame.VLine)
-        separator8.setFrameShadow(QtWidgets.QFrame.Sunken)
-        separator8.setFixedWidth(1)
-        limit_row.addWidget(separator8)
         
         self.machine_deny_list_check = QtWidgets.QCheckBox("Machine list is a deny list")
         limit_row.addWidget(self.machine_deny_list_check)
