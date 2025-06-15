@@ -10,9 +10,13 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 import importlib.resources
+import inspect
 
 # Get module-level logger
 logger = logging.getLogger(__name__)
+
+# Track which config keys have been logged to reduce spam
+_logged_config_keys = set()
 
 class ConfigError(Exception):
     """Base exception for configuration related errors."""
@@ -294,14 +298,31 @@ class Config:
         Returns:
             Configuration value or default
         """
+        global _logged_config_keys
+        
         current = self._config
         for part in key.split('.'):
             if not isinstance(current, dict) or part not in current:
-                logger.debug(f"Config key not found: {key}, using default: {default}")
+                if key not in _logged_config_keys:
+                    logger.debug(f"Config key not found: {key}, using default: {default}")
+                    _logged_config_keys.add(key)
+                else:
+                    # Add caller information for repeated calls
+                    caller_frame = inspect.currentframe().f_back
+                    caller_info = f"{caller_frame.f_code.co_filename}:{caller_frame.f_lineno}"
+                    logger.debug(f"Config key not found: {key}, using default: {default} (called from {caller_info})")
                 return default
             current = current[part]
         
-        logger.debug(f"Config get: {key} = {current}")
+        if key not in _logged_config_keys:
+            logger.debug(f"Config get: {key} = {current}")
+            _logged_config_keys.add(key)
+        else:
+            # Add caller information for repeated calls
+            caller_frame = inspect.currentframe().f_back
+            caller_info = f"{caller_frame.f_code.co_filename}:{caller_frame.f_lineno}"
+            logger.debug(f"Config get: {key} = {current} (called from {caller_info})")
+        
         return current
 
 # Global configuration instance

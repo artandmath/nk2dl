@@ -9,8 +9,13 @@ import sys
 from pathlib import Path
 from typing import Optional
 import os
+import inspect
 
 from .config import config
+
+# Module-level flag to track if we've already shown the initial config messages
+_config_debug_shown = False
+_nk2dl_env_debug_shown = False
 
 def setup_logging(name: Optional[str] = None) -> logging.Logger:
     """Set up and return a logger instance.
@@ -21,10 +26,19 @@ def setup_logging(name: Optional[str] = None) -> logging.Logger:
     Returns:
         Configured logger instance
     """
+    global _config_debug_shown, _nk2dl_env_debug_shown
+    
     logger = logging.getLogger(name)
     
     # Only configure if no handlers exist (avoid duplicate handlers)
     if not logger.handlers:
+        # Suppress config debug messages after first logger setup
+        config_logger = logging.getLogger('nk2dl.common.config') if _config_debug_shown else None
+        original_level = None
+        if _config_debug_shown and config_logger:
+            original_level = config_logger.level
+            config_logger.setLevel(logging.INFO)
+        
         # Get logging config
         log_level = config.get('logging.level', 'INFO')
         
@@ -41,9 +55,17 @@ def setup_logging(name: Optional[str] = None) -> logging.Logger:
         numeric_level = getattr(logging, log_level.upper())
         logger.setLevel(numeric_level)
         
-        # Log build job environment status for debugging
+        # Log build job environment status for debugging - but add caller info after first time
         if name and name.startswith('nk2dl'):
-            logger.debug(f"NK2DL_IN_BUILD_JOB environment variable: '{os.environ.get('NK2DL_IN_BUILD_JOB', 'not set')}', in_build_job={in_build_job}")
+            env_msg = f"NK2DL_IN_BUILD_JOB environment variable: '{os.environ.get('NK2DL_IN_BUILD_JOB', 'not set')}', in_build_job={in_build_job}"
+            if not _nk2dl_env_debug_shown:
+                logger.debug(env_msg)
+                _nk2dl_env_debug_shown = True
+            else:
+                # Add caller information for subsequent calls
+                caller_frame = inspect.currentframe().f_back
+                caller_info = f"{caller_frame.f_code.co_filename}:{caller_frame.f_lineno}"
+                logger.debug(f"{env_msg} (called from {caller_info})")
         
         # Remove the temporary handler after logging
         logger.removeHandler(temp_handler)
@@ -56,7 +78,16 @@ def setup_logging(name: Optional[str] = None) -> logging.Logger:
             log_format = config.get('logging.format', 
                                   '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
         
+        # Get log file
         log_file = config.get('logging.file')
+        
+        # Restore original config logger level if we suppressed it
+        if original_level is not None and config_logger:
+            config_logger.setLevel(original_level)
+        
+        # Mark that we've shown the config debug messages for the first time
+        if not _config_debug_shown:
+            _config_debug_shown = True
         
         # Create formatter
         formatter = logging.Formatter(log_format)
