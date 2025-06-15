@@ -119,7 +119,7 @@ class StandardTableWidget(QtWidgets.QTableWidget):
         
         # Standard table properties
         self.setAlternatingRowColors(True)
-        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectRows)
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.setSortingEnabled(True)
         
         logger.info("StandardTableWidget created")
@@ -130,8 +130,8 @@ class StandardTableWidget(QtWidgets.QTableWidget):
             index = self.indexAt(event.pos())
             if index.isValid():
                 # Check if this is a dropdown column
-                headers = ["Order", "Node", "Filename", "Chunk", "Frames", "Priority", "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", "BatchMode", "Reloadplugin"]
-                dropdown_columns = ["NodesFrames", "AutoTimeout", "NukeX", "BatchMode", "Reloadplugin", "RenderMode"]
+                headers = ["Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", "BatchMode", "ReloadPlugin"]
+                dropdown_columns = ["NodesFrames", "AutoTimeout", "NukeX", "BatchMode", "ReloadPlugin", "RenderMode"]
                 
                 if index.column() < len(headers):
                     header = headers[index.column()]
@@ -292,3 +292,477 @@ class GroupedHeaderView(QtWidgets.QHeaderView):
         painter.drawLine(0, self.group_height, self.width(), self.group_height)
         
         painter.restore() 
+
+
+class FrozenTableWidget(QtWidgets.QTableWidget):
+    """Table widget with frozen first 3 columns (Order, Node, Filename).
+    
+    Based on Qt's frozen column example. The first 3 columns are pinned and don't scroll
+    horizontally, while the rest of the columns scroll normally. This is useful for
+    keeping node-specific information (Order, Node, Filename) always visible.
+    """
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # Number of columns to freeze (Order, Node, Filename)
+        self.frozen_column_count = 3
+        
+        # Create the frozen table view as an overlay
+        self.frozen_table = QtWidgets.QTableWidget(self)
+        
+        # Initialize the frozen table
+        self._init_frozen_table()
+        
+        # Standard table properties
+        self.setAlternatingRowColors(True)
+        self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        self.setSortingEnabled(True)
+        
+        # Set selection behavior for frozen table as well
+        self.frozen_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        
+        # Connect signals for synchronization
+        self._connect_signals()
+        
+        logger.info("FrozenTableWidget created with 3 frozen columns")
+    
+    def _init_frozen_table(self):
+        """Initialize the frozen table overlay."""
+        # Set same model (will be set by parent)
+        self.frozen_table.setFocusPolicy(QtCore.Qt.NoFocus)
+        self.frozen_table.verticalHeader().hide()
+        self.frozen_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        
+        # Stack the frozen table on top of the main viewport
+        self.viewport().stackUnder(self.frozen_table)
+        
+        # Style the frozen table with darker alternating rows and no custom selection color
+        self.frozen_table.setStyleSheet("""
+            QTableWidget { 
+                border: none;
+                background-color: #2a2a2a;
+                alternate-background-color: #1a1a1a;
+            }
+        """)
+        
+        # Enable alternating row colors for frozen table (darker than main table)
+        self.frozen_table.setAlternatingRowColors(True)
+        
+        # Share selection model
+        self.frozen_table.setSelectionModel(self.selectionModel())
+        
+        # Hide scrollbars on frozen table
+        self.frozen_table.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        self.frozen_table.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAlwaysOff)
+        
+        # Set scroll mode for smooth scrolling
+        self.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.frozen_table.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        
+        # Show the frozen table
+        self.frozen_table.show()
+    
+    def _connect_signals(self):
+        """Connect signals for synchronization between main and frozen tables."""
+        # Synchronize horizontal header resizing
+        self.horizontalHeader().sectionResized.connect(self._update_frozen_section_width)
+        
+        # Synchronize vertical header resizing
+        self.verticalHeader().sectionResized.connect(self._update_frozen_section_height)
+        
+        # Synchronize vertical scrolling
+        self.frozen_table.verticalScrollBar().valueChanged.connect(
+            self.verticalScrollBar().setValue
+        )
+        self.verticalScrollBar().valueChanged.connect(
+            self.frozen_table.verticalScrollBar().setValue
+        )
+        
+        # Handle exclusive selection between frozen and main tables
+        self.itemSelectionChanged.connect(self._on_main_table_selection_changed)
+        self.frozen_table.itemSelectionChanged.connect(self._on_frozen_table_selection_changed)
+    
+    def _on_main_table_selection_changed(self):
+        """Handle selection changes in the main table - clear frozen table selection."""
+        if self.selectionModel().hasSelection():
+            # Block signals to prevent recursive calls
+            self.frozen_table.blockSignals(True)
+            try:
+                # Clear frozen table selection
+                self.frozen_table.clearSelection()
+            finally:
+                self.frozen_table.blockSignals(False)
+    
+    def _on_frozen_table_selection_changed(self):
+        """Handle selection changes in the frozen table - clear main table selection."""
+        if self.frozen_table.selectionModel().hasSelection():
+            # Block signals to prevent recursive calls
+            self.blockSignals(True)
+            try:
+                # Clear main table selection
+                self.clearSelection()
+            finally:
+                self.blockSignals(False)
+    
+    def setColumnCount(self, columns):
+        """Set column count for both main and frozen tables."""
+        super().setColumnCount(columns)
+        self.frozen_table.setColumnCount(columns)
+        
+        # Hide non-frozen columns in frozen table
+        for col in range(self.frozen_column_count, columns):
+            self.frozen_table.setColumnHidden(col, True)
+    
+    def setRowCount(self, rows):
+        """Set row count for both main and frozen tables."""
+        super().setRowCount(rows)
+        self.frozen_table.setRowCount(rows)
+    
+    def setHorizontalHeaderLabels(self, labels):
+        """Set header labels for both tables."""
+        super().setHorizontalHeaderLabels(labels)
+        self.frozen_table.setHorizontalHeaderLabels(labels)
+    
+    def setItem(self, row, column, item):
+        """Set item in both tables (frozen table gets copy for frozen columns)."""
+        super().setItem(row, column, item)
+        
+        # If this is a frozen column, also set in frozen table
+        if column < self.frozen_column_count:
+            # Create a copy of the item for the frozen table
+            frozen_item = QtWidgets.QTableWidgetItem(item.text())
+            frozen_item.setData(QtCore.Qt.UserRole, item.data(QtCore.Qt.UserRole))
+            frozen_item.setFont(item.font())
+            frozen_item.setForeground(item.foreground())
+            frozen_item.setBackground(item.background())
+            
+            self.frozen_table.setItem(row, column, frozen_item)
+    
+    def resizeEvent(self, event):
+        """Handle resize events and update frozen table geometry."""
+        super().resizeEvent(event)
+        self._update_frozen_table_geometry()
+    
+    def moveCursor(self, cursor_action, modifiers):
+        """Handle cursor movement to ensure visibility."""
+        current = super().moveCursor(cursor_action, modifiers)
+        
+        # If moving left and cursor would be hidden behind frozen columns
+        if (cursor_action == QtWidgets.QAbstractItemView.MoveLeft and 
+            current.column() >= self.frozen_column_count):
+            
+            # Calculate if the current cell is visible
+            visual_rect = self.visualRect(current)
+            frozen_width = self._get_frozen_table_width()
+            
+            if visual_rect.left() < frozen_width:
+                # Adjust horizontal scroll to make cell visible
+                new_value = (self.horizontalScrollBar().value() + 
+                           visual_rect.left() - frozen_width)
+                self.horizontalScrollBar().setValue(new_value)
+        
+        return current
+    
+    def _update_frozen_section_width(self, logical_index, old_size, new_size):
+        """Update frozen table column width when main table column is resized."""
+        if logical_index < self.frozen_column_count:
+            self.frozen_table.setColumnWidth(logical_index, new_size)
+            self._update_frozen_table_geometry()
+    
+    def _update_frozen_section_height(self, logical_index, old_size, new_size):
+        """Update frozen table row height when main table row is resized."""
+        self.frozen_table.setRowHeight(logical_index, new_size)
+    
+    def _update_frozen_table_geometry(self):
+        """Update the geometry of the frozen table overlay."""
+        frozen_width = self._get_frozen_table_width()
+        
+        self.frozen_table.setGeometry(
+            self.verticalHeader().width() + self.frameWidth(),
+            self.frameWidth(),
+            frozen_width,
+            self.viewport().height() + self.horizontalHeader().height()
+        )
+    
+    def _get_frozen_table_width(self):
+        """Calculate the total width of frozen columns."""
+        width = 0
+        for col in range(self.frozen_column_count):
+            width += self.columnWidth(col)
+        return width
+    
+    def mousePressEvent(self, event):
+        """Override to enable single-click editing for dropdown columns."""
+        if event.button() == QtCore.Qt.LeftButton:
+            index = self.indexAt(event.pos())
+            if index.isValid():
+                # Check if this is a dropdown column
+                headers = ["Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", "BatchMode", "ReloadPlugin"]
+                dropdown_columns = ["NodesFrames", "AutoTimeout", "NukeX", "BatchMode", "ReloadPlugin", "RenderMode"]
+                
+                if index.column() < len(headers):
+                    header = headers[index.column()]
+                    
+                    if header in dropdown_columns:
+                        # Select the row first
+                        self.setCurrentIndex(index)
+                        
+                        # Use a single-shot timer to enter edit mode after selection
+                        # This prevents interference between row selection and editor activation
+                        QtCore.QTimer.singleShot(0, lambda: self.edit(index))
+                        return
+        
+        # Call parent for normal behavior
+        super().mousePressEvent(event)
+    
+    def blockSignals(self, block):
+        """Block signals for both main and frozen tables."""
+        result = super().blockSignals(block)
+        self.frozen_table.blockSignals(block)
+        return result 
+
+class ColumnVisibilityDropdown(QtWidgets.QPushButton):
+    """Dropdown button with column visibility checkboxes grouped by categories."""
+    
+    def __init__(self, parent=None):
+        super().__init__("Columns ▼", parent)
+        self.setToolTip("Show/hide table columns")
+        self.setMaximumWidth(80)
+        
+        self.column_checkboxes = {}  # header -> checkbox mapping
+        self.group_checkboxes = {}   # group_name -> checkbox mapping
+        self.visible_columns = set()  # Track visible columns
+        
+        # Create the dropdown menu
+        self._create_menu()
+        
+        # Connect button click to show menu
+        self.clicked.connect(self._show_menu)
+        
+        # Initialize all columns as visible by default (including fixed columns)
+        from .constants import TableColumns
+        self.visible_columns = set(TableColumns.HEADERS)
+    
+    def _create_menu(self):
+        """Create the dropdown menu with grouped checkboxes."""
+        from .constants import TableColumns
+        
+        self.menu = QtWidgets.QMenu(self)
+        
+        # Add "All Columns" checkbox at the top
+        all_action = QtWidgets.QWidgetAction(self.menu)
+        all_checkbox = QtWidgets.QCheckBox("All Columns")
+        all_checkbox.setChecked(True)
+        all_checkbox.stateChanged.connect(self._on_all_changed)
+        all_action.setDefaultWidget(all_checkbox)
+        self.menu.addAction(all_action)
+        self.group_checkboxes["All"] = all_checkbox
+        
+        self.menu.addSeparator()
+        
+        # Add groups (skip "Fixed" group)
+        for group_name, headers in TableColumns.COLUMN_GROUPS.items():
+            if group_name == "Fixed":
+                continue  # Skip the Fixed group entirely
+                
+            # Add group header with "All" checkbox
+            group_action = QtWidgets.QWidgetAction(self.menu)
+            group_widget = QtWidgets.QWidget()
+            group_layout = QtWidgets.QHBoxLayout(group_widget)
+            group_layout.setContentsMargins(5, 2, 5, 2)
+            
+            # Group label
+            group_label = QtWidgets.QLabel(f"<b>{group_name}</b>")
+            group_layout.addWidget(group_label)
+            
+            # Group "All" checkbox
+            group_layout.addStretch()
+            group_all_checkbox = QtWidgets.QCheckBox("All")
+            group_all_checkbox.setChecked(True)
+            group_all_checkbox.stateChanged.connect(
+                lambda state, group=group_name: self._on_group_all_changed(group, state)
+            )
+            group_layout.addWidget(group_all_checkbox)
+            self.group_checkboxes[group_name] = group_all_checkbox
+            
+            group_action.setDefaultWidget(group_widget)
+            self.menu.addAction(group_action)
+            
+            # Add individual column checkboxes for this group
+            for header in headers:
+                column_action = QtWidgets.QWidgetAction(self.menu)
+                column_widget = QtWidgets.QWidget()
+                column_layout = QtWidgets.QHBoxLayout(column_widget)
+                column_layout.setContentsMargins(20, 2, 5, 2)  # Indent for grouping
+                
+                checkbox = QtWidgets.QCheckBox(TableColumns.HEADER_DISPLAY_NAMES.get(header, header))
+                checkbox.setChecked(True)
+                checkbox.stateChanged.connect(
+                    lambda state, h=header: self._on_column_changed(h, state)
+                )
+                
+                column_layout.addWidget(checkbox)
+                column_action.setDefaultWidget(column_widget)
+                self.menu.addAction(column_action)
+                
+                self.column_checkboxes[header] = checkbox
+            
+            # Add separator after each group except the last
+            remaining_groups = [g for g in TableColumns.COLUMN_GROUPS.keys() if g != "Fixed"]
+            if group_name != remaining_groups[-1]:
+                self.menu.addSeparator()
+    
+    def _show_menu(self):
+        """Show the dropdown menu."""
+        # Position the menu below the button
+        pos = self.mapToGlobal(QtCore.QPoint(0, self.height()))
+        self.menu.exec_(pos)
+    
+    def _on_all_changed(self, state):
+        """Handle "All Columns" checkbox change."""
+        checked = state == QtCore.Qt.Checked
+        
+        # Block signals to prevent recursion
+        for header, checkbox in self.column_checkboxes.items():
+            checkbox.blockSignals(True)
+            checkbox.setChecked(checked)
+            checkbox.blockSignals(False)
+        
+        for group_name, checkbox in self.group_checkboxes.items():
+            if group_name != "All":
+                checkbox.blockSignals(True)
+                checkbox.setChecked(checked)
+                checkbox.blockSignals(False)
+        
+        # Update visible columns (always keep fixed columns visible)
+        from .constants import TableColumns
+        fixed_columns = set(TableColumns.COLUMN_GROUPS["Fixed"])
+        
+        if checked:
+            self.visible_columns = set(TableColumns.HEADERS)
+        else:
+            # Keep only fixed columns visible when unchecked
+            self.visible_columns = fixed_columns.copy()
+        
+        self.column_visibility_changed.emit()
+    
+    def _on_group_all_changed(self, group_name, state):
+        """Handle group "All" checkbox change."""
+        checked = state == QtCore.Qt.Checked
+        
+        from .constants import TableColumns
+        group_headers = TableColumns.COLUMN_GROUPS.get(group_name, [])
+        
+        # Update individual column checkboxes in this group
+        for header in group_headers:
+            if header in self.column_checkboxes:
+                checkbox = self.column_checkboxes[header]
+                checkbox.blockSignals(True)
+                checkbox.setChecked(checked)
+                checkbox.blockSignals(False)
+                
+                # Update visible columns
+                if checked:
+                    self.visible_columns.add(header)
+                else:
+                    self.visible_columns.discard(header)
+        
+        self._update_all_checkbox()
+        self.column_visibility_changed.emit()
+    
+    def _on_column_changed(self, header, state):
+        """Handle individual column checkbox change."""
+        checked = state == QtCore.Qt.Checked
+        
+        if checked:
+            self.visible_columns.add(header)
+        else:
+            self.visible_columns.discard(header)
+        
+        self._update_group_checkboxes()
+        self._update_all_checkbox()
+        self.column_visibility_changed.emit()
+    
+    def _update_group_checkboxes(self):
+        """Update group "All" checkboxes based on individual column states."""
+        from .constants import TableColumns
+        
+        for group_name, headers in TableColumns.COLUMN_GROUPS.items():
+            if group_name == "Fixed" or group_name not in self.group_checkboxes:
+                continue
+            
+            # Check if all columns in this group are visible
+            all_visible = all(header in self.visible_columns for header in headers)
+            any_visible = any(header in self.visible_columns for header in headers)
+            
+            group_checkbox = self.group_checkboxes[group_name]
+            group_checkbox.blockSignals(True)
+            
+            if all_visible:
+                group_checkbox.setCheckState(QtCore.Qt.Checked)
+            elif any_visible:
+                group_checkbox.setCheckState(QtCore.Qt.PartiallyChecked)
+            else:
+                group_checkbox.setCheckState(QtCore.Qt.Unchecked)
+            
+            group_checkbox.blockSignals(False)
+    
+    def _update_all_checkbox(self):
+        """Update the main "All Columns" checkbox based on individual column states."""
+        from .constants import TableColumns
+        
+        # Count non-fixed columns that are shown in the dropdown
+        dropdown_headers = []
+        for group_name, headers in TableColumns.COLUMN_GROUPS.items():
+            if group_name != "Fixed":
+                dropdown_headers.extend(headers)
+        
+        all_visible = all(header in self.visible_columns for header in dropdown_headers)
+        any_visible = any(header in self.visible_columns for header in dropdown_headers)
+        
+        all_checkbox = self.group_checkboxes["All"]
+        all_checkbox.blockSignals(True)
+        
+        if all_visible:
+            all_checkbox.setCheckState(QtCore.Qt.Checked)
+        elif any_visible:
+            all_checkbox.setCheckState(QtCore.Qt.PartiallyChecked)
+        else:
+            all_checkbox.setCheckState(QtCore.Qt.Unchecked)
+        
+        all_checkbox.blockSignals(False)
+    
+    def get_visible_columns(self):
+        """Get the set of visible column headers.
+        
+        Returns:
+            set: Set of visible column header names
+        """
+        return self.visible_columns.copy()
+    
+    def set_visible_columns(self, visible_columns):
+        """Set the visible columns.
+        
+        Args:
+            visible_columns (set): Set of column header names to make visible
+        """
+        from .constants import TableColumns
+        
+        # Always ensure fixed columns are included
+        fixed_columns = set(TableColumns.COLUMN_GROUPS["Fixed"])
+        self.visible_columns = set(visible_columns) | fixed_columns
+        
+        # Update all checkboxes
+        for header, checkbox in self.column_checkboxes.items():
+            checkbox.blockSignals(True)
+            checkbox.setChecked(header in self.visible_columns)
+            checkbox.blockSignals(False)
+        
+        self._update_group_checkboxes()
+        self._update_all_checkbox()
+        self.column_visibility_changed.emit()
+    
+    # Signal for when column visibility changes
+    column_visibility_changed = QtCore.Signal() 

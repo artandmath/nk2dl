@@ -289,8 +289,8 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
                 "Order": "3999", 
                 "Node": "Write4", 
                 "Filename": "Some_path1_v002.%04d.exr", 
-                "Chunk": None,  # Should inherit (normal text)
-                "Frames": "1350-1650",  # Explicit (bold)
+                "ChunkSize": None,  # Should inherit (normal text)
+                "Frames": None,  # Should inherit 1001-2315 from job settings (normal text)
                 "Priority": "75",  # Explicit override (bold)
                 "NodesFrames": None,  # Should inherit (normal text)
                 "TaskTimeout": None,  # Should inherit (normal text)
@@ -298,7 +298,7 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
                 "RenderMode": "Full",  # Explicit (bold)
                 "NukeX": None,  # Should inherit (normal text)
                 "BatchMode": None,  # Should inherit (normal text)
-                "Reloadplugin": None,  # Should inherit (normal text)
+                "ReloadPlugin": None,  # Should inherit (normal text)
                 "Pool": "lighting",  # Explicit override (bold)
                 "SecondaryPool": None,  # Should inherit (normal text)
                 "Group": None,  # Should inherit (normal text)
@@ -317,8 +317,8 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
                 "Order": "3100", 
                 "Node": "Write30", 
                 "Filename": "Some_path3_v002.%04d.exr", 
-                "Chunk": "3", 
-                "Frames": "1001-2315", 
+                "ChunkSize": "3", 
+                "Frames": "1500-2000",  # Custom frame range override (bold)
                 "Priority": "40", 
                 "NodesFrames": "No", 
                 "TaskTimeout": "10", 
@@ -326,7 +326,7 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
                 "RenderMode": "Proxy", 
                 "NukeX": "No", 
                 "BatchMode": "No", 
-                "Reloadplugin": "No",
+                "ReloadPlugin": "No",
                 "Pool": "fx", 
                 "SecondaryPool": "render", 
                 "Group": "high_priority",
@@ -345,8 +345,8 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
                 "Order": "3050", 
                 "Node": "Write27", 
                 "Filename": "Some_path5_v002.%04d.exr", 
-                "Chunk": None,
-                "Frames": "1570-1620", 
+                "ChunkSize": None,
+                "Frames": None,  # Should inherit 1001-2315 from job settings (normal text)
                 "Priority": None,
                 "NodesFrames": None,
                 "TaskTimeout": None,
@@ -354,7 +354,7 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
                 "RenderMode": None,
                 "NukeX": None,
                 "BatchMode": None,
-                "Reloadplugin": None,
+                "ReloadPlugin": None,
                 "Pool": None,
                 "SecondaryPool": None,
                 "Group": None,
@@ -373,9 +373,9 @@ class StandaloneNk2dlPanel(QtWidgets.QWidget):
         self.table_model.set_data(test_data)
         
         print("Test data loaded:")
-        print("Row 1: Mix of explicit (bold) and inherited (normal) values")
-        print("Row 2: All explicit values (all should be bold)")
-        print("Row 3: All inherited values (all should be normal text)")
+        print("Row 1: Mix of explicit (bold) and inherited (normal) values - Frames should inherit 1001-2315")
+        print("Row 2: All explicit values (all should be bold) - Frames shows custom 1500-2000")
+        print("Row 3: All inherited values (all should be normal text) - Frames should inherit 1001-2315")
 
 
 def main():

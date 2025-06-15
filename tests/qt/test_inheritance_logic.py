@@ -84,7 +84,7 @@ def test_inheritance_logic():
     
     # Test each column
     headers = table_model.get_headers()
-    test_columns = ["Order", "Node", "Filename", "Chunk", "Priority", "NodesFrames", "Pool", "UseGPU"]
+    test_columns = ["Order", "Node", "Filename", "Priority", "ChunkSize", "NodesFrames", "Pool", "UseGPU"]
     
     print("\nInheritance Test Results:")
     print("-" * 60)

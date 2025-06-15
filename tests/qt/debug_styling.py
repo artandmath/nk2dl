@@ -60,8 +60,8 @@ def debug_styling_logic():
         {
             "Order": "3999",  # Explicit - should be bold
             "Node": "Write4",  # Explicit - should be bold
-            "Chunk": None,  # Inherited - should be normal
-            "Priority": "75",  # Explicit - should be bold
+            "Priority": "75",  # Explicit - should be bold  
+            "ChunkSize": None,  # Inherited - should be normal (updated from "Chunk")
             "NodesFrames": None,  # Inherited - should be normal
             "Pool": "lighting",  # Explicit - should be bold
             "UseGPU": None,  # Inherited - should be normal
@@ -75,7 +75,12 @@ def debug_styling_logic():
     print("-" * 50)
     
     headers = table_model.get_headers()
-    test_columns = ["Order", "Node", "Chunk", "Priority", "NodesFrames", "Pool", "UseGPU"]
+    test_columns = ["Order", "Node", "Priority", "ChunkSize", "NodesFrames", "Pool", "UseGPU"]
+    
+    print("\nStyling Debug Results:")
+    print("-" * 80)
+    print(f"{'Column':<12} | {'Raw Value':<8} | {'Display':<8} | {'Override':<5} | {'Style'}")
+    print("-" * 80)
     
     for col_name in test_columns:
         if col_name in headers:
@@ -98,13 +103,13 @@ def debug_styling_logic():
     
     print("\nExpected Results:")
     print("- Order, Node, Priority, Pool: Should be BOLD (explicit values)")
-    print("- Chunk, NodesFrames, UseGPU: Should be NORMAL (inherited values)")
+    print("- ChunkSize, NodesFrames, UseGPU: Should be NORMAL (inherited values)")
     
     # Test the specific case that might be causing issues
     print("\nDetailed Analysis:")
     print("-" * 30)
     
-    for col_name in ["Chunk", "Priority"]:
+    for col_name in ["ChunkSize", "Priority"]:
         if col_name in headers:
             col = headers.index(col_name)
             row = 0

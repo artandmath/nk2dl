@@ -55,6 +55,9 @@ class TableDataModel(QtCore.QObject):
         self._headers = TableColumns.HEADERS.copy()
         self.settings_model = settings_model
         
+        # Column visibility tracking
+        self._visible_columns = set(self._headers)  # All columns visible by default
+        
     def set_settings_model(self, settings_model):
         """Set the settings model for inheritance.
         
@@ -423,6 +426,31 @@ class TableDataModel(QtCore.QObject):
         self._data.pop(row)
         self.dataChanged.emit()
         return True
+    
+    def set_visible_columns(self, visible_columns):
+        """Set which columns should be visible.
+        
+        Args:
+            visible_columns (set): Set of column header names to show
+        """
+        self._visible_columns = set(visible_columns)
+        self.dataChanged.emit()
+    
+    def get_visible_columns(self):
+        """Get the set of visible column headers.
+        
+        Returns:
+            set: Set of visible column header names
+        """
+        return self._visible_columns.copy()
+    
+    def get_visible_headers(self):
+        """Get only the visible column headers in order.
+        
+        Returns:
+            list: List of visible column header names in order
+        """
+        return [h for h in self._headers if h in self._visible_columns]
 
 
 class GSVHierarchyModel(QtCore.QObject):
@@ -999,10 +1027,10 @@ class SettingsModel(QtCore.QObject):
         if not isinstance(task_timeout, int) or task_timeout < 0 or task_timeout > 999:
             errors.append("Task timeout must be between 0 and 999")
         
-        # Validate frame range format (basic check)
-        frame_range = self._job_settings.get('frame_range', '')
-        if frame_range and not self._is_valid_frame_range(frame_range):
-            errors.append("Frame range format is invalid")
+        # Validate frame range format
+        frames = self._job_settings.get('frames', '')
+        if frames and not self._is_valid_frame_range(frames):
+            errors.append("Invalid frame range format")
         
         return len(errors) == 0, errors
     

@@ -98,6 +98,7 @@ class SettingsView(QtWidgets.QWidget):
         self.priority_spin.setMinimum(0)
         self.priority_spin.setMaximum(100)
         self.priority_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.priority_spin.setToolTip("A job can have a numeric priority ranging from 0 to 100, where 0 is the lowest priority.")
         priority_chunk_row.addWidget(self.priority_spin)
         
         chunk_label = QtWidgets.QLabel("Chunk")
@@ -107,6 +108,7 @@ class SettingsView(QtWidgets.QWidget):
         self.chunk_size_spin = QtWidgets.QSpinBox()
         self.chunk_size_spin.setMinimum(1)
         self.chunk_size_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.chunk_size_spin.setToolTip("This is the number of frames that will be rendered at a time for each job task.")
         priority_chunk_row.addWidget(self.chunk_size_spin)
         priority_chunk_row.addStretch()
         
@@ -124,10 +126,12 @@ class SettingsView(QtWidgets.QWidget):
         self.frames_combo = QtWidgets.QComboBox()
         self.frames_combo.addItems(Settings.FRAMES_OPTIONS)
         self.frames_combo.setFixedWidth(80)
+        self.frames_combo.setToolTip("Select the Global, Input, or Custom frame list mode.")
         frames_row.addWidget(self.frames_combo)
         
         self.frame_range_edit = QtWidgets.QLineEdit()
         self.frame_range_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
+        self.frame_range_edit.setToolTip("If Custom frame list mode is selected, this is the list of frames to render.")
         frames_row.addWidget(self.frame_range_edit)
         frames_row.addStretch()
         
@@ -142,6 +146,7 @@ class SettingsView(QtWidgets.QWidget):
         node_frame_list_row.addWidget(empty_label1)
         
         self.use_node_frame_list_check = QtWidgets.QCheckBox("Use node's frame list")
+        self.use_node_frame_list_check.setToolTip("If submitting each write node as a separate job, enable this to pull the frame range from the write node, instead of using the global frame range.")
         node_frame_list_row.addWidget(self.use_node_frame_list_check)
         node_frame_list_row.addStretch()
         
@@ -160,6 +165,7 @@ class SettingsView(QtWidgets.QWidget):
         self.task_timeout_spin.setMinimum(0)
         self.task_timeout_spin.setMaximum(999)
         self.task_timeout_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.task_timeout_spin.setToolTip("The number of minutes a Worker has to render a task for this job before it requeues it. Specify 0 for no limit.")
         timeout_row.addWidget(self.task_timeout_spin)
         
         minutes_label = QtWidgets.QLabel("minutes")
@@ -167,6 +173,7 @@ class SettingsView(QtWidgets.QWidget):
         timeout_row.addWidget(minutes_label)
         
         self.enable_auto_timeout_check = QtWidgets.QCheckBox("Enable auto task timeout")
+        self.enable_auto_timeout_check.setToolTip("If the Auto Task Timeout is properly configured in the Repository Options, then enabling this will allow a task timeout to be automatically calculated based on the render times of previous frames for the job.")
         timeout_row.addWidget(self.enable_auto_timeout_check)
         timeout_row.addStretch()
         
@@ -184,6 +191,7 @@ class SettingsView(QtWidgets.QWidget):
         self.render_mode_combo = QtWidgets.QComboBox()
         self.render_mode_combo.addItems(["Full", "Proxy", "Both", "Script"])
         self.render_mode_combo.setFixedWidth(Sizes.COMBO_WIDTH)
+        self.render_mode_combo.setToolTip("The mode to render with.")
         render_mode_row.addWidget(self.render_mode_combo)
         render_mode_row.addStretch()
         
@@ -198,12 +206,15 @@ class SettingsView(QtWidgets.QWidget):
         checkboxes_row.addWidget(empty_label2)
         
         self.render_nukex_check = QtWidgets.QCheckBox("Use Nuke X")
+        self.render_nukex_check.setToolTip("If checked, NukeX will be used instead of just Nuke.")
         checkboxes_row.addWidget(self.render_nukex_check)
         
         self.use_batch_mode_check = QtWidgets.QCheckBox("Use batch mode")
+        self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
         checkboxes_row.addWidget(self.use_batch_mode_check)
         
         self.reload_plugin_check = QtWidgets.QCheckBox("Reload plugin between tasks")
+        self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         checkboxes_row.addWidget(self.reload_plugin_check)
         checkboxes_row.addStretch()
         
@@ -225,6 +236,7 @@ class SettingsView(QtWidgets.QWidget):
         job_org_row1.addWidget(empty_label3)
         
         self.separate_tasks_check = QtWidgets.QCheckBox("Write node as separate tasks for the same job")
+        self.separate_tasks_check.setToolTip("Enable to submit a job to Deadline where each task for the job represents a different write node, and all frames for that write node are rendered by its corresponding task.")
         job_org_row1.addWidget(self.separate_tasks_check)
         job_org_row1.addStretch()
         
@@ -238,6 +250,7 @@ class SettingsView(QtWidgets.QWidget):
         job_org_row2.addWidget(empty_label4)
         
         self.separate_jobs_check = QtWidgets.QCheckBox("Write nodes as separate jobs")
+        self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
         job_org_row2.addWidget(self.separate_jobs_check)
         job_org_row2.addStretch()
         
@@ -251,6 +264,7 @@ class SettingsView(QtWidgets.QWidget):
         job_org_row3.addWidget(empty_label5)
         
         self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
+        self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
         job_org_row3.addWidget(self.views_separate_jobs_check)
         job_org_row3.addStretch()
         
@@ -284,6 +298,7 @@ class SettingsView(QtWidgets.QWidget):
         self.pool_combo = QtWidgets.QComboBox()
         self.pool_combo.addItems(Settings.POOL_OPTIONS)
         self.pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
+        self.pool_combo.setToolTip("The pool that your job will be submitted to.")
         pool_group_row.addWidget(self.pool_combo)
         
         secondary_pool_label = QtWidgets.QLabel("Secondary Pool")
@@ -293,6 +308,7 @@ class SettingsView(QtWidgets.QWidget):
         self.secondary_pool_combo = QtWidgets.QComboBox()
         self.secondary_pool_combo.addItems([""] + Settings.POOL_OPTIONS)
         self.secondary_pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
+        self.secondary_pool_combo.setToolTip("The secondary pool lets you specify a Pool to use if the primary Pool does not have any available Workers.")
         pool_group_row.addWidget(self.secondary_pool_combo)
         
         group_label = QtWidgets.QLabel("Group")
@@ -302,6 +318,7 @@ class SettingsView(QtWidgets.QWidget):
         self.group_combo = QtWidgets.QComboBox()
         self.group_combo.addItems(Settings.GROUP_OPTIONS)
         self.group_combo.setFixedWidth(120)
+        self.group_combo.setToolTip("The group that your job will be submitted to.")
         pool_group_row.addWidget(self.group_combo)
         pool_group_row.addStretch()
         
@@ -320,6 +337,7 @@ class SettingsView(QtWidgets.QWidget):
         self.threads_spin.setMinimum(1)
         self.threads_spin.setMaximum(64)
         self.threads_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.threads_spin.setToolTip("The number of threads to use for rendering. Set to 0 to have Nuke automatically determine the optimal thread count.")
         threads_row.addWidget(self.threads_spin)
         threads_row.addStretch()
         
@@ -338,12 +356,14 @@ class SettingsView(QtWidgets.QWidget):
         self.min_ram_spin.setMinimum(0)
         self.min_ram_spin.setMaximum(64)
         self.min_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.min_ram_spin.setToolTip("The minimum RAM usage (in GB) to be used for rendering. Set to 0 to not enforce a minimum amount of RAM.")
         ram_row.addWidget(self.min_ram_spin)
         
         self.max_ram_spin = QtWidgets.QSpinBox()
         self.max_ram_spin.setMinimum(0)
         self.max_ram_spin.setMaximum(512)
         self.max_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.max_ram_spin.setToolTip("The maximum RAM usage (in GB) to be used for rendering. Set to 0 to not enforce a maximum amount of RAM.")
         ram_row.addWidget(self.max_ram_spin)
         
         max_ram_label = QtWidgets.QLabel("Max RAM (GB)")
@@ -366,9 +386,11 @@ class SettingsView(QtWidgets.QWidget):
         self.gpu_override_spin.setMinimum(0)
         self.gpu_override_spin.setMaximum(16)
         self.gpu_override_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.gpu_override_spin.setToolTip("The GPU to use when rendering.")
         gpu_row.addWidget(self.gpu_override_spin)
         
         self.use_gpu_check = QtWidgets.QCheckBox("Use GPU")
+        self.use_gpu_check.setToolTip("If Nuke should also use the GPU for rendering.")
         gpu_row.addWidget(self.use_gpu_check)
         gpu_row.addStretch()
         
@@ -387,9 +409,11 @@ class SettingsView(QtWidgets.QWidget):
         self.concurrent_tasks_spin.setMinimum(1)
         self.concurrent_tasks_spin.setMaximum(64)
         self.concurrent_tasks_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.concurrent_tasks_spin.setToolTip("The number of tasks that can render concurrently on a single Worker. This is useful if the rendering application only uses one thread to render and your Workers have multiple CPUs.")
         concurrent_row.addWidget(self.concurrent_tasks_spin)
         
         self.limit_tasks_check = QtWidgets.QCheckBox("Limit tasks to worker's task limit")
+        self.limit_tasks_check.setToolTip("If you limit the tasks to a Worker's task limit, then by default, the Worker won't dequeue more tasks then it has CPUs. This task limit can be overridden for individual Workers by an administrator.")
         concurrent_row.addWidget(self.limit_tasks_check)
         concurrent_row.addStretch()
         
@@ -408,9 +432,11 @@ class SettingsView(QtWidgets.QWidget):
         self.machine_limit_spin.setMinimum(0)
         self.machine_limit_spin.setMaximum(999)
         self.machine_limit_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
+        self.machine_limit_spin.setToolTip("Use the Machine Limit to specify the maximum number of machines that can render your job at one time. Specify 0 for no limit.")
         limit_row.addWidget(self.machine_limit_spin)
         
         self.machine_deny_list_check = QtWidgets.QCheckBox("Machine list is a deny list")
+        self.machine_deny_list_check.setToolTip("You can force the job to render on specific machines by using an allow list, or you can avoid specific machines by using a deny list.")
         limit_row.addWidget(self.machine_deny_list_check)
         limit_row.addStretch()
         
@@ -427,6 +453,7 @@ class SettingsView(QtWidgets.QWidget):
         
         self.machine_list_edit = QtWidgets.QLineEdit()
         self.machine_list_edit.setMinimumWidth(300)
+        self.machine_list_edit.setToolTip("The list of machines on the deny list or allow list.")
         machine_list_row.addWidget(self.machine_list_edit)
         
         self.machine_list_browse_btn = QtWidgets.QPushButton("Browse")
@@ -446,6 +473,7 @@ class SettingsView(QtWidgets.QWidget):
         
         self.limits_edit = QtWidgets.QLineEdit()
         self.limits_edit.setMinimumWidth(300)
+        self.limits_edit.setToolTip("The Limits that your job requires.")
         limits_row.addWidget(self.limits_edit)
         
         self.limits_browse_btn = QtWidgets.QPushButton("Browse")
@@ -463,10 +491,10 @@ class SettingsView(QtWidgets.QWidget):
         self.priority_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('priority', v))
         self.chunk_size_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('chunk_size', v))
         self.frames_combo.currentTextChanged.connect(lambda t: self.settings_model.set_job_setting('frames_mode', t))
-        self.frame_range_edit.textChanged.connect(lambda t: self.settings_model.set_job_setting('frame_range', t))
-        self.use_node_frame_list_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_node_frame_list', c))
+        self.frame_range_edit.textChanged.connect(lambda t: self.settings_model.set_job_setting('frames', t))
+        self.use_node_frame_list_check.toggled.connect(lambda c: self.settings_model.set_job_setting('nodes_frames', c))
         self.task_timeout_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('task_timeout', v))
-        self.enable_auto_timeout_check.toggled.connect(lambda c: self.settings_model.set_job_setting('enable_auto_timeout', c))
+        self.enable_auto_timeout_check.toggled.connect(lambda c: self.settings_model.set_job_setting('auto_timeout', c))
         self.render_mode_combo.currentTextChanged.connect(lambda t: self.settings_model.set_job_setting('render_mode', t))
         self.render_nukex_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_nukex', c))
         self.use_batch_mode_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_batch_mode', c))
@@ -511,10 +539,10 @@ class SettingsView(QtWidgets.QWidget):
             if index >= 0:
                 self.frames_combo.setCurrentIndex(index)
             
-            self.frame_range_edit.setText(job_settings.get('frame_range', '1001-2315'))
-            self.use_node_frame_list_check.setChecked(job_settings.get('use_node_frame_list', False))
+            self.frame_range_edit.setText(job_settings.get('frames', '1001-2315'))
+            self.use_node_frame_list_check.setChecked(job_settings.get('nodes_frames', False))
             self.task_timeout_spin.setValue(job_settings.get('task_timeout', 0))
-            self.enable_auto_timeout_check.setChecked(job_settings.get('enable_auto_timeout', False))
+            self.enable_auto_timeout_check.setChecked(job_settings.get('auto_timeout', False))
             
             render_mode = job_settings.get('render_mode', 'Full')
             index = self.render_mode_combo.findText(render_mode)
@@ -703,8 +731,14 @@ class NodeSettingsView(QtWidgets.QWidget):
         self.inside_groups_check.stateChanged.connect(self._on_inside_groups_changed)
         self.button_layout.addWidget(self.inside_groups_check)
         
-        # Add spacer to push filter to the right
+        # Add spacer to push column dropdown and filter to the right
         self.button_layout.addStretch()
+        
+        # Column visibility dropdown
+        from .widgets import ColumnVisibilityDropdown
+        self.column_dropdown = ColumnVisibilityDropdown()
+        self.column_dropdown.column_visibility_changed.connect(self._on_column_visibility_changed)
+        self.button_layout.addWidget(self.column_dropdown)
         
         # Filter input on same row
         self.button_layout.addWidget(QtWidgets.QLabel("Filter:"))
@@ -716,25 +750,27 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _create_table(self):
         """Create the node settings table."""
-        from .widgets import StandardTableWidget
+        from .widgets import FrozenTableWidget
         from .delegates import SettingsAwareDelegate
+        from .constants import TableColumns
         
-        self.render_table = StandardTableWidget()
+        self.render_table = FrozenTableWidget()
         self.render_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         
         # Set up settings-aware delegate for inheritance and override styling
         self.settings_delegate = SettingsAwareDelegate(self.table_model)
         self.render_table.setItemDelegate(self.settings_delegate)
         
-        # Set up table headers
+        # Set up table headers with display names
         headers = self.table_model.get_headers()
+        display_headers = [TableColumns.HEADER_DISPLAY_NAMES.get(h, h) for h in headers]
         self.render_table.setColumnCount(len(headers))
-        self.render_table.setHorizontalHeaderLabels(headers)
+        self.render_table.setHorizontalHeaderLabels(display_headers)
         
         # Connect table signals
         self.render_table.itemChanged.connect(self._on_table_item_changed)
         
-        # Table properties are already set in StandardTableWidget constructor
+        # Table properties are already set in FrozenTableWidget constructor
     
     def _connect_signals(self):
         """Connect model signals to view updates."""
@@ -782,6 +818,9 @@ class NodeSettingsView(QtWidgets.QWidget):
                     self._apply_cell_styling(item, row, col)
                     
                     self.render_table.setItem(row, col, item)
+                    
+                    # Sync to frozen table if this is a frozen column
+                    self._sync_frozen_item(row, col, item)
             
             # Resize columns to content
             self.render_table.resizeColumnsToContents()
@@ -792,6 +831,17 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _apply_cell_styling(self, item, row, col):
         """Apply styling to table cell items based on override status."""
+        # Don't apply bold styling to frozen columns (Order, Node, Filename)
+        # since they don't support inheritance and are always explicit
+        if (hasattr(self.render_table, 'frozen_column_count') and 
+            col < self.render_table.frozen_column_count):
+            # Frozen columns use normal font and default text color
+            font = item.font()
+            font.setBold(False)
+            item.setFont(font)
+            item.setForeground(QtGui.QBrush())
+            return
+        
         # Check if cell is overridden (has explicit value different from inherited)
         is_overridden = self.table_model.is_cell_overridden(row, col)
         
@@ -809,6 +859,23 @@ class NodeSettingsView(QtWidgets.QWidget):
             item.setFont(font)
             # Default text color for inherited values
             item.setForeground(QtGui.QBrush())
+    
+    def _sync_frozen_item(self, row, col, item):
+        """Sync item to frozen table if it's in a frozen column."""
+        # Check if this table has frozen columns and if column is frozen
+        if (hasattr(self.render_table, 'frozen_table') and 
+            hasattr(self.render_table, 'frozen_column_count') and
+            col < self.render_table.frozen_column_count):
+            
+            # Create a copy of the item for the frozen table
+            frozen_item = QtWidgets.QTableWidgetItem(item.text())
+            frozen_item.setData(QtCore.Qt.UserRole, item.data(QtCore.Qt.UserRole))
+            frozen_item.setFont(item.font())
+            frozen_item.setForeground(item.foreground())
+            frozen_item.setBackground(item.background())
+            
+            # Set the item in the frozen table
+            self.render_table.frozen_table.setItem(row, col, frozen_item)
     
     def _on_table_item_changed(self, item):
         """Handle table item changes and update the model."""
@@ -844,6 +911,9 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Refresh styling for this cell only
             self._apply_cell_styling(item, row, col)
             
+            # Sync to frozen table if this is a frozen column
+            self._sync_frozen_item(row, col, item)
+            
         finally:
             # Re-enable signals
             self.render_table.blockSignals(False)
@@ -876,6 +946,9 @@ class NodeSettingsView(QtWidgets.QWidget):
                             
                             # Refresh styling
                             self._apply_cell_styling(item, row, col)
+                            
+                            # Sync to frozen table if this is a frozen column
+                            self._sync_frozen_item(row, col, item)
         finally:
             # Re-enable signals
             self.render_table.blockSignals(False)
@@ -917,6 +990,25 @@ class NodeSettingsView(QtWidgets.QWidget):
             nuke.message('Selection functionality will be implemented in the final integration phase.')
         else:
             print("Selection functionality will be implemented in the final integration phase.")
+    
+    def _on_column_visibility_changed(self):
+        """Handle column visibility changes."""
+        visible_columns = self.column_dropdown.get_visible_columns()
+        
+        # Update the table model
+        self.table_model.set_visible_columns(visible_columns)
+        
+        # Hide/show columns in the table widget
+        headers = self.table_model.get_headers()
+        for i, header in enumerate(headers):
+            column_visible = header in visible_columns
+            self.render_table.setColumnHidden(i, not column_visible)
+            
+            # Also hide in frozen table if applicable
+            if (hasattr(self.render_table, 'frozen_table') and 
+                hasattr(self.render_table, 'frozen_column_count') and
+                i < self.render_table.frozen_column_count):
+                self.render_table.frozen_table.setColumnHidden(i, not column_visible)
     
     def get_table_model(self):
         """Get the table model.
@@ -1448,14 +1540,17 @@ class ExtraSettingsView(QtWidgets.QWidget):
         
         job_info_layout.addWidget(QtWidgets.QLabel("Job Name:"), 0, 0)
         self.job_name_edit = QtWidgets.QLineEdit()
+        self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
         job_info_layout.addWidget(self.job_name_edit, 0, 1)
         
         job_info_layout.addWidget(QtWidgets.QLabel("Comment:"), 1, 0)
         self.comment_edit = QtWidgets.QLineEdit()
+        self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
         job_info_layout.addWidget(self.comment_edit, 1, 1)
         
         job_info_layout.addWidget(QtWidgets.QLabel("Department:"), 2, 0)
         self.department_edit = QtWidgets.QLineEdit()
+        self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 2, 1)
         
         layout.addWidget(job_info_group)

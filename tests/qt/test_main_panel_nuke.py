@@ -39,6 +39,9 @@ def main():
     print("Check the Node Settings tab for inheritance behavior:")
     print("- Bold text should indicate explicit values")
     print("- Normal text should indicate inherited values")
+    print("- Frames column should now inherit from job settings (1001-2315) when set to None")
+    print("- Some sample rows have None for Frames (should show 1001-2315 in normal text)")
+    print("- Other rows have explicit frame ranges (should show in bold text)")
     print("\nWindow should remain open. Close it manually when done testing.")
     
     # Store global reference to prevent garbage collection

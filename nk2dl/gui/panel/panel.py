@@ -187,13 +187,14 @@ class Nk2dlPanel(QtWidgets.QWidget):
         from .constants import GSVDefaults
         
         # Load sample table data - mix of explicit values and None for inheritance demo
+        # Note: Order, Node, Filename are frozen columns and don't support inheritance
         sample_table_data = [
             {
                 # Row 1: Mix of explicit values and inheritance (None = inherited)
                 "Order": "3999", "Node": "Write4", "Filename": "Some_path1_v002.%04d.exr", 
-                "Chunk": None, "Frames": "1350-1650", "Priority": "75",  # Priority overrides default 50
+                "Priority": "75", "ChunkSize": None, "Frames": None,  # Priority moved before ChunkSize
                 "NodesFrames": None, "TaskTimeout": None, "AutoTimeout": None, "RenderMode": "Full", 
-                "NukeX": None, "BatchMode": None, "Reloadplugin": None,
+                "NukeX": None, "BatchMode": None, "ReloadPlugin": None,
                 # Machine settings - some explicit, some inherited
                 "Pool": "lighting",  # Override default "comp"
                 "SecondaryPool": None, "Group": None, "Threads": None, "MinRam": None, "MaxRam": None,
@@ -204,9 +205,9 @@ class Nk2dlPanel(QtWidgets.QWidget):
             {
                 # Row 2: Mostly explicit values (will show in bold)
                 "Order": "3100", "Node": "Write30", "Filename": "Some_path3_v002.%04d.exr", 
-                "Chunk": "3", "Frames": "1001-2315", "Priority": "40", "NodesFrames": "No", 
+                "Priority": "40", "ChunkSize": "3", "Frames": "1500-2000", "NodesFrames": "No",  # Custom frame range
                 "TaskTimeout": "10", "AutoTimeout": "No", "RenderMode": "Proxy", "NukeX": "No", 
-                "BatchMode": "No", "Reloadplugin": "No",
+                "BatchMode": "No", "ReloadPlugin": "No",
                 # Machine settings with explicit values
                 "Pool": "lighting", "SecondaryPool": "render", "Group": "high_priority",
                 "Threads": "4", "MinRam": "16", "MaxRam": "64", "UseGPU": "No",
@@ -216,9 +217,9 @@ class Nk2dlPanel(QtWidgets.QWidget):
             {
                 # Row 3: Mostly inherited values (None = inherited)
                 "Order": "3050", "Node": "Write27", "Filename": "Some_path5_v002.%04d.exr", 
-                "Chunk": None, "Frames": "1570-1620", "Priority": None,  # Inherit default priority
+                "Priority": None, "ChunkSize": None, "Frames": None,  # Frames inherits from job settings
                 "NodesFrames": None, "TaskTimeout": None, "AutoTimeout": None, "RenderMode": None, 
-                "NukeX": None, "BatchMode": None, "Reloadplugin": None,
+                "NukeX": None, "BatchMode": None, "ReloadPlugin": None,
                 # Machine settings - mostly inherited
                 "Pool": None, "SecondaryPool": None, "Group": None, "Threads": "8",  # Override threads
                 "MinRam": None, "MaxRam": None, "UseGPU": None, "GPUId": None,
@@ -227,9 +228,9 @@ class Nk2dlPanel(QtWidgets.QWidget):
             {
                 # Row 4: Mixed inheritance and overrides
                 "Order": "3000", "Node": "Write9", "Filename": "Some_path6_v002.%04d.exr", 
-                "Chunk": "8", "Frames": "1350-1650", "Priority": "60",  # Override priority
+                "Priority": "60", "ChunkSize": "8", "Frames": "1350-1650",  # Custom frame range override
                 "NodesFrames": "No", "TaskTimeout": "5", "AutoTimeout": "No", "RenderMode": "Both", 
-                "NukeX": "No", "BatchMode": None, "Reloadplugin": None,  # Mix of explicit and inherited
+                "NukeX": "No", "BatchMode": None, "ReloadPlugin": None,  # Mix of explicit and inherited
                 # Machine settings
                 "Pool": "fx", "SecondaryPool": "general", "Group": "weekend",
                 "Threads": "16", "MinRam": "32", "MaxRam": "128", "UseGPU": None,  # Inherit UseGPU
@@ -239,20 +240,20 @@ class Nk2dlPanel(QtWidgets.QWidget):
             {
                 # Row 5: Demonstrate inheritance for all mapped columns (None = inherited)
                 "Order": "2999", "Node": "Write3", "Filename": "Some_path9_v002.%04d.exr", 
-                "Chunk": None, "Frames": "1001-2315", "Priority": None,  # All job settings inherited
+                "Priority": None, "ChunkSize": None, "Frames": None,  # All job settings inherited (including frames)
                 "NodesFrames": None, "TaskTimeout": None, "AutoTimeout": None, "RenderMode": None, 
-                "NukeX": None, "BatchMode": None, "Reloadplugin": None,
+                "NukeX": None, "BatchMode": None, "ReloadPlugin": None,
                 # All machine settings inherited
                 "Pool": None, "SecondaryPool": None, "Group": None, "Threads": None,
                 "MinRam": None, "MaxRam": None, "UseGPU": None, "GPUId": None,
                 "ConcurrentTasks": None, "WorkerTaskLimit": None, "MachineList": None, "Limits": None
             },
             {
-                # Row 6: Explicit values including empty strings (should still be bold)
+                # Row 6: Explicit values including matching values (should still be bold)
                 "Order": "2900", "Node": "Write5", "Filename": "Some_path10_v002.%04d.exr", 
-                "Chunk": "1", "Frames": "1001-2315", "Priority": "50",  # Explicit 50 (matches setting but should be bold)
+                "Priority": "50", "ChunkSize": "1", "Frames": "1001-2315",  # Explicit 1001-2315 (matches setting but should be bold)
                 "NodesFrames": "No", "TaskTimeout": "0", "AutoTimeout": "No", "RenderMode": "Full", 
-                "NukeX": "No", "BatchMode": "No", "Reloadplugin": "No",
+                "NukeX": "No", "BatchMode": "No", "ReloadPlugin": "No",
                 # Machine settings with explicit values including empty strings
                 "Pool": "comp", "SecondaryPool": "", "Group": "none", "Threads": "4",  # Empty string is explicit
                 "MinRam": "0", "MaxRam": "0", "UseGPU": "No", "GPUId": "0",

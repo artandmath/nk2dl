@@ -78,23 +78,67 @@ class Colors:
 class TableColumns:
     """Table column definitions and properties."""
     
-    # Standard table headers
+    # Standard table headers (reordered to put Priority before ChunkSize)
     HEADERS = [
-        "Order", "Node", "Filename", "Chunk", "Frames", "Priority", 
+        "Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", 
         "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", 
         "NukeX", "BatchMode", "ReloadPlugin", "Pool", "SecondaryPool", 
         "Group", "Threads", "MinRam", "MaxRam", "UseGPU", "GPUId", 
         "ConcurrentTasks", "WorkerTaskLimit", "MachineList", "Limits"
     ]
     
-    # Dropdown columns (columns that have dropdown editors)
+    # Display names for headers (more readable versions)
+    HEADER_DISPLAY_NAMES = {
+        "Order": "Order",
+        "Node": "Node", 
+        "Filename": "Filename",
+        "Priority": "Priority",
+        "ChunkSize": "Chunk Size",
+        "Frames": "Frames",
+        "NodesFrames": "Nodes Frames",
+        "TaskTimeout": "Task Timeout",
+        "AutoTimeout": "Auto Timeout",
+        "RenderMode": "Render Mode",
+        "NukeX": "Nuke X",
+        "BatchMode": "Batch Mode",
+        "ReloadPlugin": "Reload Plugin",
+        "Pool": "Pool",
+        "SecondaryPool": "Secondary Pool",
+        "Group": "Group",
+        "Threads": "Threads",
+        "MinRam": "Min RAM",
+        "MaxRam": "Max RAM",
+        "UseGPU": "Use GPU",
+        "GPUId": "GPU ID",
+        "ConcurrentTasks": "Concurrent Tasks",
+        "WorkerTaskLimit": "Worker Task Limit",
+        "MachineList": "Machine List",
+        "Limits": "Limits"
+    }
+    
+    # Column groups for visibility dropdown
+    COLUMN_GROUPS = {
+        "Fixed": ["Order", "Node", "Filename"],  # Always visible, cannot be hidden
+        "Job Settings": [
+            "Priority", "ChunkSize", "Frames", "NodesFrames", 
+            "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", 
+            "BatchMode", "ReloadPlugin"
+        ],
+        "Machine Settings": [
+            "Pool", "SecondaryPool", "Group", "Threads", 
+            "MinRam", "MaxRam", "UseGPU", "GPUId", 
+            "ConcurrentTasks", "WorkerTaskLimit", "MachineList", "Limits"
+        ]
+    }
+    
+    # Dropdown columns (columns that have dropdown editors) - updated indices for reordered headers
     DROPDOWN_COLUMNS = {
         6: ["Yes", "No"],                    # NodesFrames
         8: ["Yes", "No"],                    # AutoTimeout  
         9: ["Full", "Proxy", "Both", "Script"],  # RenderMode
         10: ["Yes", "No"],                   # NukeX
         11: ["Yes", "No"],                   # BatchMode
-        12: ["Yes", "No"],                   # Reloadplugin
+        12: ["Yes", "No"],                   # ReloadPlugin
         13: Settings.POOL_OPTIONS,           # Pool
         14: Settings.POOL_OPTIONS,           # SecondaryPool
         15: Settings.GROUP_OPTIONS,          # Group
@@ -102,21 +146,21 @@ class TableColumns:
         22: ["Yes", "No"]                    # WorkerTaskLimit
     }
     
-    # Column widths (optional, for initial sizing)
+    # Column widths (optional, for initial sizing) - updated indices for reordered headers
     COLUMN_WIDTHS = {
         0: 60,   # Order
         1: 100,  # Node
         2: 200,  # Filename
-        3: 60,   # Chunk
-        4: 120,  # Frames
-        5: 70,   # Priority
+        3: 70,   # Priority (moved to position 3)
+        4: 80,   # ChunkSize (moved to position 4)
+        5: 120,  # Frames
         6: 90,   # NodesFrames
         7: 90,   # TaskTimeout
         8: 90,   # AutoTimeout
         9: 90,   # RenderMode
         10: 70,  # NukeX
         11: 90,  # BatchMode
-        12: 100, # Reloadplugin
+        12: 100, # ReloadPlugin
         13: 80,  # Pool
         14: 100, # SecondaryPool
         15: 80,  # Group
@@ -131,7 +175,7 @@ class TableColumns:
         24: 80   # Limits
     }
     
-    # Machine settings columns (for styling pinned rows)
+    # Machine settings columns (for styling pinned rows) - updated indices
     MACHINE_SETTINGS_COLUMNS = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
 
 
@@ -207,10 +251,10 @@ class DefaultValues:
         "priority": 50,
         "chunk_size": 1,
         "frames_mode": "Global",
-        "frame_range": "1001-2315",
-        "use_node_frame_list": False,
+        "frames": "1001-2315",
+        "nodes_frames": False,
         "task_timeout": 0,
-        "enable_auto_timeout": False,
+        "auto_timeout": False,
         "render_mode": "Full",
         "use_nukex": False,
         "use_batch_mode": False,
@@ -333,14 +377,15 @@ class HeaderSettingsMapping:
     # Maps table column headers to job settings field names
     JOB_SETTINGS_MAPPING = {
         "Priority": "priority",
-        "Chunk": "chunk_size", 
-        "NodesFrames": "use_node_frame_list",
+        "ChunkSize": "chunk_size", 
+        "Frames": "frames",  # Map Frames column to frames job setting
+        "NodesFrames": "nodes_frames",
         "TaskTimeout": "task_timeout",
-        "AutoTimeout": "enable_auto_timeout",
+        "AutoTimeout": "auto_timeout",
         "RenderMode": "render_mode",
         "NukeX": "use_nukex",
         "BatchMode": "use_batch_mode",
-        "Reloadplugin": "reload_plugin"
+        "ReloadPlugin": "reload_plugin"
     }
     
     # Machine Settings Relationships  
@@ -371,18 +416,18 @@ class HeaderSettingsMapping:
     # Boolean columns that should display as Yes/No
     BOOLEAN_COLUMNS = [
         "NodesFrames", "AutoTimeout", "NukeX", "BatchMode", 
-        "Reloadplugin", "UseGPU", "WorkerTaskLimit"
+        "ReloadPlugin", "UseGPU", "WorkerTaskLimit"
     ]
     
     # Numeric columns that should display as strings
     NUMERIC_COLUMNS = [
-        "Priority", "Chunk", "TaskTimeout", "Threads", 
+        "Priority", "ChunkSize", "TaskTimeout", "Threads", 
         "MinRam", "MaxRam", "GPUId", "ConcurrentTasks"
     ]
     
     # String columns that display directly
     STRING_COLUMNS = [
-        "Pool", "SecondaryPool", "Group", "RenderMode", 
+        "Frames", "Pool", "SecondaryPool", "Group", "RenderMode", 
         "MachineList", "Limits"
     ]
     
