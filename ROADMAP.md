@@ -27,6 +27,7 @@ NK2DL is currently in active development with core CLI functionality established
 - [ ] Threaded submissions to further improve speed of large submissions
 - [ ] De-couple Deadline connection code
 - [ ] De-couple CLI code
+- [ ] De-couple GUI, possibly in a way that the same GUI can be used for any farm backend (Tractor, OpenCue, Qube etc)
 - [ ] Create replacement for functions used of the Nuke python module to make it cheaper/faster/simpler to use nk2dl anywhere in the pipeline.
 - [ ] Standalone GUI
 - [ ] Deadline monitor lite - Nuke GUI panel indicating progress for the jobs of the currently open script.
