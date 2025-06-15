@@ -31,7 +31,7 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from .constants import Colors, TableColumns
+from .constants import Colors, TableColumns, HeaderSettingsMapping
 from ...common.logging import setup_logging
 
 # Create a module-specific logger
@@ -766,3 +766,179 @@ class ColumnVisibilityDropdown(QtWidgets.QPushButton):
     
     # Signal for when column visibility changes
     column_visibility_changed = QtCore.Signal() 
+
+class CustomHeaderView(QtWidgets.QHeaderView):
+    """Custom header view that styles columns based on job/machine settings classification.
+    
+    This header view applies different color schemes to columns based on whether they
+    belong to job settings (blue) or machine settings (purple), using colors from
+    the constants module. It maintains full compatibility with FrozenTableWidget
+    synchronization.
+    """
+    
+    def __init__(self, orientation, parent=None):
+        """Initialize the custom header view.
+        
+        Args:
+            orientation: Qt.Horizontal or Qt.Vertical
+            parent: Parent widget
+        """
+        super().__init__(orientation, parent)
+        
+        # Set default header properties to match standard behavior
+        self.setSectionsClickable(True)
+        self.setSectionsMovable(False)
+        self.setStretchLastSection(False)
+        
+        # Enable section resize mode to maintain standard behavior
+        self.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        
+        # Cache colors for performance
+        self._job_background = QtGui.QColor(Colors.JOB_SETTINGS_BACKGROUND)
+        self._job_border = QtGui.QColor(Colors.JOB_SETTINGS_COLOR)
+        self._machine_background = QtGui.QColor(Colors.MACHINE_SETTINGS_BACKGROUND)
+        self._machine_border = QtGui.QColor(Colors.MACHINE_SETTINGS_COLOR)
+        self._default_background = QtGui.QColor("#2a2a2a")  # Dark gray for fixed columns
+        self._default_border = QtGui.QColor("#555555")      # Medium gray border
+        
+        logger.info("CustomHeaderView created with job/machine color schemes")
+    
+    def resizeEvent(self, event):
+        """Override resize event to maintain proper header behavior."""
+        super().resizeEvent(event)
+        # Ensure the header repaints after resize
+        self.update()
+    
+    def mousePressEvent(self, event):
+        """Override to maintain standard header interaction behavior."""
+        # Call parent to handle standard header interactions (sorting, resizing, etc.)
+        super().mousePressEvent(event)
+    
+    def mouseMoveEvent(self, event):
+        """Override to maintain standard header resize cursor behavior."""
+        # Call parent to handle resize cursors and interactions
+        super().mouseMoveEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """Override to maintain standard header interaction behavior."""
+        # Call parent to handle standard header interactions
+        super().mouseReleaseEvent(event)
+    
+    def paintSection(self, painter, rect, logicalIndex):
+        """Paint header section with custom styling based on column type.
+        
+        Args:
+            painter: QPainter instance
+            rect: Rectangle to paint in
+            logicalIndex: Logical index of the column
+        """
+        if not self.model():
+            super().paintSection(painter, rect, logicalIndex)
+            return
+            
+        painter.save()
+        
+        # Get column header name to determine styling
+        header_name = self._get_header_name(logicalIndex)
+        if not header_name:
+            super().paintSection(painter, rect, logicalIndex)
+            painter.restore()
+            return
+        
+        # Determine column type and colors
+        setting_type, _ = HeaderSettingsMapping.get_setting_type_and_key(header_name)
+        
+        if setting_type == "job":
+            bg_color = self._job_background
+            border_color = self._job_border
+        elif setting_type == "machine":
+            bg_color = self._machine_background
+            border_color = self._machine_border
+        else:
+            # Fixed columns (Order, Node, Filename) or unmapped columns
+            bg_color = self._default_background
+            border_color = self._default_border
+        
+        # Fill background with dark color
+        painter.fillRect(rect, bg_color)
+        
+        # Draw the column text
+        display_name = self._get_display_name(header_name)
+        self._draw_header_text(painter, rect, display_name)
+        
+        # Draw borders (sides and top with subtle border, bottom with bright color)
+        self._draw_header_borders(painter, rect, border_color)
+        
+        painter.restore()
+    
+    def _get_header_name(self, logical_index):
+        """Get the header name for a logical index.
+        
+        Args:
+            logical_index: Logical column index
+            
+        Returns:
+            str: Header name or None if not found
+        """
+        header_data = self.model().headerData(logical_index, self.orientation(), QtCore.Qt.DisplayRole)
+        if not header_data:
+            return None
+            
+        # Convert display name back to header name using reverse lookup
+        display_to_header = {v: k for k, v in TableColumns.HEADER_DISPLAY_NAMES.items()}
+        return display_to_header.get(str(header_data), str(header_data))
+    
+    def _get_display_name(self, header_name):
+        """Get the display name for a header.
+        
+        Args:
+            header_name: Internal header name
+            
+        Returns:
+            str: Display name for the header
+        """
+        return TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
+    
+    def _draw_header_text(self, painter, rect, text):
+        """Draw the header text centered in the rectangle.
+        
+        Args:
+            painter: QPainter instance
+            rect: Rectangle to draw text in
+            text: Text to draw
+        """
+        # Set text color to white for good contrast on dark backgrounds
+        painter.setPen(QtGui.QColor(255, 255, 255))
+        
+        # Set font (slightly bold for headers)
+        font = painter.font()
+        font.setBold(True)
+        painter.setFont(font)
+        
+        # Draw text centered
+        painter.drawText(rect, QtCore.Qt.AlignCenter, str(text))
+    
+    def _draw_header_borders(self, painter, rect, border_color):
+        """Draw header borders with bright bottom edge only.
+        
+        Args:
+            painter: QPainter instance
+            rect: Rectangle to draw borders around
+            border_color: Color for the bright bottom border only
+        """
+        # Use system default header border color for sides and top
+        default_border_color = self.palette().color(QtGui.QPalette.Mid)
+        painter.setPen(QtGui.QPen(default_border_color, 1))
+        
+        # Left border (system default)
+        painter.drawLine(rect.topLeft(), rect.bottomLeft())
+        
+        # Right border (system default)
+        painter.drawLine(rect.topRight(), rect.bottomRight())
+        
+        # Top border (system default)
+        painter.drawLine(rect.topLeft(), rect.topRight())
+        
+        # Bright bottom border ONLY (full opacity, slightly thicker)
+        painter.setPen(QtGui.QPen(border_color, 2))
+        painter.drawLine(rect.bottomLeft(), rect.bottomRight()) 

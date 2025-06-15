@@ -750,7 +750,7 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _create_table(self):
         """Create the node settings table."""
-        from .widgets import FrozenTableWidget
+        from .widgets import FrozenTableWidget, CustomHeaderView
         from .delegates import SettingsAwareDelegate
         from .constants import TableColumns
         
@@ -766,6 +766,20 @@ class NodeSettingsView(QtWidgets.QWidget):
         display_headers = [TableColumns.HEADER_DISPLAY_NAMES.get(h, h) for h in headers]
         self.render_table.setColumnCount(len(headers))
         self.render_table.setHorizontalHeaderLabels(display_headers)
+        
+        # Apply custom header view for job/machine settings styling
+        custom_header = CustomHeaderView(QtCore.Qt.Horizontal, self.render_table)
+        self.render_table.setHorizontalHeader(custom_header)
+        
+        # Also apply custom header to frozen table if it exists
+        if hasattr(self.render_table, 'frozen_table'):
+            frozen_custom_header = CustomHeaderView(QtCore.Qt.Horizontal, self.render_table.frozen_table)
+            self.render_table.frozen_table.setHorizontalHeader(frozen_custom_header)
+            
+            # CRITICAL: Reconnect synchronization signals after replacing headers
+            # The original signals were disconnected when we replaced the headers
+            # Connect the main header's sectionResized signal to the frozen table update method
+            custom_header.sectionResized.connect(self.render_table._update_frozen_section_width)
         
         # Connect table signals
         self.render_table.itemChanged.connect(self._on_table_item_changed)
