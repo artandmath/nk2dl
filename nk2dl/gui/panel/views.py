@@ -33,7 +33,7 @@ except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
 from .widgets import ColoredGroupBox
-from .constants import Settings, Sizes
+from .constants import Settings, Sizes, GSVDefaults
 
 
 class SettingsView(QtWidgets.QWidget):
@@ -1194,8 +1194,11 @@ class GSVView(QtWidgets.QWidget):
         # Expand first level by default
         self.gsvs_tree.expandToDepth(0)
         
-        # Set up column sizing
+        # Set up column properties
         self._setup_column_properties()
+        
+        # Force a repaint to ensure everything displays correctly
+        self.gsvs_tree.update()
     
     def _build_tree_from_model(self):
         """Build the tree structure from the model data."""
@@ -1263,6 +1266,10 @@ class GSVView(QtWidgets.QWidget):
         """Set up column properties including width and alignment."""
         header = self.gsvs_tree.header()
         
+        # Set a reasonable minimum section size for GSV columns
+        # This is separate from the node settings table minimum
+        header.setMinimumSectionSize(GSVDefaults.GSV_HEADER_MIN_SECTION_SIZE)
+        
         # Set up each column
         for i in range(self.gsvs_tree.columnCount()):
             if i == 0:
@@ -1270,7 +1277,6 @@ class GSVView(QtWidgets.QWidget):
                 header.setSectionResizeMode(i, QtWidgets.QHeaderView.Interactive)
                 primary_width = self._calculate_primary_column_width()
                 header.resizeSection(i, primary_width)
-                header.setMinimumSectionSize(primary_width)
             else:
                 # Secondary GSV columns
                 header.setSectionResizeMode(i, QtWidgets.QHeaderView.Fixed)
@@ -1279,9 +1285,6 @@ class GSVView(QtWidgets.QWidget):
     
     def _calculate_primary_column_width(self):
         """Calculate the optimal width for the primary GSVs column."""
-        if not hasattr(self, 'gsvs_tree') or not self.gsvs_tree.model():
-            return 150  # Default fallback
-        
         font = self.gsvs_tree.font()
         font_metrics = QtGui.QFontMetrics(font)
         max_width = 0
@@ -1294,69 +1297,81 @@ class GSVView(QtWidgets.QWidget):
             header_width = font_metrics.width(header_text)
         max_width = max(max_width, header_width)
         
-        # Check all tree items recursively
-        def check_item_width(item, indent_level=0):
+        # Check all possible GSV values from the model data
+        gsv_data = self.gsv_model.get_gsv_data()
+        primary_levels = self.gsv_model.get_primary_gsv_levels()
+        
+        def check_data_width(data, level_index=0):
             nonlocal max_width
-            if item:
-                text = item.text(0)
-                if text:
-                    try:
-                        text_width = font_metrics.horizontalAdvance(text)
-                    except AttributeError:
-                        text_width = font_metrics.width(text)
-                    
-                    # Add indentation (approximately 20px per level)
-                    indented_width = text_width + (indent_level * 20)
-                    max_width = max(max_width, indented_width)
-                
-                # Check children
-                for i in range(item.childCount()):
-                    check_item_width(item.child(i), indent_level + 1)
+            if level_index >= len(primary_levels):
+                return
+            
+            level_name = primary_levels[level_index]
+            if level_name in data:
+                level_data = data[level_name]
+                if isinstance(level_data, dict):
+                    for key in level_data.keys():
+                        try:
+                            text_width = font_metrics.horizontalAdvance(str(key))
+                        except AttributeError:
+                            text_width = font_metrics.width(str(key))
+                        
+                        # Add indentation using constant
+                        indented_width = text_width + (level_index * GSVDefaults.PRIMARY_COLUMN_INDENTATION)
+                        max_width = max(max_width, indented_width)
+                        
+                        # Recursively check children
+                        check_data_width(level_data[key], level_index + 1)
         
-        # Check all top-level items
-        for i in range(self.gsvs_tree.topLevelItemCount()):
-            check_item_width(self.gsvs_tree.topLevelItem(i), 0)
+        check_data_width(gsv_data)
         
-        # Add padding for tree decorations, checkboxes, and margins
-        padding = 60
-        final_width = max_width + padding
+        # Add padding using constant
+        final_width = max_width + GSVDefaults.PRIMARY_COLUMN_PADDING
         
-        # Ensure minimum and maximum bounds
-        min_width = 120
-        max_width_limit = 300
-        
-        return max(min_width, min(final_width, max_width_limit))
+        # Ensure reasonable bounds using constants
+        return max(GSVDefaults.PRIMARY_COLUMN_MIN_WIDTH, min(final_width, GSVDefaults.PRIMARY_COLUMN_MAX_WIDTH))
     
     def _calculate_secondary_column_width(self):
-        """Calculate the optimal width for secondary GSV columns."""
+        """Calculate the optimal width for secondary GSV columns.
+        
+        This method finds the widest GSV value (not the grouped header names)
+        across all secondary columns, adds minimal padding for the checkbox,
+        and returns a uniform width that all secondary columns will use.
+        """
         font = self.gsvs_tree.font()
         font_metrics = QtGui.QFontMetrics(font)
         max_width = 0
+        longest_value = ""
         
-        # Get all secondary GSV values
+        # Only check the actual GSV values (second row headers), not the grouped headers
         secondary_gsv_data = self.gsv_model.get_secondary_gsv_data()
         all_values = []
         for values in secondary_gsv_data.values():
             all_values.extend(values)
         
-        # Find the longest value
+        # Find the longest GSV value (e.g., "Full", "Proxy", "EXR", "MOV", "DWAA")
         for value in all_values:
             value_str = str(value)
             try:
-                text_width = font_metrics.horizontalAdvance(value_str)
+                value_width = font_metrics.horizontalAdvance(value_str)
             except AttributeError:
-                text_width = font_metrics.width(value_str)
-            max_width = max(max_width, text_width)
+                value_width = font_metrics.width(value_str)
+            
+            if value_width > max_width:
+                max_width = value_width
+                longest_value = value_str
         
-        # Add padding for checkbox centering and header text
-        checkbox_padding = 6
-        header_text_padding = 8
-        total_padding = checkbox_padding + header_text_padding
-        final_width = max_width + total_padding
+        # Calculate width based on content with padding from constants
+        if max_width > 0:
+            content_based_width = max_width + GSVDefaults.SECONDARY_COLUMN_PADDING
+        else:
+            # Fallback: use minimum width from constants
+            content_based_width = GSVDefaults.SECONDARY_COLUMN_MIN_WIDTH
         
-        # Minimum width
-        min_width = 35
-        return max(final_width, min_width)
+        # Ensure bounds using constants
+        final_width = max(GSVDefaults.SECONDARY_COLUMN_MIN_WIDTH, min(content_based_width, GSVDefaults.SECONDARY_COLUMN_MAX_WIDTH))
+        
+        return final_width
     
     def _on_primary_gsv_text_changed(self, text):
         """Handle primary GSV text changes."""

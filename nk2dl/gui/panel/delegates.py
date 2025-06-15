@@ -181,17 +181,25 @@ class CenteredCheckboxDelegate(QtWidgets.QStyledItemDelegate):
         value = index.data(QtCore.Qt.CheckStateRole)
         
         if value is not None:
-            # Calculate the checkbox rect
-            checkbox_style = QtWidgets.QApplication.style()
-            checkbox_rect = checkbox_style.subElementRect(
-                QtWidgets.QStyle.SE_CheckBoxIndicator, 
-                option
-            )
-            
-            # Center the checkbox within the cell
-            center_x = option.rect.center().x() - checkbox_rect.width() // 2
-            center_y = option.rect.center().y() - checkbox_rect.height() // 2
-            checkbox_rect.moveTopLeft(QtCore.QPoint(center_x, center_y))
+            # For primary column (column 0), use default painting
+            # Qt will automatically draw the checkbox since we set ItemIsUserCheckable
+            if index.column() == 0:
+                # Just use the default painting - Qt handles the checkbox
+                super().paint(painter, option, index)
+                return
+            else:
+                # For secondary columns (1+), draw centered checkbox
+                checkbox_style = QtWidgets.QApplication.style()
+                checkbox_rect = checkbox_style.subElementRect(
+                    QtWidgets.QStyle.SE_CheckBoxIndicator, 
+                    option,
+                    None  # widget parameter - can be None for basic checkbox rendering
+                )
+                
+                # Center the checkbox within the cell
+                center_x = option.rect.center().x() - checkbox_rect.width() // 2
+                center_y = option.rect.center().y() - checkbox_rect.height() // 2
+                checkbox_rect.moveTopLeft(QtCore.QPoint(center_x, center_y))
             
             # Create style option for checkbox
             checkbox_option = QtWidgets.QStyleOptionButton()

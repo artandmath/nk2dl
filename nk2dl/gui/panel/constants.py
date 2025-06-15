@@ -186,6 +186,18 @@ class GSVDefaults:
     DEFAULT_PRIMARY_GSVS = "Sequence, Shotcode"
     DEFAULT_SECONDARY_GSVS = "Resolution, Format"
     
+    # GSV Column Sizing Constants
+    SECONDARY_COLUMN_PADDING = 16  # Total padding for secondary columns (8px each side)
+    SECONDARY_COLUMN_MIN_WIDTH = 20  # Minimum width for secondary columns
+    SECONDARY_COLUMN_MAX_WIDTH = 120  # Maximum width for secondary columns
+    PRIMARY_COLUMN_MIN_WIDTH = 120  # Minimum width for primary column
+    PRIMARY_COLUMN_MAX_WIDTH = 250  # Maximum width for primary column
+    PRIMARY_COLUMN_PADDING = 80  # Padding for primary column (checkbox + tree decoration + margins)
+    PRIMARY_COLUMN_INDENTATION = 20  # Indentation per level in primary column
+    
+    # Header view minimum section sizes
+    GSV_HEADER_MIN_SECTION_SIZE = 20  # Minimum section size for GSV tree header
+    
     # Sample GSV data for demonstration
     SAMPLE_PRIMARY_DATA = {
         "Sequence": ["seq010", "seq020", "seq030"],
@@ -193,7 +205,7 @@ class GSVDefaults:
     }
     
     SAMPLE_SECONDARY_DATA = {
-        "Resolution": ["1920x1080", "2048x1556", "4096x3112"],
+        "Resolution": ["wh", "hh", "qh"],
         "Format": ["exr", "dpx", "jpg"]
     }
     
