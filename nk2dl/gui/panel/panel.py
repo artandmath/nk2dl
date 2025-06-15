@@ -95,8 +95,8 @@ class Nk2dlPanel(QtWidgets.QWidget):
         # Settings view (top section)
         self.settings_view = SettingsView(self.settings_model, self)
         
-        # Node settings view (table tab)
-        self.node_settings_view = NodeSettingsView(self.table_model, self)
+        # Node settings view (table tab) - now with settings model for inheritance
+        self.node_settings_view = NodeSettingsView(self.table_model, self.settings_model, self)
         
         # GSV view (GSV tab) - only for Nuke 15.1+
         if NUKE_AVAILABLE and self._is_nuke_15_1_or_later():
@@ -186,102 +186,77 @@ class Nk2dlPanel(QtWidgets.QWidget):
         """Load sample data for demonstration."""
         from .constants import GSVDefaults
         
-        # Load sample table data - all rows now have explicit values
+        # Load sample table data - mix of explicit values and None for inheritance demo
         sample_table_data = [
             {
+                # Row 1: Mix of explicit values and inheritance (None = inherited)
                 "Order": "3999", "Node": "Write4", "Filename": "Some_path1_v002.%04d.exr", 
-                "Chunk": "5", "Frames": "1350-1650", "Priority": "50", "NodesFrames": "Yes", 
-                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Full", "NukeX": "Yes", 
-                "BatchMode": "Yes", "Reloadplugin": "Yes",
-                # Machine settings columns with explicit values
-                "Pool": GSVDefaults.SAMPLE_MACHINE_DATA["pool"],
-                "SecondaryPool": GSVDefaults.SAMPLE_MACHINE_DATA["secondary_pool"],
-                "Group": GSVDefaults.SAMPLE_MACHINE_DATA["group"],
-                "Threads": str(GSVDefaults.SAMPLE_MACHINE_DATA["threads"]),
-                "MinRam": str(GSVDefaults.SAMPLE_MACHINE_DATA["min_ram"]),
-                "MaxRam": str(GSVDefaults.SAMPLE_MACHINE_DATA["max_ram"]),
-                "UseGPU": "Yes" if GSVDefaults.SAMPLE_MACHINE_DATA["use_gpu"] else "No",
-                "GPUId": str(GSVDefaults.SAMPLE_MACHINE_DATA["gpu_id"]),
-                "ConcurrentTasks": str(GSVDefaults.SAMPLE_MACHINE_DATA["concurrent_tasks"]),
-                "WorkerTaskLimit": "Yes" if GSVDefaults.SAMPLE_MACHINE_DATA["worker_task_limit"] else "No",
-                "MachineList": GSVDefaults.SAMPLE_MACHINE_DATA["machine_list"],
-                "Limits": GSVDefaults.SAMPLE_MACHINE_DATA["limits"]
+                "Chunk": None, "Frames": "1350-1650", "Priority": "75",  # Priority overrides default 50
+                "NodesFrames": None, "TaskTimeout": None, "AutoTimeout": None, "RenderMode": "Full", 
+                "NukeX": None, "BatchMode": None, "Reloadplugin": None,
+                # Machine settings - some explicit, some inherited
+                "Pool": "lighting",  # Override default "comp"
+                "SecondaryPool": None, "Group": None, "Threads": None, "MinRam": None, "MaxRam": None,
+                "UseGPU": "Yes",  # Override default False
+                "GPUId": None, "ConcurrentTasks": None, "WorkerTaskLimit": None,
+                "MachineList": None, "Limits": None
             },
             {
+                # Row 2: Mostly explicit values (will show in bold)
                 "Order": "3100", "Node": "Write30", "Filename": "Some_path3_v002.%04d.exr", 
                 "Chunk": "3", "Frames": "1001-2315", "Priority": "40", "NodesFrames": "No", 
                 "TaskTimeout": "10", "AutoTimeout": "No", "RenderMode": "Proxy", "NukeX": "No", 
                 "BatchMode": "No", "Reloadplugin": "No",
-                # Machine settings columns with explicit values
-                "Pool": "lighting",
-                "SecondaryPool": "render",
-                "Group": "high_priority",
-                "Threads": "4",
-                "MinRam": "16",
-                "MaxRam": "64",
-                "UseGPU": "No",
-                "GPUId": "0",
-                "ConcurrentTasks": "2",
-                "WorkerTaskLimit": "No",
-                "MachineList": "",
-                "Limits": ""
+                # Machine settings with explicit values
+                "Pool": "lighting", "SecondaryPool": "render", "Group": "high_priority",
+                "Threads": "4", "MinRam": "16", "MaxRam": "64", "UseGPU": "No",
+                "GPUId": "0", "ConcurrentTasks": "2", "WorkerTaskLimit": "No",
+                "MachineList": None, "Limits": None
             },
             {
+                # Row 3: Mostly inherited values (None = inherited)
                 "Order": "3050", "Node": "Write27", "Filename": "Some_path5_v002.%04d.exr", 
-                "Chunk": "1", "Frames": "1570-1620", "Priority": "30", "NodesFrames": "Yes", 
-                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Full", "NukeX": "Yes", 
-                "BatchMode": "Yes", "Reloadplugin": "Yes",
-                # Machine settings columns with explicit values
-                "Pool": "comp",
-                "SecondaryPool": "",
-                "Group": "none",
-                "Threads": "8",
-                "MinRam": "8",
-                "MaxRam": "32",
-                "UseGPU": "Yes",
-                "GPUId": "1",
-                "ConcurrentTasks": "4",
-                "WorkerTaskLimit": "Yes",
-                "MachineList": "render01,render02",
-                "Limits": "nuke_license:2"
+                "Chunk": None, "Frames": "1570-1620", "Priority": None,  # Inherit default priority
+                "NodesFrames": None, "TaskTimeout": None, "AutoTimeout": None, "RenderMode": None, 
+                "NukeX": None, "BatchMode": None, "Reloadplugin": None,
+                # Machine settings - mostly inherited
+                "Pool": None, "SecondaryPool": None, "Group": None, "Threads": "8",  # Override threads
+                "MinRam": None, "MaxRam": None, "UseGPU": None, "GPUId": None,
+                "ConcurrentTasks": None, "WorkerTaskLimit": None, "MachineList": None, "Limits": None
             },
             {
+                # Row 4: Mixed inheritance and overrides
                 "Order": "3000", "Node": "Write9", "Filename": "Some_path6_v002.%04d.exr", 
-                "Chunk": "8", "Frames": "1350-1650", "Priority": "60", "NodesFrames": "No", 
-                "TaskTimeout": "5", "AutoTimeout": "No", "RenderMode": "Both", "NukeX": "No", 
-                "BatchMode": "No", "Reloadplugin": "No",
-                # Machine settings columns with explicit values
-                "Pool": "fx",
-                "SecondaryPool": "general",
-                "Group": "weekend",
-                "Threads": "16",
-                "MinRam": "32",
-                "MaxRam": "128",
-                "UseGPU": "Yes",
-                "GPUId": "2",
-                "ConcurrentTasks": "1",
-                "WorkerTaskLimit": "No",
-                "MachineList": "workstation03",
-                "Limits": "arnold_license:1"
+                "Chunk": "8", "Frames": "1350-1650", "Priority": "60",  # Override priority
+                "NodesFrames": "No", "TaskTimeout": "5", "AutoTimeout": "No", "RenderMode": "Both", 
+                "NukeX": "No", "BatchMode": None, "Reloadplugin": None,  # Mix of explicit and inherited
+                # Machine settings
+                "Pool": "fx", "SecondaryPool": "general", "Group": "weekend",
+                "Threads": "16", "MinRam": "32", "MaxRam": "128", "UseGPU": None,  # Inherit UseGPU
+                "GPUId": "2", "ConcurrentTasks": "1", "WorkerTaskLimit": None,
+                "MachineList": "workstation03", "Limits": "arnold_license:1"
             },
             {
+                # Row 5: Demonstrate inheritance for all mapped columns (None = inherited)
                 "Order": "2999", "Node": "Write3", "Filename": "Some_path9_v002.%04d.exr", 
-                "Chunk": "2", "Frames": "1001-2315", "Priority": "20", "NodesFrames": "Yes", 
-                "TaskTimeout": "0", "AutoTimeout": "Yes", "RenderMode": "Script", "NukeX": "Yes", 
-                "BatchMode": "Yes", "Reloadplugin": "Yes",
-                # Machine settings columns with explicit values
-                "Pool": "render",
-                "SecondaryPool": "comp",
-                "Group": "overnight",
-                "Threads": "6",
-                "MinRam": "12",
-                "MaxRam": "48",
-                "UseGPU": "No",
-                "GPUId": "0",
-                "ConcurrentTasks": "3",
-                "WorkerTaskLimit": "Yes",
-                "MachineList": "",
-                "Limits": ""
+                "Chunk": None, "Frames": "1001-2315", "Priority": None,  # All job settings inherited
+                "NodesFrames": None, "TaskTimeout": None, "AutoTimeout": None, "RenderMode": None, 
+                "NukeX": None, "BatchMode": None, "Reloadplugin": None,
+                # All machine settings inherited
+                "Pool": None, "SecondaryPool": None, "Group": None, "Threads": None,
+                "MinRam": None, "MaxRam": None, "UseGPU": None, "GPUId": None,
+                "ConcurrentTasks": None, "WorkerTaskLimit": None, "MachineList": None, "Limits": None
+            },
+            {
+                # Row 6: Explicit values including empty strings (should still be bold)
+                "Order": "2900", "Node": "Write5", "Filename": "Some_path10_v002.%04d.exr", 
+                "Chunk": "1", "Frames": "1001-2315", "Priority": "50",  # Explicit 50 (matches setting but should be bold)
+                "NodesFrames": "No", "TaskTimeout": "0", "AutoTimeout": "No", "RenderMode": "Full", 
+                "NukeX": "No", "BatchMode": "No", "Reloadplugin": "No",
+                # Machine settings with explicit values including empty strings
+                "Pool": "comp", "SecondaryPool": "", "Group": "none", "Threads": "4",  # Empty string is explicit
+                "MinRam": "0", "MaxRam": "0", "UseGPU": "No", "GPUId": "0",
+                "ConcurrentTasks": "2", "WorkerTaskLimit": "No", "MachineList": "", "Limits": ""  # Empty strings are explicit
             }
         ]
         

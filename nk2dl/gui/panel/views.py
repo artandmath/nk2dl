@@ -645,12 +645,18 @@ class NodeSettingsView(QtWidgets.QWidget):
     """View for the node settings table with controls.
     
     This view handles the UI for the node settings table (formerly render order),
-    including the table widget, control buttons, and filter functionality.
+    including the table widget, control buttons, filter functionality, and
+    settings inheritance system.
     """
     
-    def __init__(self, table_model, parent=None):
+    def __init__(self, table_model, settings_model=None, parent=None):
         super().__init__(parent)
         self.table_model = table_model
+        self.settings_model = settings_model
+        
+        # Connect settings model to table model for inheritance
+        if self.settings_model:
+            self.table_model.set_settings_model(self.settings_model)
         
         # Create the main layout and UI components
         self._create_ui()
@@ -711,9 +717,14 @@ class NodeSettingsView(QtWidgets.QWidget):
     def _create_table(self):
         """Create the node settings table."""
         from .widgets import StandardTableWidget
+        from .delegates import SettingsAwareDelegate
         
         self.render_table = StandardTableWidget()
         self.render_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+        
+        # Set up settings-aware delegate for inheritance and override styling
+        self.settings_delegate = SettingsAwareDelegate(self.table_model)
+        self.render_table.setItemDelegate(self.settings_delegate)
         
         # Set up table headers
         headers = self.table_model.get_headers()
@@ -728,38 +739,75 @@ class NodeSettingsView(QtWidgets.QWidget):
     def _connect_signals(self):
         """Connect model signals to view updates."""
         self.table_model.dataChanged.connect(self._on_model_data_changed)
+        
+        # Connect settings model change signals to refresh table
+        if self.settings_model:
+            self.settings_model.jobSettingsChanged.connect(self._on_settings_changed)
+            self.settings_model.machineSettingsChanged.connect(self._on_settings_changed)
     
     def _load_data_from_model(self):
-        """Load data from the model into the table."""
-        # Get data from model
-        data = self.table_model.get_data()
-        headers = self.table_model.get_headers()
+        """Load data from the model into the table widget."""
+        # Block signals during loading to prevent unwanted updates
+        self.render_table.blockSignals(True)
         
-        # Set table size
-        self.render_table.setRowCount(len(data))
-        
-        # Populate table with data
-        for row, row_data in enumerate(data):
-            for col, header in enumerate(headers):
-                value = row_data.get(header, "")
-                item = QtWidgets.QTableWidgetItem(str(value))
-                
-                # Apply standard styling for dropdown columns
-                if self.table_model.is_dropdown_column(col):
-                    self._apply_dropdown_styling(item, value, row)
-                
-                self.render_table.setItem(row, col, item)
-        
-        # Resize columns to content
-        self.render_table.resizeColumnsToContents()
+        try:
+            # Get data from model
+            data = self.table_model.get_data()
+            headers = self.table_model.get_headers()
+            
+            # Set table size
+            self.render_table.setRowCount(len(data))
+            
+            # Populate table with raw values, but display effective values
+            for row, row_data in enumerate(data):
+                for col, header in enumerate(headers):
+                    # Get raw cell value (may be None for inheritance)
+                    raw_value = self.table_model.get_cell_value(row, col)
+                    
+                    # Create item with raw value for data storage
+                    if raw_value is None:
+                        # For None values, store empty string but mark as inherited
+                        item = QtWidgets.QTableWidgetItem("")
+                        item.setData(QtCore.Qt.UserRole, None)  # Store None in user data
+                    else:
+                        # For explicit values, store the actual value
+                        item = QtWidgets.QTableWidgetItem(str(raw_value))
+                        item.setData(QtCore.Qt.UserRole, raw_value)
+                    
+                    # Set display text to effective value (for inheritance display)
+                    effective_value = self.table_model.get_effective_cell_value(row, col)
+                    item.setText(str(effective_value))
+                    
+                    # Apply styling based on whether cell is overridden
+                    self._apply_cell_styling(item, row, col)
+                    
+                    self.render_table.setItem(row, col, item)
+            
+            # Resize columns to content
+            self.render_table.resizeColumnsToContents()
+            
+        finally:
+            # Re-enable signals after loading is complete
+            self.render_table.blockSignals(False)
     
-    def _apply_dropdown_styling(self, item, value, row):
-        """Apply styling to dropdown column items."""
-        if str(value) in ["Yes", "No", "Full", "Proxy", "Both", "Script"]:
+    def _apply_cell_styling(self, item, row, col):
+        """Apply styling to table cell items based on override status."""
+        # Check if cell is overridden (has explicit value different from inherited)
+        is_overridden = self.table_model.is_cell_overridden(row, col)
+        
+        if is_overridden:
+            # Bold font for override values
+            font = item.font()
+            font.setBold(True)
+            item.setFont(font)
             # White text for explicit values
-            item.setForeground(QtGui.QBrush(QtGui.QColor(255, 255, 255)))  # White
+            item.setForeground(QtGui.QBrush(QtGui.QColor(255, 255, 255)))
         else:
-            # Default text color
+            # Normal font for inherited values
+            font = item.font()
+            font.setBold(False)
+            item.setFont(font)
+            # Default text color for inherited values
             item.setForeground(QtGui.QBrush())
     
     def _on_table_item_changed(self, item):
@@ -767,21 +815,70 @@ class NodeSettingsView(QtWidgets.QWidget):
         if not item:
             return
         
-        row = item.row()
-        col = item.column()
-        value = item.text()
+        # Block signals to prevent recursive calls
+        self.render_table.blockSignals(True)
         
-        # Update the model
-        self.table_model.set_cell_value(row, col, value)
-        
-        # Apply styling for dropdown columns
-        if self.table_model.is_dropdown_column(col):
-            self._apply_dropdown_styling(item, value, row)
+        try:
+            row = item.row()
+            col = item.column()
+            text_value = item.text()
+            
+            # Determine the value to store in the model
+            if text_value.strip() == "":
+                # Empty string means user wants to inherit from settings
+                model_value = None
+            else:
+                # Non-empty string is an explicit value
+                model_value = text_value
+            
+            # Update the model with the appropriate value (suppress signal to prevent full reload)
+            self.table_model.set_cell_value(row, col, model_value, emit_signal=False)
+            
+            # Update the item's user data to reflect the stored value
+            item.setData(QtCore.Qt.UserRole, model_value)
+            
+            # Update display text to show effective value (may be inherited)
+            effective_value = self.table_model.get_effective_cell_value(row, col)
+            item.setText(str(effective_value))
+            
+            # Refresh styling for this cell only
+            self._apply_cell_styling(item, row, col)
+            
+        finally:
+            # Re-enable signals
+            self.render_table.blockSignals(False)
     
     def _on_model_data_changed(self):
         """Handle model data changes."""
         # Refresh the table display
         self._load_data_from_model()
+    
+    def _on_settings_changed(self):
+        """Handle settings model changes - refresh table to show updated inherited values."""
+        # Update only inherited cells instead of reloading entire table
+        self._update_inherited_cells()
+    
+    def _update_inherited_cells(self):
+        """Update only cells that inherit from settings."""
+        # Block signals to prevent recursive updates
+        self.render_table.blockSignals(True)
+        
+        try:
+            for row in range(self.render_table.rowCount()):
+                for col in range(self.render_table.columnCount()):
+                    # Check if this cell is inherited (not overridden)
+                    if not self.table_model.is_cell_overridden(row, col):
+                        item = self.render_table.item(row, col)
+                        if item:
+                            # Update display text with new inherited value
+                            effective_value = self.table_model.get_effective_cell_value(row, col)
+                            item.setText(str(effective_value))
+                            
+                            # Refresh styling
+                            self._apply_cell_styling(item, row, col)
+        finally:
+            # Re-enable signals
+            self.render_table.blockSignals(False)
     
     def _on_filter_changed(self, text):
         """Handle filter text changes."""

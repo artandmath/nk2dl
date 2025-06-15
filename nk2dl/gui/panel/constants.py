@@ -318,4 +318,119 @@ class StyleSheets:
         QTreeWidget::item:selected:!active {
             background-color: transparent;
         }
-    """ 
+    """
+
+
+class HeaderSettingsMapping:
+    """Mapping between table column headers and job/machine settings.
+    
+    This class defines the relationships between table columns and settings panel
+    fields, enabling inheritance where empty table cells inherit values from
+    the corresponding settings, and explicit cell values override the settings.
+    """
+    
+    # Job Settings Relationships
+    # Maps table column headers to job settings field names
+    JOB_SETTINGS_MAPPING = {
+        "Priority": "priority",
+        "Chunk": "chunk_size", 
+        "NodesFrames": "use_node_frame_list",
+        "TaskTimeout": "task_timeout",
+        "AutoTimeout": "enable_auto_timeout",
+        "RenderMode": "render_mode",
+        "NukeX": "use_nukex",
+        "BatchMode": "use_batch_mode",
+        "Reloadplugin": "reload_plugin"
+    }
+    
+    # Machine Settings Relationships  
+    # Maps table column headers to machine settings field names
+    MACHINE_SETTINGS_MAPPING = {
+        "Pool": "pool",
+        "SecondaryPool": "secondary_pool",
+        "Group": "group",
+        "Threads": "threads",
+        "MinRam": "min_ram",
+        "MaxRam": "max_ram",
+        "UseGPU": "use_gpu",
+        "GPUId": "gpu_id",
+        "ConcurrentTasks": "concurrent_tasks",
+        "WorkerTaskLimit": "worker_task_limit",
+        "MachineList": "machine_list",
+        "Limits": "limits"
+    }
+    
+    # Combined mapping for easy lookup
+    ALL_MAPPINGS = {**JOB_SETTINGS_MAPPING, **MACHINE_SETTINGS_MAPPING}
+    
+    # Dropdown inheritance labels
+    JOB_SETTINGS_INHERITANCE_LABEL = "Use job settings"
+    MACHINE_SETTINGS_INHERITANCE_LABEL = "Use machine settings"
+    DROPDOWN_SEPARATOR = "-----"
+    
+    # Boolean columns that should display as Yes/No
+    BOOLEAN_COLUMNS = [
+        "NodesFrames", "AutoTimeout", "NukeX", "BatchMode", 
+        "Reloadplugin", "UseGPU", "WorkerTaskLimit"
+    ]
+    
+    # Numeric columns that should display as strings
+    NUMERIC_COLUMNS = [
+        "Priority", "Chunk", "TaskTimeout", "Threads", 
+        "MinRam", "MaxRam", "GPUId", "ConcurrentTasks"
+    ]
+    
+    # String columns that display directly
+    STRING_COLUMNS = [
+        "Pool", "SecondaryPool", "Group", "RenderMode", 
+        "MachineList", "Limits"
+    ]
+    
+    @classmethod
+    def get_setting_type_and_key(cls, column_header):
+        """Get the setting type and key for a column header.
+        
+        Args:
+            column_header (str): The table column header name
+            
+        Returns:
+            tuple: (setting_type, setting_key) where setting_type is 
+                   "job", "machine", or None, and setting_key is the 
+                   corresponding field name in the settings model
+        """
+        if column_header in cls.JOB_SETTINGS_MAPPING:
+            return "job", cls.JOB_SETTINGS_MAPPING[column_header]
+        elif column_header in cls.MACHINE_SETTINGS_MAPPING:
+            return "machine", cls.MACHINE_SETTINGS_MAPPING[column_header]
+        else:
+            return None, None
+    
+    @classmethod
+    def is_mapped_column(cls, column_header):
+        """Check if a column header has a settings mapping.
+        
+        Args:
+            column_header (str): The table column header name
+            
+        Returns:
+            bool: True if the column has a settings mapping
+        """
+        return column_header in cls.ALL_MAPPINGS
+    
+    @classmethod
+    def get_inheritance_label(cls, column_header):
+        """Get the inheritance label for a column header.
+        
+        Args:
+            column_header (str): The table column header name
+            
+        Returns:
+            str: The inheritance label to show in dropdown menus
+        """
+        setting_type, _ = cls.get_setting_type_and_key(column_header)
+        if setting_type == "job":
+            return cls.JOB_SETTINGS_INHERITANCE_LABEL
+        elif setting_type == "machine":
+            return cls.MACHINE_SETTINGS_INHERITANCE_LABEL
+        else:
+            return None 

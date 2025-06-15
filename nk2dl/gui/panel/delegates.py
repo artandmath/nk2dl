@@ -32,6 +32,142 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
+from .constants import HeaderSettingsMapping
+
+
+class SettingsAwareDelegate(QtWidgets.QStyledItemDelegate):
+    """Delegate that handles settings inheritance and override styling.
+    
+    This delegate provides:
+    - Bold text styling for cells with override values
+    - Enhanced dropdown menus with inheritance options
+    - Proper handling of inheritance vs explicit values
+    """
+    
+    def __init__(self, table_model, parent=None):
+        super().__init__(parent)
+        self.table_model = table_model
+    
+    def paint(self, painter, option, index):
+        """Paint cell with bold text for overridden values."""
+        # Check if cell is overridden
+        if self.table_model.is_cell_overridden(index.row(), index.column()):
+            # Create new option with bold font for override values
+            new_option = QtWidgets.QStyleOptionViewItem(option)
+            new_option.font.setBold(True)
+            super().paint(painter, new_option, index)
+        else:
+            # Use normal styling for inherited values
+            super().paint(painter, option, index)
+    
+    def displayText(self, value, locale):
+        """Display effective value (explicit or inherited)."""
+        # The view should already be showing effective values
+        return super().displayText(value, locale)
+    
+    def createEditor(self, parent, option, index):
+        """Create editor with inheritance options for dropdown columns."""
+        column = index.column()
+        
+        if not self.table_model.is_dropdown_column(column):
+            # Use default editor for non-dropdown columns
+            return super().createEditor(parent, option, index)
+        
+        # Create dropdown editor with inheritance options
+        editor = QtWidgets.QComboBox(parent)
+        editor.setEditable(False)
+        
+        # Populate dropdown based on column type
+        self._populate_dropdown_editor(editor, column)
+        
+        return editor
+    
+    def _populate_dropdown_editor(self, editor, column):
+        """Populate dropdown editor with options and inheritance choice."""
+        headers = self.table_model.get_headers()
+        if column >= len(headers):
+            return
+        
+        header = headers[column]
+        setting_type, setting_key = self.table_model.get_setting_for_column(column)
+        
+        # Add standard options first based on column type
+        if header in HeaderSettingsMapping.BOOLEAN_COLUMNS:
+            # Yes/No columns
+            editor.addItems(["Yes", "No"])
+        elif header == "RenderMode":
+            editor.addItems(["Full", "Proxy", "Both", "Script"])
+        elif header == "Pool":
+            editor.addItems(["comp", "lighting", "render", "fx", "general"])
+        elif header == "SecondaryPool":
+            editor.addItems(["", "comp", "lighting", "render", "fx", "general"])
+        elif header == "Group":
+            editor.addItems(["none", "high_priority", "weekend", "overnight"])
+        else:
+            # For other dropdown columns, use default options
+            # This handles any columns defined in TableColumns.DROPDOWN_COLUMNS
+            from .constants import TableColumns
+            if column in TableColumns.DROPDOWN_COLUMNS:
+                options = TableColumns.DROPDOWN_COLUMNS[column]
+                editor.addItems(options)
+        
+        # Add separator and inheritance option if column has settings mapping
+        if setting_type:
+            editor.insertSeparator(editor.count())
+            inheritance_label = HeaderSettingsMapping.get_inheritance_label(header)
+            if inheritance_label:
+                editor.addItem(inheritance_label)
+    
+    def setEditorData(self, editor, index):
+        """Set editor data with current effective value."""
+        if isinstance(editor, QtWidgets.QComboBox):
+            # Get current effective value for display
+            current_value = self.table_model.get_effective_cell_value(
+                index.row(), index.column())
+            
+            # Check if this is an inherited value by looking at raw value
+            raw_value = self.table_model.get_cell_value(
+                index.row(), index.column())
+            
+            if raw_value is None:
+                # Cell is inheriting - select inheritance option
+                headers = self.table_model.get_headers()
+                if index.column() < len(headers):
+                    header = headers[index.column()]
+                    inheritance_label = HeaderSettingsMapping.get_inheritance_label(header)
+                    if inheritance_label:
+                        inheritance_index = editor.findText(inheritance_label)
+                        if inheritance_index >= 0:
+                            editor.setCurrentIndex(inheritance_index)
+                            return
+            
+            # Find and select the current effective value
+            index_to_select = editor.findText(current_value)
+            if index_to_select >= 0:
+                editor.setCurrentIndex(index_to_select)
+        else:
+            super().setEditorData(editor, index)
+    
+    def setModelData(self, editor, model, index):
+        """Set model data from editor, handling inheritance."""
+        if isinstance(editor, QtWidgets.QComboBox):
+            selected_text = editor.currentText()
+            
+            # Check if inheritance option was selected
+            headers = self.table_model.get_headers()
+            if index.column() < len(headers):
+                header = headers[index.column()]
+                inheritance_label = HeaderSettingsMapping.get_inheritance_label(header)
+                
+                if selected_text == inheritance_label:
+                    # Set None to use inheritance
+                    self.table_model.set_cell_value(index.row(), index.column(), None)
+                else:
+                    # Set explicit value
+                    self.table_model.set_cell_value(index.row(), index.column(), selected_text)
+        else:
+            super().setModelData(editor, model, index)
+
 
 class CenteredCheckboxDelegate(QtWidgets.QStyledItemDelegate):
     """Custom delegate that centers checkboxes in tree widget columns."""
