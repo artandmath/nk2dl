@@ -334,8 +334,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         self.frozen_table.verticalHeader().hide()
         self.frozen_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
         
-        # Stack the frozen table on top of the main viewport
-        self.viewport().stackUnder(self.frozen_table)
+        # Stack the frozen table ON TOP of the main viewport (not under!)
+        self.frozen_table.raise_()
         
         # Style the frozen table with darker alternating rows and no custom selection color
         self.frozen_table.setStyleSheet("""
@@ -485,6 +485,9 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             frozen_width,
             self.viewport().height() + self.horizontalHeader().height()
         )
+        
+        # Ensure frozen table stays on top after geometry changes
+        self.frozen_table.raise_()
     
     def _get_frozen_table_width(self):
         """Calculate the total width of frozen columns."""
