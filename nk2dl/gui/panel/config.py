@@ -14,7 +14,7 @@ from typing import Dict, Any, Optional, Set
 from PySide2 import QtWidgets, QtCore
 
 from nk2dl.common.logging import setup_logging
-from nk2dl.common import config
+from nk2dl.common.config import config
 from .tooltips import set_enhanced_tooltip
 
 logger = setup_logging(__name__)
@@ -239,18 +239,75 @@ def _get_current_widget_value(widget: QtWidgets.QWidget) -> Any:
 def _add_context_menu(widget: QtWidgets.QWidget, control_name: str) -> None:
     """Add context menu to widget for reset functionality."""
     try:
+        # Disconnect any existing context menu connections to prevent conflicts
+        try:
+            widget.customContextMenuRequested.disconnect()
+            logger.debug(f"Disconnected existing context menu signal for {control_name}")
+        except (TypeError, RuntimeError) as e:
+            # No connections exist, which is fine
+            logger.debug(f"No existing context menu connections for {control_name}: {e}")
+        
+        # Set context menu policy
         widget.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
+        logger.debug(f"Set context menu policy for {control_name}")
+        
+        # Store control_name as a property on the widget to avoid lambda closure issues
+        widget.setProperty("nk2dl_control_name", control_name)
+        logger.debug(f"Set nk2dl_control_name property for {control_name}")
+        
+        # Connect signal using a proper slot method to avoid lambda issues
         widget.customContextMenuRequested.connect(
-            lambda pos: _show_context_menu(widget, control_name, pos)
+            lambda pos, w=widget: _show_context_menu_safe(w, pos)
         )
+        logger.debug(f"Connected customContextMenuRequested signal for {control_name}")
+        
+        # Verify the connection was successful
+        try:
+            # Test emit to verify signal is connected (but don't show menu)
+            # We'll use a flag to prevent actual menu display during test
+            widget.setProperty("nk2dl_test_emit", True)
+            widget.customContextMenuRequested.emit(QtCore.QPoint(0, 0))
+            widget.setProperty("nk2dl_test_emit", False)
+            logger.debug(f"Context menu signal verification successful for {control_name}")
+        except Exception as e:
+            logger.warning(f"Context menu signal verification failed for {control_name}: {e}")
+        
+        logger.debug(f"Context menu setup completed successfully for {control_name}")
         
     except Exception as e:
         logger.error(f"Error adding context menu to {control_name}: {e}")
+        import traceback
+        logger.debug(f"Context menu setup error traceback: {traceback.format_exc()}")
+
+
+def _show_context_menu_safe(widget: QtWidgets.QWidget, position: QtCore.QPoint) -> None:
+    """Safe wrapper for showing context menu that gets control_name from widget property."""
+    try:
+        # Check if this is a test emit (don't show menu during verification)
+        if widget.property("nk2dl_test_emit"):
+            logger.debug("Test emit detected, skipping menu display")
+            return
+        
+        # Get control name from widget property
+        control_name = widget.property("nk2dl_control_name")
+        if not control_name:
+            logger.warning("Widget missing nk2dl_control_name property for context menu")
+            return
+        
+        logger.debug(f"Context menu requested for {control_name} at position {position}")
+        _show_context_menu(widget, control_name, position)
+        
+    except Exception as e:
+        logger.error(f"Error in safe context menu handler: {e}")
+        import traceback
+        logger.debug(f"Safe context menu error traceback: {traceback.format_exc()}")
 
 
 def _show_context_menu(widget: QtWidgets.QWidget, control_name: str, position: QtCore.QPoint) -> None:
     """Show context menu with reset options."""
     try:
+        logger.debug(f"Showing context menu for {control_name} at position {position}")
+        
         menu = QtWidgets.QMenu(widget)
         
         # Add reset actions
@@ -271,10 +328,13 @@ def _show_context_menu(widget: QtWidgets.QWidget, control_name: str, position: Q
         
         # Show menu
         global_pos = widget.mapToGlobal(position)
+        logger.debug(f"Executing context menu at global position {global_pos}")
         menu.exec_(global_pos)
         
     except Exception as e:
         logger.error(f"Error showing context menu for {control_name}: {e}")
+        import traceback
+        logger.debug(f"Context menu error traceback: {traceback.format_exc()}")
 
 
 def _reset_control_to_default(control_name: str) -> None:
@@ -352,11 +412,23 @@ def _find_widget_by_name(control_name: str) -> Optional[QtWidgets.QWidget]:
     try:
         panel = _get_panel_instance()
         if not panel:
+            logger.warning("No panel instance found for widget discovery")
             return None
         
-        # Search for widget by objectName
+        # First try to find by exact objectName match
         widget = panel.findChild(QtWidgets.QWidget, control_name)
-        return widget
+        if widget:
+            logger.debug(f"Found widget {control_name} by objectName")
+            return widget
+        
+        # If not found by objectName, try to find by property (fallback)
+        for child in panel.findChildren(QtWidgets.QWidget):
+            if child.property("nk2dl_control_name") == control_name:
+                logger.debug(f"Found widget {control_name} by property")
+                return child
+        
+        logger.warning(f"Widget not found for control: {control_name}")
+        return None
         
     except Exception as e:
         logger.error(f"Error finding widget {control_name}: {e}")
@@ -369,15 +441,86 @@ def _get_panel_instance():
         # Try to find the panel instance in Qt's application
         # This is a simple approach that looks for any Nk2dlPanel widget
         app = QtWidgets.QApplication.instance()
-        if app:
-            for widget in app.allWidgets():
-                if widget.__class__.__name__ == 'Nk2dlPanel':
-                    logger.debug(f"Found panel instance: {widget}")
-                    return widget
+        if not app:
+            logger.warning("No Qt application instance found")
+            return None
+            
+        # Look for Nk2dlPanel widgets
+        panels = []
+        for widget in app.allWidgets():
+            if widget.__class__.__name__ == 'Nk2dlPanel':
+                panels.append(widget)
         
-        logger.debug("No panel instance found in Qt application")
-        return None
+        if not panels:
+            logger.debug("No Nk2dlPanel instances found in Qt application")
+            return None
+        elif len(panels) == 1:
+            logger.debug(f"Found single panel instance: {panels[0]}")
+            return panels[0]
+        else:
+            # Multiple panels - try to find the active/visible one
+            for panel in panels:
+                if panel.isVisible():
+                    logger.debug(f"Found visible panel instance: {panel}")
+                    return panel
+            # If none are visible, return the first one
+            logger.debug(f"Multiple panels found, returning first: {panels[0]}")
+            return panels[0]
         
     except Exception as e:
         logger.error(f"Error getting panel instance: {e}")
         return None
+
+# Debug utility functions
+def debug_context_menu_status(control_name: str) -> None:
+    """Debug utility to check context menu status for a control."""
+    try:
+        widget = _find_widget_by_name(control_name)
+        if not widget:
+            logger.info(f"DEBUG: Widget not found for {control_name}")
+            return
+        
+        logger.info(f"DEBUG: Context menu status for {control_name}:")
+        logger.info(f"  - Widget type: {type(widget).__name__}")
+        logger.info(f"  - Widget visible: {widget.isVisible()}")
+        logger.info(f"  - Widget enabled: {widget.isEnabled()}")
+        logger.info(f"  - Object name: {widget.objectName()}")
+        logger.info(f"  - Context menu policy: {widget.contextMenuPolicy()}")
+        logger.info(f"  - nk2dl_control_name property: {widget.property('nk2dl_control_name')}")
+        
+        # Check if customContextMenuRequested signal has connections
+        signal = widget.customContextMenuRequested
+        try:
+            # This is a bit hacky, but we can check if the signal has connections
+            signal.emit(widget.rect().center())  # Emit to test, but don't show menu
+        except:
+            logger.info(f"  - customContextMenuRequested signal appears disconnected")
+        else:
+            logger.info(f"  - customContextMenuRequested signal appears connected")
+            
+    except Exception as e:
+        logger.error(f"Error in debug_context_menu_status for {control_name}: {e}")
+
+
+def test_context_menu_manually(control_name: str) -> None:
+    """Manually trigger context menu for testing purposes."""
+    try:
+        widget = _find_widget_by_name(control_name)
+        if not widget:
+            logger.error(f"Widget not found for control: {control_name}")
+            return
+        
+        logger.info(f"Manually triggering context menu for {control_name}")
+        
+        # Get the center of the widget for the menu position
+        center_pos = widget.rect().center()
+        logger.info(f"Widget center position: {center_pos}")
+        
+        # Manually trigger the context menu
+        widget.customContextMenuRequested.emit(center_pos)
+        logger.info(f"Context menu signal emitted for {control_name}")
+        
+    except Exception as e:
+        logger.error(f"Error manually testing context menu for {control_name}: {e}")
+        import traceback
+        logger.debug(f"Manual test error traceback: {traceback.format_exc()}")

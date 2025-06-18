@@ -11,7 +11,7 @@ from typing import Optional, Any
 from PySide2 import QtWidgets, QtCore
 
 from nk2dl.common.logging import setup_logging
-from nk2dl.common import config
+from nk2dl.common.config import config
 
 logger = setup_logging(__name__)
 
