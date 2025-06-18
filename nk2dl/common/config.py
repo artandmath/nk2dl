@@ -132,6 +132,10 @@ class Config:
             
             # Write node types
             'custom_write_classes': [],  # Additional custom write node types (Write and DeepWrite are always included)
+        },
+        'panel': {
+            # Panel configuration for UI control visibility, disabled state, and default values
+            # This section allows studio administrators to customize the panel behavior
         }
     }
     

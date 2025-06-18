@@ -35,6 +35,7 @@ except ImportError:
 
 from ..widgets import ColoredGroupBox
 from ..constants import Settings, Sizes, GSVDefaults
+from ..config import apply_panel_config
 
 
 class NodeSettingsView(QtWidgets.QWidget):
@@ -407,3 +408,33 @@ class NodeSettingsView(QtWidgets.QWidget):
             list: List of effective row values
         """
         return self.table_model.get_data()
+    
+    def _apply_configuration(self):
+        """Apply panel configuration to table control widgets."""
+        # Add debug logging - move outside try block for error handling
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.node_settings_view')
+        
+        try:
+            logger.debug("Starting _apply_configuration for NodeSettingsView")
+            
+            # Set object names for table control widgets
+            self.update_btn.setObjectName("update_btn")
+            self.all_btn.setObjectName("all_btn")
+            self.clear_btn.setObjectName("clear_btn")
+            self.selection_btn.setObjectName("selection_btn")
+            self.inside_groups_check.setObjectName("inside_groups_check")
+            self.column_dropdown.setObjectName("column_dropdown")
+            self.filter_edit.setObjectName("filter_edit")
+            
+            # Apply configuration to table control widgets
+            apply_panel_config(self.update_btn, "update")
+            apply_panel_config(self.all_btn, "all")
+            apply_panel_config(self.clear_btn, "clear")
+            apply_panel_config(self.selection_btn, "selection")
+            apply_panel_config(self.inside_groups_check, "inside_groups")
+            apply_panel_config(self.column_dropdown, "column_dropdown")
+            apply_panel_config(self.filter_edit, "filter")
+            
+        except Exception as e:
+            logger.error(f"Error applying configuration to NodeSettingsView: {e}")

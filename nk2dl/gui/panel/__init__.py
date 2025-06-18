@@ -66,6 +66,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         from .models import TableDataModel, GSVHierarchyModel, SettingsModel
         from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
         from .constants import Sizes, DefaultValues, GSVDefaults
+        from .config import apply_panel_config
 
 
         class Nk2dlPanel(QtWidgets.QWidget):
@@ -106,6 +107,10 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 
                 # Set size policy
                 self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
+                
+                # Apply panel configuration
+                logger.debug("Applying panel configuration")
+                self._apply_panel_configuration()
                 
                 logger.info(f"nk2dl panel initialized using {PYSIDE_VERSION} for Nuke {nuke.NUKE_VERSION_MAJOR}.{nuke.NUKE_VERSION_MINOR}")
             
@@ -326,6 +331,33 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     dict: All settings organized by category
                 """
                 return self.settings_model.export_settings()
+
+            def _apply_panel_configuration(self):
+                """Apply panel configuration to all controls."""
+                from .config import apply_panel_config
+                
+                # Add debug logging
+                logger.debug("Starting _apply_panel_configuration")
+                
+                # Apply to main panel controls first
+                apply_panel_config(self.render_btn, "render_btn")
+                apply_panel_config(self.tab_widget, "tab_widget") 
+                apply_panel_config(self.progress_bar, "progress_bar")
+                
+                # Apply to view controls
+                logger.debug("Applying configuration to SettingsView")
+                if hasattr(self.settings_view, '_apply_configuration'):
+                    self.settings_view._apply_configuration()
+                
+                logger.debug("Applying configuration to NodeSettingsView")
+                if hasattr(self.node_settings_view, '_apply_configuration'):
+                    self.node_settings_view._apply_configuration()
+                
+                logger.debug("Applying configuration to ExtraSettingsView")
+                if hasattr(self.extra_settings_view, '_apply_configuration'):
+                    self.extra_settings_view._apply_configuration()
+                    
+                logger.debug("Finished _apply_panel_configuration")
 
 
         def register_panel():

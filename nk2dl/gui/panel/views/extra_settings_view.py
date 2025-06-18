@@ -34,6 +34,7 @@ except ImportError:
 
 from ..widgets import ColoredGroupBox
 from ..constants import Settings, Sizes, GSVDefaults
+from ..config import apply_panel_config
 
 
 class ExtraSettingsView(QtWidgets.QWidget):
@@ -127,3 +128,25 @@ class ExtraSettingsView(QtWidgets.QWidget):
             SettingsModel: The settings model instance
         """
         return self.settings_model 
+    
+    def _apply_configuration(self):
+        """Apply panel configuration to extra settings controls."""
+        # Add debug logging - move outside try block for error handling
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        
+        try:
+            logger.debug("Starting _apply_configuration for ExtraSettingsView")
+            
+            # Set object names for extra settings controls
+            self.job_name_edit.setObjectName("job_name_edit")
+            self.comment_edit.setObjectName("comment_edit")
+            self.department_edit.setObjectName("department_edit")
+            
+            # Apply configuration to extra settings controls
+            apply_panel_config(self.job_name_edit, "job_name")
+            apply_panel_config(self.comment_edit, "comment")
+            apply_panel_config(self.department_edit, "department")
+            
+        except Exception as e:
+            logger.error(f"Error applying configuration to ExtraSettingsView: {e}") 

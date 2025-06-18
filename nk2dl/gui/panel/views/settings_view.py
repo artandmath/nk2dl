@@ -34,6 +34,7 @@ except ImportError:
 
 from ..widgets import ColoredGroupBox
 from ..constants import Settings, Sizes
+from ..config import apply_panel_config
 
 
 class SettingsView(QtWidgets.QWidget):
@@ -667,3 +668,80 @@ class SettingsView(QtWidgets.QWidget):
             SettingsModel: The settings model instance
         """
         return self.settings_model 
+    
+    def _apply_configuration(self):
+        """Apply panel configuration to job and machine settings controls."""
+        # Add debug logging - move outside try block for error handling
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.settings_view')
+        
+        try:
+            logger.debug("Starting _apply_configuration for SettingsView")
+            
+            # Set object names for all controls first
+            # Job settings controls
+            self.priority_spin.setObjectName("priority_spin")
+            self.chunk_size_spin.setObjectName("chunk_size_spin")
+            self.frames_combo.setObjectName("frames_combo")
+            self.frame_range_edit.setObjectName("frame_range_edit")
+            self.use_node_frame_list_check.setObjectName("use_node_frame_list_check")
+            self.task_timeout_spin.setObjectName("task_timeout_spin")
+            self.enable_auto_timeout_check.setObjectName("enable_auto_timeout_check")
+            self.render_mode_combo.setObjectName("render_mode_combo")
+            self.render_nukex_check.setObjectName("render_nukex_check")
+            self.use_batch_mode_check.setObjectName("use_batch_mode_check")
+            self.reload_plugin_check.setObjectName("reload_plugin_check")
+            self.separate_tasks_check.setObjectName("separate_tasks_check")
+            self.separate_jobs_check.setObjectName("separate_jobs_check")
+            self.views_separate_jobs_check.setObjectName("views_separate_jobs_check")
+            
+            # Machine settings controls
+            self.pool_combo.setObjectName("pool_combo")
+            self.secondary_pool_combo.setObjectName("secondary_pool_combo")
+            self.group_combo.setObjectName("group_combo")
+            self.threads_spin.setObjectName("threads_spin")
+            self.min_ram_spin.setObjectName("min_ram_spin")
+            self.max_ram_spin.setObjectName("max_ram_spin")
+            self.gpu_override_spin.setObjectName("gpu_override_spin")
+            self.use_gpu_check.setObjectName("use_gpu_check")
+            self.concurrent_tasks_spin.setObjectName("concurrent_tasks_spin")
+            self.limit_tasks_check.setObjectName("limit_tasks_check")
+            self.machine_limit_spin.setObjectName("machine_limit_spin")
+            self.machine_deny_list_check.setObjectName("machine_deny_list_check")
+            self.machine_list_edit.setObjectName("machine_list_edit")
+            self.limits_edit.setObjectName("limits_edit")
+            
+            # Apply configuration to job settings controls
+            apply_panel_config(self.priority_spin, "priority")
+            apply_panel_config(self.chunk_size_spin, "chunk_size")
+            apply_panel_config(self.frames_combo, "frames")
+            apply_panel_config(self.frame_range_edit, "frame_range")
+            apply_panel_config(self.use_node_frame_list_check, "use_node_frame_list")
+            apply_panel_config(self.task_timeout_spin, "task_timeout")
+            apply_panel_config(self.enable_auto_timeout_check, "enable_auto_timeout")
+            apply_panel_config(self.render_mode_combo, "render_mode")
+            apply_panel_config(self.render_nukex_check, "render_nukex")
+            apply_panel_config(self.use_batch_mode_check, "use_batch_mode")
+            apply_panel_config(self.reload_plugin_check, "reload_plugin")
+            apply_panel_config(self.separate_tasks_check, "separate_tasks")
+            apply_panel_config(self.separate_jobs_check, "separate_jobs")
+            apply_panel_config(self.views_separate_jobs_check, "views_separate_jobs")
+            
+            # Apply configuration to machine settings controls
+            apply_panel_config(self.pool_combo, "pool")
+            apply_panel_config(self.secondary_pool_combo, "secondary_pool")
+            apply_panel_config(self.group_combo, "group")
+            apply_panel_config(self.threads_spin, "threads")
+            apply_panel_config(self.min_ram_spin, "min_ram")
+            apply_panel_config(self.max_ram_spin, "max_ram")
+            apply_panel_config(self.gpu_override_spin, "gpu_override")
+            apply_panel_config(self.use_gpu_check, "use_gpu")
+            apply_panel_config(self.concurrent_tasks_spin, "concurrent_tasks")
+            apply_panel_config(self.limit_tasks_check, "limit_tasks")
+            apply_panel_config(self.machine_limit_spin, "machine_limit")
+            apply_panel_config(self.machine_deny_list_check, "machine_deny_list")
+            apply_panel_config(self.machine_list_edit, "machine_list")
+            apply_panel_config(self.limits_edit, "limits")
+            
+        except Exception as e:
+            logger.error(f"Error applying configuration to SettingsView: {e}") 
