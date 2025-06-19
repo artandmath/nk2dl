@@ -12,7 +12,7 @@ Configuration values are loaded and overridden in the following order (later sou
 1. **Default configuration** - Baseline values built into the package
 2. **Project configuration** - `config.yaml` in the nk2dl module directory
 3. **Environment variables** - `NK2DL_*` variables
-4. **User configuration** - `~/.nk2dl/config.yaml` in the user's home directory
+4. **User configuration** - `~/.nuke/nk2dl/config.yaml` in the user's .nuke directory
 
 ## Configuration File Format
 

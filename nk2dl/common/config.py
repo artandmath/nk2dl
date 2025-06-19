@@ -12,11 +12,31 @@ from typing import Any, Dict, Optional
 import importlib.resources
 import inspect
 
-# Get module-level logger
-logger = logging.getLogger(__name__)
+# Get module-level logger with fallback format
+# Use basic logger initially to avoid circular import, will be upgraded later
+try:
+    from .logging import get_nk2dl_logger
+    logger = get_nk2dl_logger(__name__)
+except ImportError:
+    # Fallback to standard logger during bootstrap
+    import logging
+    logger = logging.getLogger(__name__)
 
-# Track which config keys have been logged to reduce spam
-_logged_config_keys = set()
+# Configure a fallback formatter in case setup_logging isn't called
+if not logger.handlers:
+    # Create a basic handler with the time-only format (matching the new standard)
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    logger.setLevel(logging.DEBUG)
+    logger.propagate = False
+
+# Flag to track if we need to reinitialize the logger with proper setup
+_logger_needs_setup = True
+
+# Track if debug config info has been shown (only show once)
+_debug_config_shown = False
 
 class ConfigError(Exception):
     """Base exception for configuration related errors."""
@@ -30,11 +50,11 @@ class Config:
     1. Default configuration
     2. Project configuration file (from NK2DL_CONFIG or config.yaml in nk2dl module root)
     3. Environment variables (NK2DL_*)
-    4. User configuration file (~/.nk2dl/config.yaml)
+    4. User configuration file (~/.nuke/nk2dl/config.yaml)
     """
     
-    # Default paths for configuration files
-    USER_CONFIG_PATH = Path.home() / '.nk2dl' / 'config.yaml'
+    # Default paths for configuration files - using .nuke directory
+    USER_CONFIG_PATH = Path.home() / '.nuke' / 'nk2dl' / 'config.yaml'
     
     # Get the module directory path for finding the config
     try:
@@ -150,6 +170,8 @@ class Config:
         self._config: Dict[str, Any] = {}
         self._project_config_path = self._get_project_config_path(project_config)
         logger.debug(f"Project config path: {self._project_config_path}")
+        
+        # Set up user config path
         self._user_config_path = Path(user_config) if user_config else self.USER_CONFIG_PATH
         logger.debug(f"User config path: {self._user_config_path}")
         self.load_config()
@@ -184,38 +206,100 @@ class Config:
     def load_config(self) -> None:
         """Load configuration from all sources."""
         # Start with default config
-        logger.debug("Loading default configuration")
+        logger.debug("=== Loading nk2dl Configuration ===")
+        logger.debug("Starting with default configuration")
         self._config = self.DEFAULT_CONFIG.copy()
         
         # Load project config first
-        logger.debug(f"Attempting to load project config from {self._project_config_path}")
+        logger.debug(f"1. Checking project config: {self._project_config_path}")
         project_config = self._load_yaml_file(self._project_config_path)
         if project_config:
-            logger.debug(f"Project config found and loaded: {self._project_config_path}")
+            logger.debug(f"✓ Project config loaded from: {self._project_config_path}")
+            logger.debug(f"Project config sections: {list(project_config.keys())}")
             logger.debug(f"Project config contents: {project_config}")
             self._update_config(project_config)
         else:
-            logger.debug(f"No project config found at {self._project_config_path}")
+            logger.debug(f"✗ No project config found at: {self._project_config_path}")
         
         # Load environment variables second
-        logger.debug("Loading configuration from environment variables")
-        self._load_env_vars()
+        logger.debug("2. Loading environment variables (NK2DL_*)")
+        env_count = self._load_env_vars()
+        if env_count > 0:
+            logger.debug(f"✓ Loaded {env_count} environment variables")
+        else:
+            logger.debug("✗ No NK2DL_* environment variables found")
             
         # Load user config last (now has highest priority)
-        logger.debug(f"Attempting to load user config from {self._user_config_path}")
+        logger.debug(f"3. Checking user config: {self._user_config_path}")
         user_config = self._load_yaml_file(self._user_config_path)
         if user_config:
-            logger.debug(f"User config found and loaded: {self._user_config_path}")
+            logger.debug(f"✓ User config loaded from: {self._user_config_path}")
+            logger.debug(f"User config sections: {list(user_config.keys())}")
             logger.debug(f"User config contents: {user_config}")
             self._update_config(user_config)
+            user_config_loaded = True
+            user_config_path_used = self._user_config_path
         else:
-            logger.debug(f"No user config found at {self._user_config_path}")
+            logger.debug(f"✗ No user config found at: {self._user_config_path}")
+            logger.debug(f"To create a user config, place config.yaml at: {self.USER_CONFIG_PATH}")
+            user_config_loaded = False
+            user_config_path_used = None
             
-        # Log final config
-        logger.debug(f"Final configuration: {self._config}")
+        # Log final config summary - moved to DEBUG level
+        logger.debug("=== Configuration Summary ===")
+        logger.debug(f"Sources loaded:")
+        logger.debug(f"  - Default config: ✓")
+        logger.debug(f"  - Project config: {'✓' if project_config else '✗'} {self._project_config_path if project_config else ''}")
+        logger.debug(f"  - Environment vars: {'✓' if env_count > 0 else '✗'} ({env_count} vars)")
+        logger.debug(f"  - User config: {'✓' if user_config_loaded else '✗'} {user_config_path_used if user_config_loaded else ''}")
+        
+        # Log key configuration sections
+        logger.debug("Configuration sections available:")
+        for section in sorted(self._config.keys()):
+            if isinstance(self._config[section], dict):
+                logger.debug(f"  - {section}: {len(self._config[section])} settings")
+            else:
+                logger.debug(f"  - {section}: {type(self._config[section]).__name__}")
+        
+        logger.debug(f"Complete final configuration: {self._config}")
+        logger.debug("=== Configuration Loading Complete ===")
+        
+        # Now that config is loaded, set up the logger properly
+        # Set flag for external debug trigger - check FINAL config level after all merging
+        final_config_log_level = self.get('logging.level', 'INFO')
+        self._should_show_debug = (isinstance(final_config_log_level, str) and final_config_log_level.upper() == 'DEBUG')
+        
+        # Now that config is loaded, set up the logger properly
+        self._setup_config_logger()
+        
+        # Fix any existing loggers to use consistent formatting
+        try:
+            from .logging import fix_existing_loggers
+            fix_existing_loggers()
+        except ImportError:
+            pass  # fix_existing_loggers may not be available during early import
+        
+        logger.debug(f"Configuration loaded. Level: {final_config_log_level}, Debug flag set: {self._should_show_debug}")
+        
+        # Trigger debug output automatically if DEBUG level is enabled
+        if self._should_show_debug:
+            # Use a simple approach - trigger after config is fully loaded and logger should be ready
+            import threading
+            def delayed_trigger():
+                import time
+                time.sleep(0.1)  # Brief delay to ensure logger is ready
+                self.trigger_debug_if_enabled()
+            
+            thread = threading.Thread(target=delayed_trigger, daemon=True)
+            thread.start()
     
     def _load_yaml_file(self, path: Path) -> Optional[Dict[str, Any]]:
         """Load and parse a YAML configuration file."""
+        logger.debug(f"Checking config file: {path}")
+        logger.debug(f"  Path exists: {path.exists()}")
+        logger.debug(f"  Path is file: {path.is_file() if path.exists() else 'N/A'}")
+        logger.debug(f"  Path readable: {os.access(path, os.R_OK) if path.exists() else 'N/A'}")
+        
         if not path.exists():
             logger.debug(f"Config file does not exist: {path}")
             return None
@@ -223,13 +307,28 @@ class Config:
         try:
             with path.open('r') as f:
                 config_data = yaml.safe_load(f)
-                logger.debug(f"Loaded YAML from {path}")
-                return config_data
+                if config_data is None:
+                    logger.debug(f"YAML file is empty: {path}")
+                    return {}
+                elif not isinstance(config_data, dict):
+                    logger.warning(f"YAML file does not contain a dictionary: {path}")
+                    return {}
+                else:
+                    logger.debug(f"Successfully loaded YAML from {path}")
+                    logger.debug(f"  File size: {path.stat().st_size} bytes")
+                    logger.debug(f"  Sections found: {list(config_data.keys())}")
+                    return config_data
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error in {path}: {e}")
+            raise ConfigError(f"YAML parsing error in {path}: {e}")
+        except PermissionError as e:
+            logger.error(f"Permission denied reading config file {path}: {e}")
+            raise ConfigError(f"Permission denied reading config file {path}: {e}")
         except Exception as e:
             logger.error(f"Failed to load config file {path}: {e}")
             raise ConfigError(f"Failed to load config file {path}: {e}")
     
-    def _load_env_vars(self) -> None:
+    def _load_env_vars(self) -> int:
         """Load configuration from environment variables.
         
         Environment variables should be in the format NK2DL_SECTION_KEY
@@ -239,19 +338,33 @@ class Config:
         Examples:
             NK2DL_DEADLINE_HOST -> deadline.host
             NK2DL_DEADLINE_USE__WEB__SERVICE -> deadline.use_web_service
+            
+        Returns:
+            Number of environment variables processed
         """
         env_vars_found = 0
+        env_vars_processed = []
+        
         for key, value in os.environ.items():
             if key.startswith('NK2DL_') and key not in self.SPECIAL_ENV_VARS:
                 # Remove prefix and split into section and key
                 _, section, *key_parts = key.split('_')
                 # Join remaining parts and replace double underscores with single
-                key = '_'.join(key_parts).lower().replace('__', '_')
-                logger.debug(f"Setting config from env var: {section.lower()}.{key} = {value}")
-                self._set_config_value([section.lower(), key], value)
+                config_key = '_'.join(key_parts).lower().replace('__', '_')
+                config_path = f"{section.lower()}.{config_key}"
+                logger.debug(f"Setting config from env var {key}: {config_path} = {value}")
+                self._set_config_value([section.lower(), config_key], value)
                 env_vars_found += 1
+                env_vars_processed.append(f"{key} -> {config_path}")
                 
-        logger.debug(f"Found {env_vars_found} NK2DL_ environment variables")
+        if env_vars_processed:
+            logger.debug("Environment variables processed:")
+            for env_var in env_vars_processed:
+                logger.debug(f"  {env_var}")
+        else:
+            logger.debug("No NK2DL_* environment variables found")
+            
+        return env_vars_found
     
     def _update_config(self, new_config: Dict[str, Any]) -> None:
         """Recursively update configuration dictionary."""
@@ -302,33 +415,151 @@ class Config:
         Returns:
             Configuration value or default
         """
-        global _logged_config_keys
-        
         current = self._config
         for part in key.split('.'):
             if not isinstance(current, dict) or part not in current:
-                if key not in _logged_config_keys:
-                    logger.debug(f"Config key not found: {key}, using default: {default}")
-                    _logged_config_keys.add(key)
-                else:
-                    # Add caller information for repeated calls
-                    caller_frame = inspect.currentframe().f_back
-                    caller_info = f"{caller_frame.f_code.co_filename}:{caller_frame.f_lineno}"
-                    logger.debug(f"Config key not found: {key}, using default: {default} (called from {caller_info})")
+                logger.debug(f"Config key not found: {key}, using default: {default}")
                 return default
             current = current[part]
         
-        if key not in _logged_config_keys:
-            logger.debug(f"Config get: {key} = {current}")
-            _logged_config_keys.add(key)
-        else:
-            # Add caller information for repeated calls
-            caller_frame = inspect.currentframe().f_back
-            caller_info = f"{caller_frame.f_code.co_filename}:{caller_frame.f_lineno}"
-            logger.debug(f"Config get: {key} = {current} (called from {caller_info})")
-        
+        logger.debug(f"Config get: {key} = {current}")
         return current
+
+    def _setup_config_logger(self) -> None:
+        """Set up the config logger properly after configuration is loaded."""
+        global logger, _logger_needs_setup
+        
+        if not _logger_needs_setup:
+            return
+            
+        try:
+            # Import setup_logging after config is loaded to avoid circular import
+            from .logging import setup_logging
+            logger = setup_logging('nk2dl.common.config')
+            _logger_needs_setup = False
+            logger.debug("Config logger properly initialized with setup_logging")
+        except ImportError:
+            # Fallback to basic logger if setup_logging not available
+            logger.debug("Using basic logger - setup_logging not available")
+            _logger_needs_setup = False
+    
+    def trigger_debug_if_enabled(self) -> None:
+        """Trigger debug output if DEBUG level is configured and hasn't been shown yet."""
+        if hasattr(self, '_should_show_debug') and self._should_show_debug:
+            logger.debug("DEBUG level detected - triggering configuration debug output")
+            self.debug_config_info()
+        else:
+            logger.debug("DEBUG level not detected or not configured - skipping debug output")
+    
+    def debug_config_info(self) -> None:
+        """Log detailed configuration debugging information to help troubleshoot config issues."""
+        global _debug_config_shown
+        
+        if _debug_config_shown:
+            logger.debug("Configuration debug info already shown (use debug_config(force=True) to show again)")
+            return
+            
+        _debug_config_shown = True
+        
+        # Temporarily disable caller information for clean debug output
+        try:
+            from .logging import disable_caller_info, enable_caller_info
+            disable_caller_info()
+        except ImportError:
+            pass
+        
+        # Save current logger level and temporarily set to 1 to ensure all debug messages appear
+        original_level = logger.getEffectiveLevel()
+        logger.setLevel(1)
+        
+        try:
+            # Output each line as a separate debug message with individual timestamps
+            logger.debug("=" * 60)
+            logger.debug("NK2DL Configuration Debug Information")
+            logger.debug("=" * 60)
+            
+            logger.debug("1. Configuration File Paths:")
+            logger.debug(f"   Project config: {self._project_config_path}")
+            logger.debug(f"   User config: {'✓' if self._user_config_path.exists() else '✗'} {self._user_config_path}")
+            
+            logger.debug("2. Environment Variables:")
+            env_vars = [key for key in os.environ.keys() if key.startswith('NK2DL_')]
+            if env_vars:
+                logger.debug(f"   Found {len(env_vars)} NK2DL_* environment variables:")
+                for var in sorted(env_vars):
+                    logger.debug(f"     {var} = {os.environ[var]}")
+            else:
+                logger.debug("   No NK2DL_* environment variables found")
+            
+            logger.debug("3. Current Configuration Sections:")
+            for section in sorted(self._config.keys()):
+                if isinstance(self._config[section], dict):
+                    logger.debug(f"   {section}: {len(self._config[section])} settings")
+                    # Show ALL settings for each section
+                    for key in sorted(self._config[section].keys()):
+                        value = self._config[section][key]
+                        # Format the value nicely
+                        if isinstance(value, str) and len(value) > 80:
+                            value = value[:77] + "..."
+                        elif isinstance(value, list):
+                            if len(value) == 0:
+                                value = "[]"
+                            elif len(value) <= 3:
+                                value = str(value)
+                            else:
+                                value = f"[{len(value)} items: {value[0]}, ...]"
+                        elif isinstance(value, dict):
+                            if len(value) == 0:
+                                value = "{}"
+                            else:
+                                value = f"{{{len(value)} items}}"
+                        logger.debug(f"     {key}: {value}")
+                else:
+                    logger.debug(f"   {section}: {self._config[section]}")
+            
+            logger.debug("4. To create a user config file:")
+            logger.debug(f"   1. Create directory: {self.USER_CONFIG_PATH.parent}")
+            logger.debug(f"   2. Create file: {self.USER_CONFIG_PATH}")
+            logger.debug("   3. Add YAML content like:")
+            logger.debug("      deadline:")
+            logger.debug("        host: your-deadline-server")
+            logger.debug("      submission:")
+            logger.debug("        priority: 75")
+            logger.debug("        pool: your-pool")
+            
+            logger.debug("=" * 60)
+        
+        finally:
+            # Restore original logger level
+            logger.setLevel(original_level)
+            
+            # Re-enable caller information
+            try:
+                enable_caller_info()
+            except ImportError:
+                pass
 
 # Global configuration instance
 logger.debug("Creating global config instance")
-config = Config() 
+config = Config()
+
+# Convenience function for debugging
+def debug_config(force: bool = False) -> None:
+    """Convenience function to log configuration debugging information.
+    
+    Outputs detailed configuration information using the logger at DEBUG level.
+    
+    Args:
+        force: If True, show debug info even if already shown once
+    
+    Usage:
+        from nk2dl.common.config import debug_config
+        debug_config()  # Show once
+        debug_config(force=True)  # Force show again
+    """
+    global _debug_config_shown
+    
+    if force:
+        _debug_config_shown = False
+        
+    config.debug_config_info() 
