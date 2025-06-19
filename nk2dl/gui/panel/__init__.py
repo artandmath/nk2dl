@@ -339,7 +339,12 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 # Add debug logging
                 logger.debug("Starting _apply_panel_configuration")
                 
-                # Apply to main panel controls first
+                # Set object names for main panel controls first - MUST match control names passed to apply_panel_config
+                self.render_btn.setObjectName("render_btn")
+                self.tab_widget.setObjectName("tab_widget")
+                self.progress_bar.setObjectName("progress_bar")
+                
+                # Apply to main panel controls
                 apply_panel_config(self.render_btn, "render_btn")
                 apply_panel_config(self.tab_widget, "tab_widget") 
                 apply_panel_config(self.progress_bar, "progress_bar")

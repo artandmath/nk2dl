@@ -138,10 +138,10 @@ class ExtraSettingsView(QtWidgets.QWidget):
         try:
             logger.debug("Starting _apply_configuration for ExtraSettingsView")
             
-            # Set object names for extra settings controls
-            self.job_name_edit.setObjectName("job_name_edit")
-            self.comment_edit.setObjectName("comment_edit")
-            self.department_edit.setObjectName("department_edit")
+            # Set object names for extra settings controls - MUST match control names passed to apply_panel_config
+            self.job_name_edit.setObjectName("job_name")
+            self.comment_edit.setObjectName("comment")
+            self.department_edit.setObjectName("department")
             
             # Apply configuration to extra settings controls
             apply_panel_config(self.job_name_edit, "job_name")

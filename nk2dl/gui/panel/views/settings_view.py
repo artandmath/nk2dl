@@ -100,6 +100,7 @@ class SettingsView(QtWidgets.QWidget):
         self.priority_spin.setMaximum(100)
         self.priority_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.priority_spin.setToolTip("A job can have a numeric priority ranging from 0 to 100, where 0 is the lowest priority.")
+
         priority_chunk_row.addWidget(self.priority_spin)
         
         chunk_label = QtWidgets.QLabel("Chunk")
@@ -110,6 +111,7 @@ class SettingsView(QtWidgets.QWidget):
         self.chunk_size_spin.setMinimum(1)
         self.chunk_size_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.chunk_size_spin.setToolTip("This is the number of frames that will be rendered at a time for each job task.")
+
         priority_chunk_row.addWidget(self.chunk_size_spin)
         priority_chunk_row.addStretch()
         
@@ -678,38 +680,38 @@ class SettingsView(QtWidgets.QWidget):
         try:
             logger.debug("Starting _apply_configuration for SettingsView")
             
-            # Set object names for all controls first
+            # Set object names for all controls first - MUST match control names passed to apply_panel_config
             # Job settings controls
-            self.priority_spin.setObjectName("priority_spin")
-            self.chunk_size_spin.setObjectName("chunk_size_spin")
-            self.frames_combo.setObjectName("frames_combo")
-            self.frame_range_edit.setObjectName("frame_range_edit")
-            self.use_node_frame_list_check.setObjectName("use_node_frame_list_check")
-            self.task_timeout_spin.setObjectName("task_timeout_spin")
-            self.enable_auto_timeout_check.setObjectName("enable_auto_timeout_check")
-            self.render_mode_combo.setObjectName("render_mode_combo")
-            self.render_nukex_check.setObjectName("render_nukex_check")
-            self.use_batch_mode_check.setObjectName("use_batch_mode_check")
-            self.reload_plugin_check.setObjectName("reload_plugin_check")
-            self.separate_tasks_check.setObjectName("separate_tasks_check")
-            self.separate_jobs_check.setObjectName("separate_jobs_check")
-            self.views_separate_jobs_check.setObjectName("views_separate_jobs_check")
+            self.priority_spin.setObjectName("priority")
+            self.chunk_size_spin.setObjectName("chunk_size")
+            self.frames_combo.setObjectName("frames")
+            self.frame_range_edit.setObjectName("frame_range")
+            self.use_node_frame_list_check.setObjectName("use_node_frame_list")
+            self.task_timeout_spin.setObjectName("task_timeout")
+            self.enable_auto_timeout_check.setObjectName("enable_auto_timeout")
+            self.render_mode_combo.setObjectName("render_mode")
+            self.render_nukex_check.setObjectName("render_nukex")
+            self.use_batch_mode_check.setObjectName("use_batch_mode")
+            self.reload_plugin_check.setObjectName("reload_plugin")
+            self.separate_tasks_check.setObjectName("separate_tasks")
+            self.separate_jobs_check.setObjectName("separate_jobs")
+            self.views_separate_jobs_check.setObjectName("views_separate_jobs")
             
             # Machine settings controls
-            self.pool_combo.setObjectName("pool_combo")
-            self.secondary_pool_combo.setObjectName("secondary_pool_combo")
-            self.group_combo.setObjectName("group_combo")
-            self.threads_spin.setObjectName("threads_spin")
-            self.min_ram_spin.setObjectName("min_ram_spin")
-            self.max_ram_spin.setObjectName("max_ram_spin")
-            self.gpu_override_spin.setObjectName("gpu_override_spin")
-            self.use_gpu_check.setObjectName("use_gpu_check")
-            self.concurrent_tasks_spin.setObjectName("concurrent_tasks_spin")
-            self.limit_tasks_check.setObjectName("limit_tasks_check")
-            self.machine_limit_spin.setObjectName("machine_limit_spin")
-            self.machine_deny_list_check.setObjectName("machine_deny_list_check")
-            self.machine_list_edit.setObjectName("machine_list_edit")
-            self.limits_edit.setObjectName("limits_edit")
+            self.pool_combo.setObjectName("pool")
+            self.secondary_pool_combo.setObjectName("secondary_pool")
+            self.group_combo.setObjectName("group")
+            self.threads_spin.setObjectName("threads")
+            self.min_ram_spin.setObjectName("min_ram")
+            self.max_ram_spin.setObjectName("max_ram")
+            self.gpu_override_spin.setObjectName("gpu_override")
+            self.use_gpu_check.setObjectName("use_gpu")
+            self.concurrent_tasks_spin.setObjectName("concurrent_tasks")
+            self.limit_tasks_check.setObjectName("limit_tasks")
+            self.machine_limit_spin.setObjectName("machine_limit")
+            self.machine_deny_list_check.setObjectName("machine_deny_list")
+            self.machine_list_edit.setObjectName("machine_list")
+            self.limits_edit.setObjectName("limits")
             
             # Apply configuration to job settings controls
             apply_panel_config(self.priority_spin, "priority")

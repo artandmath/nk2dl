@@ -418,9 +418,20 @@ class NukeProcess (ManagedProcess):
             else:
                 self.TempSceneFilename = self.TempSceneFilename.replace( "\\", "/" )
             
+
+            '''
+            NK2DL: Disable path mapping the way that Thinkbox does it.
+            Replacing '\' with '/' throughout the script breaks more than it fixes.
+            Better practice is to use '/' in pathing no matter what the operating system.
+            Let it error out if the path is using '\' and have the user fix their nuke script.
+            
             # First, replace all TCL escapes ('\]') with '_TCL_ESCAPE_', then replace the '\' path separators with '/', and then swap back in the orignal TCL escapes.
             # This is so that we don't mess up any embedded TCL statements in the output path.
             self.pathMappingWithFilePermissionFix( sceneFilename, self.TempSceneFilename, ("\\[","\\", "_TCL_ESCAPE_"), ("_TCL_ESCAPE_", "/", "\\[") )
+            '''
+
+            # NK2DL: Generic path mapping.
+            self.pathMappingWithFilePermissionFix( sceneFilename, self.TempSceneFilename, "", "" )
         else:
             if SystemUtils.IsRunningOnWindows():
                 self.TempSceneFilename = sceneFilename.replace( "/", "\\" )

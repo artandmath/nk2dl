@@ -418,14 +418,14 @@ class NodeSettingsView(QtWidgets.QWidget):
         try:
             logger.debug("Starting _apply_configuration for NodeSettingsView")
             
-            # Set object names for table control widgets
-            self.update_btn.setObjectName("update_btn")
-            self.all_btn.setObjectName("all_btn")
-            self.clear_btn.setObjectName("clear_btn")
-            self.selection_btn.setObjectName("selection_btn")
-            self.inside_groups_check.setObjectName("inside_groups_check")
+            # Set object names for table control widgets - MUST match control names passed to apply_panel_config
+            self.update_btn.setObjectName("update")
+            self.all_btn.setObjectName("all")
+            self.clear_btn.setObjectName("clear")
+            self.selection_btn.setObjectName("selection")
+            self.inside_groups_check.setObjectName("inside_groups")
             self.column_dropdown.setObjectName("column_dropdown")
-            self.filter_edit.setObjectName("filter_edit")
+            self.filter_edit.setObjectName("filter")
             
             # Apply configuration to table control widgets
             apply_panel_config(self.update_btn, "update")

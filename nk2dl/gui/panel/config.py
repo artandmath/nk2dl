@@ -152,21 +152,31 @@ def _store_widget_default(widget: QtWidgets.QWidget, control_name: str) -> None:
     
     try:
         default_value = _get_current_widget_value(widget)
-        _widget_defaults[control_name] = {
+        defaults_to_store = {
             'value': default_value,
             'visible': widget.isVisible(),
             'enabled': widget.isEnabled(),
             'style': widget.styleSheet()
         }
-        logger.debug(f"Stored default for {control_name}: {_widget_defaults[control_name]}")
+        
+        _widget_defaults[control_name] = defaults_to_store
+        
+        # Add detailed logging to debug what's being stored
+        logger.debug(f"Storing defaults for {control_name}:")
+        logger.debug(f"  Widget type: {type(widget).__name__}")
+        logger.debug(f"  Stored defaults: {defaults_to_store}")
         
     except Exception as e:
         logger.error(f"Error storing default for {control_name}: {e}")
+        import traceback
+        logger.debug(f"Store error traceback: {traceback.format_exc()}")
 
 
 def _set_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
     """Set a widget's value based on its type."""
     try:
+        logger.debug(f"Setting widget value: {type(widget).__name__} = {value}")
+        
         if isinstance(widget, QtWidgets.QSpinBox):
             widget.setValue(int(value))
         elif isinstance(widget, QtWidgets.QDoubleSpinBox):
@@ -176,22 +186,29 @@ def _set_widget_value(widget: QtWidgets.QWidget, value: Any) -> None:
             index = widget.findText(str(value))
             if index >= 0:
                 widget.setCurrentIndex(index)
+                logger.debug(f"Set combo box to index {index} (text: {value})")
             else:
                 try:
                     widget.setCurrentIndex(int(value))
+                    logger.debug(f"Set combo box to index {int(value)}")
                 except (ValueError, TypeError):
                     logger.warning(f"Could not set combo box value: {value}")
         elif isinstance(widget, QtWidgets.QCheckBox):
             widget.setChecked(bool(value))
+            logger.debug(f"Set checkbox to {bool(value)}")
         elif isinstance(widget, QtWidgets.QLineEdit):
             widget.setText(str(value))
+            logger.debug(f"Set line edit to '{str(value)}'")
         elif isinstance(widget, QtWidgets.QTextEdit):
             widget.setPlainText(str(value))
+            logger.debug(f"Set text edit to '{str(value)}'")
         else:
             logger.warning(f"Unsupported widget type for value setting: {type(widget)}")
             
     except Exception as e:
         logger.error(f"Error setting widget value: {e}")
+        import traceback
+        logger.debug(f"Set widget value error traceback: {traceback.format_exc()}")
 
 
 def _apply_disabled_styling(widget: QtWidgets.QWidget) -> None:
@@ -352,16 +369,26 @@ def _reset_control_to_default(control_name: str) -> None:
         
         defaults = _widget_defaults[control_name]
         
-        # Restore original state
-        widget.setVisible(defaults['visible'])
+        # Add detailed logging to debug the reset process
+        logger.debug(f"Resetting {control_name}:")
+        logger.debug(f"  Current state - visible: {widget.isVisible()}, enabled: {widget.isEnabled()}")
+        logger.debug(f"  Stored defaults: {defaults}")
+        
+        # Restore original state - but keep widget visible since user is interacting with it
+        # widget.setVisible(defaults['visible'])  # Don't reset visibility for individual controls
         widget.setEnabled(defaults['enabled'])
         widget.setStyleSheet(defaults['style'])
         _set_widget_value(widget, defaults['value'])
+        
+        # Log final state
+        logger.debug(f"  After reset - visible: {widget.isVisible()}, enabled: {widget.isEnabled()}")
         
         logger.info(f"Reset control {control_name} to default")
         
     except Exception as e:
         logger.error(f"Error resetting control {control_name}: {e}")
+        import traceback
+        logger.debug(f"Reset error traceback: {traceback.format_exc()}")
 
 
 def _reset_group_to_default(group_name: str) -> None:
