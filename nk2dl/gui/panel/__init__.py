@@ -67,6 +67,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
         from .constants import Sizes, DefaultValues, GSVDefaults
         from .config import apply_panel_config
+        from .repositories import NodeDataProvider, NodeSettingsStorage
+        from .controllers import PanelProgressManager
 
 
         class Nk2dlPanel(QtWidgets.QWidget):
@@ -102,8 +104,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 # Connect signals between components
                 self._connect_signals()
                 
-                # Load sample data for demonstration
-                self._load_sample_data()
+                # Load initial node data
+                self._load_initial_data()
                 
                 # Set size policy
                 self.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
@@ -115,12 +117,21 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 logger.info(f"nk2dl panel initialized using {PYSIDE_VERSION} for Nuke {nuke.NUKE_VERSION_MAJOR}.{nuke.NUKE_VERSION_MINOR}")
             
             def _create_models(self):
-                """Create all data models."""
-                self.table_model = TableDataModel(self)
-                self.gsv_model = GSVHierarchyModel(self)
+                """Create all data models and repositories."""
+                # Create models
                 self.settings_model = SettingsModel(self)
+                self.table_model = TableDataModel(self.settings_model, self)
+                self.gsv_model = GSVHierarchyModel(self)
                 
-                logger.info("Models created: TableDataModel, GSVHierarchyModel, SettingsModel")
+                # Create repositories
+                self.node_data_provider = NodeDataProvider(self)
+                self.settings_storage = NodeSettingsStorage()
+                
+                # Connect repositories to table model
+                self.table_model.set_node_data_provider(self.node_data_provider)
+                self.table_model.set_settings_storage(self.settings_storage)
+                
+                logger.info("Models and repositories created: TableDataModel, GSVHierarchyModel, SettingsModel, NodeDataProvider, NodeSettingsStorage")
             
             def _setup_layout(self):
                 """Set up the main panel layout."""
@@ -178,7 +189,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.layout().setStretchFactor(self.tab_widget, 1)     # Table area stretches
             
             def _create_bottom_controls(self):
-                """Create the bottom controls with version text, progress bar and render button."""
+                """Create the bottom controls with version text, info label, progress bar, update button and render button."""
                 bottom_layout = QtWidgets.QHBoxLayout()
                 
                 # Version label on the left
@@ -186,27 +197,47 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 version_label.setStyleSheet("color: #888888; font-size: 10px;")
                 bottom_layout.addWidget(version_label)
                 
-                # Add stretch to push progress bar and render button to the right
+                # Info label for status messages
+                self.info_label = QtWidgets.QLabel("Ready")
+                self.info_label.setStyleSheet("color: #cccccc; font-size: 10px;")
+                bottom_layout.addWidget(self.info_label)
+                
+                # Add stretch to push controls to the right
                 bottom_layout.addStretch()
                 
-                # Progress bar
+                # Progress bar (initially hidden)
                 self.progress_bar = QtWidgets.QProgressBar()
                 self.progress_bar.setRange(0, 100)
                 self.progress_bar.setValue(0)
+                self.progress_bar.setVisible(False)  # Hidden by default
                 bottom_layout.addWidget(self.progress_bar)
+                
+                # Update button
+                self.update_btn = QtWidgets.QPushButton("Update Nodes")
+                self.update_btn.setStyleSheet("QPushButton { background-color: #5cb85c; color: white; font-weight: bold; padding: 4px 8px; }")
+                self.update_btn.clicked.connect(self._refresh_node_data)
+                bottom_layout.addWidget(self.update_btn)
                 
                 # Render button
                 self.render_btn = QtWidgets.QPushButton("Render")
-                self.render_btn.setStyleSheet("QPushButton { background-color: #4a90e2; color: white; font-weight: bold; }")
+                self.render_btn.setStyleSheet("QPushButton { background-color: #4a90e2; color: white; font-weight: bold; padding: 4px 8px; }")
                 self.render_btn.clicked.connect(self._on_render_clicked)
                 bottom_layout.addWidget(self.render_btn)
                 
                 self.layout().addLayout(bottom_layout)
+                
+                # Initialize progress manager
+                self.progress_manager = PanelProgressManager(self.progress_bar, self.info_label)
             
             def _connect_signals(self):
                 """Connect signals between models and views."""
                 # Connect table model changes to console logging
                 self.table_model.dataChanged.connect(self._on_table_data_changed)
+                
+                # Connect table model loading signals to progress manager
+                self.table_model.loadingStarted.connect(self._on_loading_started)
+                self.table_model.loadingFinished.connect(self._on_loading_finished)
+                self.table_model.loadingProgress.connect(self._on_loading_progress)
                 
                 # Connect GSV model changes to console logging
                 if self.gsv_view:
@@ -218,19 +249,14 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.settings_model.machineSettingsChanged.connect(self._on_machine_settings_changed)
                 self.settings_model.extraSettingsChanged.connect(self._on_extra_settings_changed)
                 
-                logger.info("Signals connected between models and views")
+                logger.info("Signals connected between models, views, and progress manager")
             
-            def _load_sample_data(self):
-                """Load sample data for demonstration."""
-                from .sample_data import SAMPLE_TABLE_DATA
+            def _load_initial_data(self):
+                """Load initial node data from Nuke script."""
+                # Auto-refresh on panel initialization using QTimer to avoid blocking
+                QtCore.QTimer.singleShot(100, self._refresh_node_data)
                 
-                self.table_model.set_data(SAMPLE_TABLE_DATA)
-                
-                # Log sample data loading
-                self.console_view.log_info("Sample table data loaded")
-                self.console_view.log_info(f"Loaded {len(SAMPLE_TABLE_DATA)} rows with explicit values")
-                
-                logger.info("Sample data loaded into models")
+                logger.info("Scheduled initial node data refresh")
             
             def _is_nuke_15_1_or_later(self):
                 """Check if Nuke version is 15.1 or later."""
@@ -272,6 +298,35 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_render_clicked(self):
                 """Handle render button click - show development message."""
                 nuke.message("Nuke to Deadline panel is still under development.\n\nUse the \"Submit Write Nodes to Deadline\" feature from the render menu.")
+            
+            # Progress and data loading handlers
+            def _refresh_node_data(self):
+                """Refresh node data from the current Nuke script."""
+                if self.progress_manager.is_busy():
+                    logger.warning("Cannot refresh node data while another operation is in progress")
+                    return
+                
+                self.console_view.log_info("Refreshing node data from script...")
+                self.table_model.refresh_from_nodes_async()
+            
+            def _on_loading_started(self):
+                """Handle start of data loading operation."""
+                self.progress_manager.start_operation("Loading node data")
+                self.update_btn.setEnabled(False)  # Disable update button during loading
+                self.console_view.log_info("Started loading node data from script")
+            
+            def _on_loading_finished(self):
+                """Handle completion of data loading operation."""
+                self.progress_manager.finish_operation(success=True, final_message="Node data loaded successfully")
+                self.update_btn.setEnabled(True)  # Re-enable update button
+                
+                # Log completion with node count
+                node_count = self.table_model.get_row_count()
+                self.console_view.log_info(f"Node data loading completed - {node_count} nodes loaded")
+            
+            def _on_loading_progress(self, progress_percent, status_message):
+                """Handle progress updates during data loading."""
+                self.progress_manager.update_progress(progress_percent, status_message)
             
             # Public API methods for external access
             def get_table_model(self):

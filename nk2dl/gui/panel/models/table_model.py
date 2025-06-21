@@ -44,10 +44,14 @@ class TableDataModel(QtCore.QObject):
     - Settings inheritance (empty cells inherit from job/machine settings)
     - Override detection (explicit values override settings)
     - Change notifications
+    - Real node data integration with background loading
     """
     
     # Signals
     dataChanged = QtCore.Signal()
+    loadingStarted = QtCore.Signal()
+    loadingFinished = QtCore.Signal()
+    loadingProgress = QtCore.Signal(int, str)
     
     def __init__(self, settings_model=None, parent=None):
         super().__init__(parent)
@@ -58,6 +62,10 @@ class TableDataModel(QtCore.QObject):
         # Column visibility tracking
         self._visible_columns = set(self._headers)  # All columns visible by default
         
+        # Repository integration
+        self._node_data_provider = None
+        self._settings_storage = None
+        
     def set_settings_model(self, settings_model):
         """Set the settings model for inheritance.
         
@@ -67,6 +75,114 @@ class TableDataModel(QtCore.QObject):
         self.settings_model = settings_model
         # Emit data changed to refresh display with inherited values
         self.dataChanged.emit()
+    
+    def set_node_data_provider(self, node_data_provider):
+        """Set the node data provider for real data integration.
+        
+        Args:
+            node_data_provider: The NodeDataProvider instance
+        """
+        self._node_data_provider = node_data_provider
+        
+        # Connect signals
+        if self._node_data_provider:
+            self._node_data_provider.dataReady.connect(self._on_data_ready)
+            self._node_data_provider.progressUpdate.connect(self._on_progress_update)
+            self._node_data_provider.errorOccurred.connect(self._on_error_occurred)
+    
+    def set_settings_storage(self, settings_storage):
+        """Set the settings storage for persistence.
+        
+        Args:
+            settings_storage: The NodeSettingsStorage instance
+        """
+        self._settings_storage = settings_storage
+    
+    def refresh_from_nodes_async(self):
+        """Refresh table data from real Nuke nodes asynchronously.
+        
+        This method triggers background loading of node data and merges it
+        with any existing user overrides.
+        """
+        if not self._node_data_provider:
+            return
+        
+        self.loadingStarted.emit()
+        self._node_data_provider.refresh_data_async()
+    
+    def _on_data_ready(self, node_data_list):
+        """Handle completion of node data extraction.
+        
+        Args:
+            node_data_list: List of extracted node data dictionaries
+        """
+        try:
+            # Merge node data with stored overrides
+            merged_data = self._merge_node_data_with_overrides(node_data_list)
+            
+            # Update table data
+            self._data = merged_data
+            
+            # Emit signals
+            self.dataChanged.emit()
+            self.loadingFinished.emit()
+            
+        except Exception as e:
+            # Handle errors gracefully
+            self._on_error_occurred(f"Error processing node data: {str(e)}")
+    
+    def _on_progress_update(self, progress_percent, status_message):
+        """Handle progress updates from node data provider.
+        
+        Args:
+            progress_percent: Progress percentage (0-100)
+            status_message: Status message
+        """
+        self.loadingProgress.emit(progress_percent, status_message)
+    
+    def _on_error_occurred(self, error_message):
+        """Handle errors from node data provider.
+        
+        Args:
+            error_message: Error message
+        """
+        # For now, just finish loading - could be enhanced to show error state
+        self.loadingFinished.emit()
+        # Could emit a separate error signal if needed
+    
+    def _merge_node_data_with_overrides(self, node_data_list):
+        """Merge fresh node data with stored user overrides.
+        
+        Args:
+            node_data_list: List of fresh node data from provider
+            
+        Returns:
+            List of merged data dictionaries
+        """
+        # Get stored overrides
+        node_overrides = {}
+        if self._settings_storage:
+            node_names = [node_data.get('Node', '') for node_data in node_data_list]
+            node_overrides = self._settings_storage.sync_with_current_nodes(node_names)
+        
+        # Merge data
+        merged_data = []
+        for node_data in node_data_list:
+            node_name = node_data.get('Node', '')
+            
+            # Start with fresh node data
+            merged_row = node_data.copy()
+            
+            # Apply any stored overrides
+            if node_name in node_overrides:
+                overrides = node_overrides[node_name]
+                for column, override_value in overrides.items():
+                    if override_value is not None:  # None means inherit
+                        merged_row[column] = override_value
+            
+            merged_data.append(merged_row)
+        
+        return merged_data
         
     def set_data(self, data):
         """Set the table data.
@@ -290,8 +406,68 @@ class TableDataModel(QtCore.QObject):
         
         if old_value != value:
             self._data[row][header] = value
+            
+            # Handle special cases for certain columns
+            if header == "Order":
+                # Update the actual node's render_order knob
+                self._update_node_render_order(row, value)
+            
+            # Persist the override to storage
+            if self._settings_storage and header not in ["Node", "Filename"]:
+                node_name = self._data[row].get("Node", "")
+                if node_name:
+                    self._settings_storage.set_node_override(node_name, header, value)
+            
             if emit_signal:
                 self.dataChanged.emit()
+    
+    def _update_node_render_order(self, row, order_value):
+        """Update the render_order knob on the actual Nuke node.
+        
+        Args:
+            row: Table row index
+            order_value: New render order value
+        """
+        try:
+            # Import here to avoid circular imports
+            from ....nuke.utils import nuke_module
+            
+            node_name = self._data[row].get("Node", "")
+            if not node_name:
+                return
+            
+            nuke = nuke_module()
+            
+            # Find the node
+            node = None
+            for n in nuke.allNodes():
+                if n.name() == node_name:
+                    node = n
+                    break
+            
+            if not node:
+                return
+            
+            # Update or create render_order knob
+            if 'render_order' in node.knobs():
+                if order_value is not None:
+                    try:
+                        node['render_order'].setValue(int(order_value))
+                    except (ValueError, TypeError):
+                        node['render_order'].setValue(1000)  # Default fallback
+            else:
+                # Create the knob if it doesn't exist
+                try:
+                    render_order_knob = nuke.Int_Knob('render_order', 'Render Order')
+                    order_int = int(order_value) if order_value else 1000
+                    render_order_knob.setValue(order_int)
+                    node.addKnob(render_order_knob)
+                except Exception:
+                    pass  # Silently fail if we can't create the knob
+                    
+        except Exception:
+            # Silently handle any errors - this is a convenience feature
+            pass
     
     def clear_cell_value(self, row, column):
         """Clear a cell value to revert to inheritance.
@@ -301,6 +477,27 @@ class TableDataModel(QtCore.QObject):
             column (int): Column index
         """
         self.set_cell_value(row, column, None)
+    
+    def is_column_editable(self, column):
+        """Check if a column is editable by the user.
+        
+        Args:
+            column (int): Column index
+            
+        Returns:
+            bool: True if column is editable
+        """
+        if column < 0 or column >= len(self._headers):
+            return False
+        
+        header = self._headers[column]
+        
+        # Node and Filename are read-only (extracted from nodes)
+        if header in ["Node", "Filename"]:
+            return False
+        
+        # All other columns are editable
+        return True
     
     def is_dropdown_column(self, column):
         """Check if a column is a dropdown column.
