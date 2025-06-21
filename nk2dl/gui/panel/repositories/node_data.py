@@ -150,8 +150,9 @@ class NodeDataProvider(QtCore.QObject):
                     progress = 50 + int((i + 1) / len(write_nodes_data) * 50)
                     self.progressUpdate.emit(progress, f"Extracting data from {node_data['name']}...")
                     
-                    # Small delay for cancellation responsiveness
-                    time.sleep(0.05)
+                    # Only add delay every 10 nodes for cancellation responsiveness  
+                    if i % 10 == 0:
+                        time.sleep(0.01)
                     
                 except Exception as e:
                     logger.warning(f"Error extracting data from node {node_data['name']}: {e}")
@@ -206,7 +207,6 @@ class NodeDataProvider(QtCore.QObject):
                             'name': node.name(),
                             'class': node.Class()
                         })
-                        logger.debug(f"Found write node: {node.name()} ({node.Class()})")
             
             logger.info(f"Discovered {len(write_nodes_data)} enabled write nodes")
             return write_nodes_data
@@ -255,7 +255,6 @@ class NodeDataProvider(QtCore.QObject):
                 "Limits": None
             }
             
-            logger.debug(f"Extracted data for node {node_name}: {node_data}")
             return node_data
             
         except Exception as e:
@@ -279,10 +278,20 @@ class NodeDataProvider(QtCore.QObject):
             Just the filename part of the file path
         """
         try:
-            # Use the existing utility function
+            # Fast path: get raw file path first
+            if 'file' not in node.knobs():
+                return ""
+            
+            raw_path = node['file'].value()
+            if raw_path:
+                # Get basename of raw path first (faster)
+                filename = os.path.basename(raw_path)
+                if filename:
+                    return filename
+            
+            # Fallback to the more expensive pretty path function if needed
             full_path = node_pretty_path(node)
             if full_path:
-                # Return just the basename (filename)
                 return os.path.basename(full_path)
             return ""
         except Exception as e:
@@ -302,8 +311,12 @@ class NodeDataProvider(QtCore.QObject):
             # Check if render order knob exists
             if 'render_order' in node.knobs():
                 order = node['render_order'].value()
-                if order and str(order).strip():
-                    return str(order)
+                if order is not None:
+                    # Convert float to int if needed, then to string
+                    try:
+                        return str(int(float(order)))
+                    except (ValueError, TypeError):
+                        pass
             else:
                 # Create render_order knob if it doesn't exist
                 try:
