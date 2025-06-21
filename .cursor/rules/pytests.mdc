@@ -1,0 +1,11 @@
+---
+description: 
+globs: pytest*,conftest*
+alwaysApply: false
+---
+When running pytest tests, we must be in the correct environment. Set the environment first:
+
+.\.venv\Scripts\Activate-nk2dl.ps1 (Windows)
+
+
+Never create a nuke mock module.

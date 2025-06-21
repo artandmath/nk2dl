@@ -1,0 +1,50 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Logical Git Check-ins Rule
+
+## Commit Structure and Atomicity
+- Each commit must represent a single, complete, logical change
+- Commits should be atomic: if reverted, they should cleanly undo one specific feature/fix/change
+- Large features should be broken down into multiple logical commits, each building incrementally
+- Avoid mixing unrelated changes (e.g., bug fixes with new features) in the same commit
+
+## Commit Message Standards
+- Use conventional commit format: `type(scope): description`
+- Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build
+- Keep the first line under 50 characters
+- Use imperative mood: "Add feature" not "Added feature" or "Adding feature"
+- Include detailed explanation in body for complex changes
+- Reference issue numbers when applicable: "Fixes #123" or "Relates to #456"
+
+## Pre-commit Validation
+- Ensure code compiles/runs without errors
+- All tests should pass before committing
+- Remove debug code, console.log statements, temporary comments, and unused imports
+- Verify no sensitive information (API keys, passwords, personal data) is included
+- Check that formatting follows project style guidelines
+- Ensure no large binary files or build artifacts are accidentally committed
+
+## Code Quality Standards
+- Each commit should maintain or improve code quality
+- Include tests for new functionality when appropriate
+- Update documentation if the change affects user-facing behavior
+- Ensure backwards compatibility or clearly document breaking changes
+- Add meaningful comments for complex logic introduced in the commit
+
+## Incremental Development
+- Make frequent, small commits rather than large, infrequent ones
+- Each commit should tell a story of the development process
+- Intermediate commits should leave the codebase in a working state
+- Use meaningful branch names that reflect the work being done
+
+## Review and Cleanup
+- Review your own changes before committing (git diff --staged)
+- Consider squashing fixup commits before pushing to main branches
+- Ensure commit history is clean and tells a coherent story
+- Remove or squash "work in progress" or "temporary" commits before merging
+
+
+This rule ensures that every commit is meaningful, reviewable, and contributes to a clean project history that future developers (including yourself) will appreciate. 

@@ -35,7 +35,7 @@ venv.bak/
 *.swp
 *.swo
 *~
-.cursor/
+#.cursor/
 
 # Nuke
 *.nk~
@@ -48,7 +48,7 @@ venv.bak/
 /tests/nukescripts/render_output/*
 
 # Project specific
-plan/
+# plan/
 sandbox/
 logs/
 *.log
