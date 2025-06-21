@@ -75,9 +75,8 @@ class PanelProgressManager:
         if self.info_label:
             self._original_info_text = self.info_label.text()
         
-        # Show and reset progress bar
+        # Reset progress bar
         if self.progress_bar:
-            self.progress_bar.setVisible(True)
             self.progress_bar.setValue(0)
         
         # Set initial status message
@@ -167,9 +166,8 @@ class PanelProgressManager:
         """Reset the UI to its original state."""
         self._is_busy = False
         
-        # Hide progress bar
+        # Reset progress bar to empty but keep it visible
         if self.progress_bar:
-            self.progress_bar.setVisible(False)
             self.progress_bar.setValue(0)
         
         # Restore original info text

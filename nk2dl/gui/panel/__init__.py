@@ -189,7 +189,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.layout().setStretchFactor(self.tab_widget, 1)     # Table area stretches
             
             def _create_bottom_controls(self):
-                """Create the bottom controls with version text, info label, progress bar, update button and render button."""
+                """Create the bottom controls with version text, info label, progress bar and render button."""
                 bottom_layout = QtWidgets.QHBoxLayout()
                 
                 # Version label on the left
@@ -205,18 +205,11 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 # Add stretch to push controls to the right
                 bottom_layout.addStretch()
                 
-                # Progress bar (initially hidden)
+                # Progress bar (always visible)
                 self.progress_bar = QtWidgets.QProgressBar()
                 self.progress_bar.setRange(0, 100)
                 self.progress_bar.setValue(0)
-                self.progress_bar.setVisible(False)  # Hidden by default
                 bottom_layout.addWidget(self.progress_bar)
-                
-                # Update button
-                self.update_btn = QtWidgets.QPushButton("Update Nodes")
-                self.update_btn.setStyleSheet("QPushButton { background-color: #5cb85c; color: white; font-weight: bold; padding: 4px 8px; }")
-                self.update_btn.clicked.connect(self._refresh_node_data)
-                bottom_layout.addWidget(self.update_btn)
                 
                 # Render button
                 self.render_btn = QtWidgets.QPushButton("Render")
@@ -312,13 +305,17 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_loading_started(self):
                 """Handle start of data loading operation."""
                 self.progress_manager.start_operation("Loading node data")
-                self.update_btn.setEnabled(False)  # Disable update button during loading
+                # Disable update button during loading
+                if hasattr(self.node_settings_view, 'update_btn'):
+                    self.node_settings_view.update_btn.setEnabled(False)
                 self.console_view.log_info("Started loading node data from script")
             
             def _on_loading_finished(self):
                 """Handle completion of data loading operation."""
                 self.progress_manager.finish_operation(success=True, final_message="Node data loaded successfully")
-                self.update_btn.setEnabled(True)  # Re-enable update button
+                # Re-enable update button
+                if hasattr(self.node_settings_view, 'update_btn'):
+                    self.node_settings_view.update_btn.setEnabled(True)
                 
                 # Log completion with node count
                 node_count = self.table_model.get_row_count()

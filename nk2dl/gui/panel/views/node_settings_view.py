@@ -350,10 +350,15 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _on_update_clicked(self):
         """Handle update button click."""
-        if NUKE_AVAILABLE:
-            nuke.message('Update functionality will be implemented in the final integration phase.')
+        # Trigger refresh through the table model
+        if hasattr(self.table_model, 'refresh_from_nodes_async'):
+            self.table_model.refresh_from_nodes_async()
         else:
-            print("Update functionality will be implemented in the final integration phase.")
+            # Fallback message if real functionality not available
+            if NUKE_AVAILABLE:
+                nuke.message('Update functionality will be implemented in the final integration phase.')
+            else:
+                print("Update functionality will be implemented in the final integration phase.")
     
     def _on_all_clicked(self):
         """Handle all button click."""
