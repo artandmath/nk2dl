@@ -13,15 +13,14 @@ Modules:
 
 Usage:
     # Check if panel is available (requires Nuke + PySide)
-    from nk2dl.gui.panel import get_panel_availability
     available, error = get_panel_availability()
     
     if available:
-        from nk2dl.gui.panel import Nk2dlPanel, register_panel
-        register_panel()  # Explicitly register the panel
+        panel = Nk2dlPanel()  # Create panel instance
+        register_panel()      # Register the panel
     
-    # Constants are always available
-    from nk2dl.gui.panel.constants import Settings, Colors, Sizes
+    # Constants are available from submodules
+    # from .constants import Settings, Colors, Sizes
 """
 
 __version__ = "0.1.0"

@@ -36,7 +36,7 @@ except ImportError:
 from ..widgets import ColoredGroupBox
 from ..constants import Settings, Sizes, GSVDefaults
 from ..config import apply_panel_config
-from ...common.logging import setup_logging
+from ....common.logging import setup_logging
 
 # Create logger for this module
 logger = setup_logging('nk2dl.gui.panel.views.node_settings_view')

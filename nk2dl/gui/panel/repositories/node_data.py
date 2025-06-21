@@ -17,22 +17,30 @@ from ....nuke.utils import nuke_module, node_pretty_path
 from ..constants import TableColumns
 
 try:
-    from PySide2 import QtCore
+    import nuke
+    NUKE_AVAILABLE = True
+    
+    # Detect Nuke version and import appropriate PySide
+    nuke_version = nuke.NUKE_VERSION_MAJOR
+    if nuke_version >= 16:
+        from PySide6 import QtCore
+        PYSIDE_VERSION = "PySide6"
+    else:
+        from PySide2 import QtCore
+        PYSIDE_VERSION = "PySide2"
+        
 except ImportError:
+    NUKE_AVAILABLE = False
+    # Fallback imports for testing without Nuke
     try:
         from PySide6 import QtCore
+        PYSIDE_VERSION = "PySide6"
     except ImportError:
-        # Fallback for testing
-        class QtCore:
-            class QObject:
-                pass
-            class Signal:
-                def __init__(self, *args):
-                    pass
-                def emit(self, *args):
-                    pass
-                def connect(self, func):
-                    pass
+        try:
+            from PySide2 import QtCore
+            PYSIDE_VERSION = "PySide2"
+        except ImportError:
+            raise ImportError("Neither PySide6 nor PySide2 is available")
 
 logger = setup_logging('nk2dl.gui.panel.repositories.node_data')
 

@@ -10,26 +10,30 @@ from typing import Optional
 from ....common.logging import setup_logging
 
 try:
-    from PySide2 import QtCore, QtWidgets
+    import nuke
+    NUKE_AVAILABLE = True
+    
+    # Detect Nuke version and import appropriate PySide
+    nuke_version = nuke.NUKE_VERSION_MAJOR
+    if nuke_version >= 16:
+        from PySide6 import QtCore, QtWidgets
+        PYSIDE_VERSION = "PySide6"
+    else:
+        from PySide2 import QtCore, QtWidgets
+        PYSIDE_VERSION = "PySide2"
+        
 except ImportError:
+    NUKE_AVAILABLE = False
+    # Fallback imports for testing without Nuke
     try:
         from PySide6 import QtCore, QtWidgets
+        PYSIDE_VERSION = "PySide6"
     except ImportError:
-        # Fallback for testing
-        class QtCore:
-            class QTimer:
-                @staticmethod
-                def singleShot(ms, callback):
-                    pass
-        class QtWidgets:
-            class QProgressBar:
-                def setVisible(self, visible):
-                    pass
-                def setValue(self, value):
-                    pass
-            class QLabel:
-                def setText(self, text):
-                    pass
+        try:
+            from PySide2 import QtCore, QtWidgets
+            PYSIDE_VERSION = "PySide2"
+        except ImportError:
+            raise ImportError("Neither PySide6 nor PySide2 is available")
 
 logger = setup_logging('nk2dl.gui.panel.controllers.progress')
 

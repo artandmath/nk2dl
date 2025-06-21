@@ -8,7 +8,32 @@ for generating enhanced tooltips with configuration information.
 import os
 from pathlib import Path
 from typing import Optional, Any
-from PySide2 import QtWidgets, QtCore
+
+try:
+    import nuke
+    NUKE_AVAILABLE = True
+    
+    # Detect Nuke version and import appropriate PySide
+    nuke_version = nuke.NUKE_VERSION_MAJOR
+    if nuke_version >= 16:
+        from PySide6 import QtWidgets, QtCore
+        PYSIDE_VERSION = "PySide6"
+    else:
+        from PySide2 import QtWidgets, QtCore
+        PYSIDE_VERSION = "PySide2"
+        
+except ImportError:
+    NUKE_AVAILABLE = False
+    # Fallback imports for testing without Nuke
+    try:
+        from PySide6 import QtWidgets, QtCore
+        PYSIDE_VERSION = "PySide6"
+    except ImportError:
+        try:
+            from PySide2 import QtWidgets, QtCore
+            PYSIDE_VERSION = "PySide2"
+        except ImportError:
+            raise ImportError("Neither PySide6 nor PySide2 is available")
 
 from nk2dl.common.logging import setup_logging
 from nk2dl.common.config import config
