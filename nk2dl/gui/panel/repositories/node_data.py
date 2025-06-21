@@ -55,12 +55,14 @@ class NodeDataProvider(QtCore.QObject):
         dataReady (list): Emitted when node data extraction is complete
         progressUpdate (int, str): Emitted with progress percentage and status message
         errorOccurred (str): Emitted when an error occurs during extraction
+        debugInfo (str): Emitted with debug information for troubleshooting
     """
     
     # Qt Signals
     dataReady = QtCore.Signal(list)
     progressUpdate = QtCore.Signal(int, str)
     errorOccurred = QtCore.Signal(str)
+    debugInfo = QtCore.Signal(str)
     
     def __init__(self, parent=None):
         """Initialize the node data provider.
@@ -73,6 +75,8 @@ class NodeDataProvider(QtCore.QObject):
         self._current_thread = None
         
         logger.debug("NodeDataProvider initialized")
+    
+
     
     def refresh_data_async(self):
         """Start background thread to refresh node data.
@@ -117,6 +121,7 @@ class NodeDataProvider(QtCore.QObject):
         """
         try:
             logger.debug("Starting node data extraction in background thread")
+            logger.debug(f"Thread ID: {threading.get_ident()}")
             
             # Phase 1: Discovery (50% of progress)
             self.progressUpdate.emit(0, "Discovering write nodes...")
@@ -126,7 +131,9 @@ class NodeDataProvider(QtCore.QObject):
                 return
             
             # Get write nodes from main thread
+            logger.debug("Calling _get_write_nodes_data_sync() for node discovery")
             write_nodes_data = self._get_write_nodes_data_sync()
+            logger.debug(f"Node discovery completed, found {len(write_nodes_data)} write nodes")
             
             if self._should_cancel:
                 logger.debug("Operation cancelled after node discovery")
@@ -142,6 +149,7 @@ class NodeDataProvider(QtCore.QObject):
                 return
             
             # Phase 2: Data extraction (50% of progress)
+            logger.debug("Starting data extraction phase")
             extracted_data = []
             
             for i, node_data in enumerate(write_nodes_data):
@@ -150,9 +158,11 @@ class NodeDataProvider(QtCore.QObject):
                     return
                 
                 # Extract data for this node
+                logger.debug(f"Processing node {i+1}/{len(write_nodes_data)}: {node_data['name']}")
                 try:
                     extracted_node_data = self._extract_node_data(node_data['node'], node_data['name'])
                     extracted_data.append(extracted_node_data)
+                    logger.debug(f"Successfully extracted data for node {node_data['name']}")
                     
                     # Update progress (50% base + 50% * progress through nodes)
                     progress = 50 + int((i + 1) / len(write_nodes_data) * 50)
@@ -163,7 +173,7 @@ class NodeDataProvider(QtCore.QObject):
                         time.sleep(0.01)
                     
                 except Exception as e:
-                    logger.warning(f"Error extracting data from node {node_data['name']}: {e}")
+                    logger.error(f"Error extracting data from node {node_data['name']}: {e}", exc_info=True)
                     # Continue with next node instead of failing completely
                     continue
             
@@ -171,9 +181,17 @@ class NodeDataProvider(QtCore.QObject):
                 logger.debug("Operation cancelled after data extraction")
                 return
             
+            logger.debug(f"Data extraction phase completed, extracted data for {len(extracted_data)} nodes")
             self.progressUpdate.emit(100, f"Extraction complete - {len(extracted_data)} nodes processed")
             
+            # Log a summary of extracted data
+            logger.debug("=== EXTRACTION SUMMARY ===")
+            for i, data in enumerate(extracted_data):
+                summary_msg = f"Node {i+1}: {data.get('Node', 'Unknown')} - Order: {data.get('Order', 'Unknown')} - Filename: {data.get('Filename', 'Unknown')}"
+                logger.debug(summary_msg)
+            
             # Emit results
+            logger.debug("Emitting dataReady signal with extracted data")
             self.dataReady.emit(extracted_data)
             logger.info(f"Node data extraction completed successfully - {len(extracted_data)} nodes")
             
@@ -199,24 +217,41 @@ class NodeDataProvider(QtCore.QObject):
             
             # Find all write nodes
             write_nodes_data = []
+            all_nodes = nuke.allNodes()
+            logger.debug(f"Total nodes in script: {len(all_nodes)}")
             
-            for node in nuke.allNodes():
+            for node in all_nodes:
+                logger.debug(f"Checking node: {node.name()} (class: {node.Class()})")
+                
                 if node.Class() in write_node_types:
+                    logger.debug(f"Node {node.name()} is a write node type")
+                    
                     # Check if node is disabled
                     disabled = False
                     try:
                         disabled = node['disable'].value()
-                    except:
+                        logger.debug(f"Node {node.name()}: disabled = {disabled}")
+                    except Exception as e:
+                        logger.debug(f"Node {node.name()}: no disable knob or error checking: {e}")
                         pass  # Some nodes might not have disable knob
                     
                     if not disabled:
-                        write_nodes_data.append({
+                        node_info = {
                             'node': node,
                             'name': node.name(),
                             'class': node.Class()
-                        })
+                        }
+                        write_nodes_data.append(node_info)
+                        logger.debug(f"Added enabled write node: {node.name()} (class: {node.Class()})")
+                    else:
+                        logger.debug(f"Skipped disabled write node: {node.name()}")
+                else:
+                    logger.debug(f"Node {node.name()} is not a write node type (class: {node.Class()})")
             
             logger.info(f"Discovered {len(write_nodes_data)} enabled write nodes")
+            for node_info in write_nodes_data:
+                logger.debug(f"Final write node list: {node_info['name']} (class: {node_info['class']})")
+                
             return write_nodes_data
             
         except Exception as e:
@@ -234,11 +269,19 @@ class NodeDataProvider(QtCore.QObject):
             Dictionary containing extracted node data
         """
         try:
+            logger.debug(f"Extracting data from node: {node_name}")
+            
+            # Get render order
+            render_order = self._get_render_order(node)
+            
+            # Get filename
+            filename = self._get_filename_only(node)
+            
             # Initialize with default values (None means inherit from settings)
             node_data = {
-                "Order": self._get_render_order(node),
+                "Order": render_order,
                 "Node": node_name,
-                "Filename": self._get_filename_only(node),
+                "Filename": filename,
                 "Priority": None,
                 "ChunkSize": None,
                 "Frames": None,
@@ -263,18 +306,21 @@ class NodeDataProvider(QtCore.QObject):
                 "Limits": None
             }
             
+            logger.debug(f"Extracted data for {node_name}: Order={render_order}, Filename={filename}")
             return node_data
             
         except Exception as e:
-            logger.warning(f"Error extracting data from node {node_name}: {e}")
+            logger.error(f"Error extracting data from node {node_name}: {e}", exc_info=True)
             # Return minimal data with just node name
-            return {
+            fallback_data = {
                 "Order": "1000",  # Default order
                 "Node": node_name,
                 "Filename": "",
                 # All other values will be None (inherited)
                 **{col: None for col in TableColumns.HEADERS[3:]},  # Skip Order, Node, Filename
             }
+            logger.debug(f"Using fallback data for {node_name}: Order=1000, Filename=''")
+            return fallback_data
     
     def _get_filename_only(self, node) -> str:
         """Get the filename from a write node's file path.
@@ -289,16 +335,28 @@ class NodeDataProvider(QtCore.QObject):
             Just the filename part of the file path with frame patterns restored
         """
         try:
+            logger.debug(f"Getting filename for node: {node.name()}")
+            
             if 'file' not in node.knobs():
+                logger.debug(f"Node {node.name()}: no 'file' knob found")
                 return ""
+            
+            logger.debug(f"Node {node.name()}: 'file' knob exists, extracting path")
             
             # Use the existing pretty path function that handles evaluate() and pattern restoration
             full_path = node_pretty_path(node)
+            logger.debug(f"Node {node.name()}: full_path from node_pretty_path = '{full_path}'")
+            
             if full_path:
-                return os.path.basename(full_path)
-            return ""
+                filename = os.path.basename(full_path)
+                logger.debug(f"Node {node.name()}: extracted filename = '{filename}'")
+                return filename
+            else:
+                logger.debug(f"Node {node.name()}: node_pretty_path returned empty/None")
+                return ""
+                
         except Exception as e:
-            logger.warning(f"Error getting filename from node {node.name()}: {e}")
+            logger.error(f"Error getting filename from node {node.name()}: {e}", exc_info=True)
             return ""
     
     def _get_render_order(self, node) -> str:
@@ -311,15 +369,29 @@ class NodeDataProvider(QtCore.QObject):
             Render order as string
         """
         try:
+            logger.debug(f"Getting render order for node: {node.name()}")
+            
             # Check if render order knob exists
             if 'render_order' in node.knobs():
                 order = node['render_order'].value()
+                
                 if order is not None:
                     # Convert float to int if needed, then to string
                     try:
-                        return str(int(float(order)))
-                    except (ValueError, TypeError):
-                        pass
+                        # Handle different numeric types
+                        if isinstance(order, (int, float)):
+                            order_int = int(order)
+                            order_str = str(order_int)
+                            return order_str
+                        else:
+                            # Try to parse as string
+                            order_float = float(str(order))
+                            order_int = int(order_float)
+                            order_str = str(order_int)
+                            return order_str
+                    except (ValueError, TypeError) as e:
+                        logger.debug(f"Could not convert render_order '{order}' to int: {e}")
+                        # Fall through to default handling
             else:
                 # Create render_order knob if it doesn't exist
                 try:
@@ -328,7 +400,7 @@ class NodeDataProvider(QtCore.QObject):
                     render_order_knob = nuke.Int_Knob('render_order', 'Render Order')
                     render_order_knob.setValue(1000)  # Default value
                     node.addKnob(render_order_knob)
-                    logger.debug(f"Created render_order knob on node {node.name()}")
+                    logger.debug(f"Created render_order knob on node {node.name()} with default value 1000")
                     return "1000"
                 except Exception as e:
                     logger.warning(f"Could not create render_order knob on node {node.name()}: {e}")
@@ -337,7 +409,7 @@ class NodeDataProvider(QtCore.QObject):
             return "1000"
             
         except Exception as e:
-            logger.warning(f"Error getting render order from node {node.name()}: {e}")
+            logger.error(f"Error getting render order from node {node.name()}: {e}", exc_info=True)
             return "1000"
     
     def _get_write_node_types(self) -> List[str]:

@@ -231,6 +231,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.table_model.loadingFinished.connect(self._on_loading_finished)
                 self.table_model.loadingProgress.connect(self._on_loading_progress)
                 
+                # Connect debug information from table model
+                self.table_model.debugInfo.connect(self._on_debug_info)
+                
                 # Connect GSV model changes to console logging
                 if self.gsv_view:
                     self.gsv_model.hierarchyChanged.connect(self._on_gsv_hierarchy_changed)
@@ -323,6 +326,15 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_loading_progress(self, progress_percent, status_message):
                 """Handle progress updates during data loading."""
                 self.progress_manager.update_progress(progress_percent, status_message)
+            
+            def _on_debug_info(self, debug_message):
+                """Handle debug information from background threads.
+                
+                Args:
+                    debug_message: Debug message from the background thread
+                """
+                # Display debug info in console view using log_info
+                self.console_view.log_info(f"DEBUG: {debug_message}")
             
             # Public API methods for external access
             def get_table_model(self):

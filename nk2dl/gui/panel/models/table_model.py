@@ -52,6 +52,7 @@ class TableDataModel(QtCore.QObject):
     loadingStarted = QtCore.Signal()
     loadingFinished = QtCore.Signal()
     loadingProgress = QtCore.Signal(int, str)
+    debugInfo = QtCore.Signal(str)
     
     def __init__(self, settings_model=None, parent=None):
         super().__init__(parent)
@@ -89,6 +90,7 @@ class TableDataModel(QtCore.QObject):
             self._node_data_provider.dataReady.connect(self._on_data_ready)
             self._node_data_provider.progressUpdate.connect(self._on_progress_update)
             self._node_data_provider.errorOccurred.connect(self._on_error_occurred)
+            self._node_data_provider.debugInfo.connect(self._on_debug_info)
     
     def set_settings_storage(self, settings_storage):
         """Set the settings storage for persistence.
@@ -150,6 +152,15 @@ class TableDataModel(QtCore.QObject):
         self.loadingFinished.emit()
         # Could emit a separate error signal if needed
     
+    def _on_debug_info(self, debug_message):
+        """Handle debug information from node data provider.
+        
+        Args:
+            debug_message: Debug message from the provider
+        """
+        # Re-emit to UI components
+        self.debugInfo.emit(debug_message)
+    
     def _merge_node_data_with_overrides(self, node_data_list):
         """Merge fresh node data with stored user overrides.
         
@@ -167,7 +178,7 @@ class TableDataModel(QtCore.QObject):
         
         # Merge data
         merged_data = []
-        for node_data in node_data_list:
+        for i, node_data in enumerate(node_data_list):
             node_name = node_data.get('Node', '')
             
             # Start with fresh node data
@@ -178,7 +189,10 @@ class TableDataModel(QtCore.QObject):
                 overrides = node_overrides[node_name]
                 for column, override_value in overrides.items():
                     if override_value is not None:  # None means inherit
+                        old_value = merged_row.get(column)
                         merged_row[column] = override_value
+            else:
+                pass  # No overrides found for this node
             
             merged_data.append(merged_row)
         
@@ -268,7 +282,9 @@ class TableDataModel(QtCore.QObject):
                 return str(value)  # Empty strings are explicit values
         
         # Otherwise, try to inherit from settings
-        return self._get_inherited_value(column)
+        inherited_value = self._get_inherited_value(column)
+        
+        return inherited_value
     
     def _get_inherited_value(self, column):
         """Get inherited value from settings for a column.

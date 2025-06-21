@@ -178,6 +178,17 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _load_data_from_model(self):
         """Load data from the model into the table widget."""
+        # Disable sorting during data loading to prevent sorting synchronization
+        # from interfering with initial data population. The FrozenTableWidget
+        # has complex sorting sync between main and frozen tables that can corrupt
+        # data display if triggered during loading.
+        sorting_enabled = self.render_table.isSortingEnabled()
+        frozen_sorting_enabled = False
+        if hasattr(self.render_table, 'frozen_table'):
+            frozen_sorting_enabled = self.render_table.frozen_table.isSortingEnabled()
+            self.render_table.frozen_table.setSortingEnabled(False)
+        self.render_table.setSortingEnabled(False)
+        
         # Block signals during loading to prevent unwanted updates
         self.render_table.blockSignals(True)
         
@@ -223,6 +234,12 @@ class NodeSettingsView(QtWidgets.QWidget):
         finally:
             # Re-enable signals after loading is complete
             self.render_table.blockSignals(False)
+            
+            # Re-enable sorting after data loading is complete
+            # This prevents sorting synchronization issues during data population
+            self.render_table.setSortingEnabled(sorting_enabled)
+            if hasattr(self.render_table, 'frozen_table'):
+                self.render_table.frozen_table.setSortingEnabled(frozen_sorting_enabled)
     
     def _apply_cell_styling(self, item, row, col):
         """Apply styling to table cell items based on override status."""
