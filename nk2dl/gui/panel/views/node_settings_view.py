@@ -36,6 +36,10 @@ except ImportError:
 from ..widgets import ColoredGroupBox
 from ..constants import Settings, Sizes, GSVDefaults
 from ..config import apply_panel_config
+from ...common.logging import setup_logging
+
+# Create logger for this module
+logger = setup_logging('nk2dl.gui.panel.views.node_settings_view')
 
 
 class NodeSettingsView(QtWidgets.QWidget):
@@ -142,13 +146,21 @@ class NodeSettingsView(QtWidgets.QWidget):
         
         # Also apply custom header to frozen table if it exists
         if hasattr(self.render_table, 'frozen_table'):
+            logger.debug(f"Setting up frozen table with {self.render_table.frozen_column_count} frozen columns")
+            
             frozen_custom_header = CustomHeaderView(QtCore.Qt.Horizontal, self.render_table.frozen_table)
             self.render_table.frozen_table.setHorizontalHeader(frozen_custom_header)
             
-            # CRITICAL: Reconnect synchronization signals after replacing headers
-            # The original signals were disconnected when we replaced the headers
-            # Connect the main header's sectionResized signal to the frozen table update method
-            custom_header.sectionResized.connect(self.render_table._update_frozen_section_width)
+            # CRITICAL: Reconnect synchronization after replacing headers
+            # When we replace headers, the original signal connections are broken
+            # Use the FrozenTableWidget's built-in method to restore all synchronization
+            self.render_table.reconnect_frozen_signals()
+            
+            # Force an immediate geometry update and repaint
+            QtCore.QTimer.singleShot(0, self.render_table._update_frozen_table_geometry)
+            QtCore.QTimer.singleShot(50, lambda: self.render_table.frozen_table.update())
+            
+            logger.debug("Frozen table setup completed")
         
         # Connect table signals
         self.render_table.itemChanged.connect(self._on_table_item_changed)
@@ -250,15 +262,25 @@ class NodeSettingsView(QtWidgets.QWidget):
             hasattr(self.render_table, 'frozen_column_count') and
             col < self.render_table.frozen_column_count):
             
-            # Create a copy of the item for the frozen table
-            frozen_item = QtWidgets.QTableWidgetItem(item.text())
-            frozen_item.setData(QtCore.Qt.UserRole, item.data(QtCore.Qt.UserRole))
-            frozen_item.setFont(item.font())
-            frozen_item.setForeground(item.foreground())
-            frozen_item.setBackground(item.background())
-            
-            # Set the item in the frozen table
-            self.render_table.frozen_table.setItem(row, col, frozen_item)
+            try:
+                # Ensure the frozen table has the correct row count
+                if self.render_table.frozen_table.rowCount() <= row:
+                    self.render_table.frozen_table.setRowCount(row + 1)
+                
+                # Create a copy of the item for the frozen table
+                frozen_item = QtWidgets.QTableWidgetItem(item.text())
+                frozen_item.setData(QtCore.Qt.UserRole, item.data(QtCore.Qt.UserRole))
+                frozen_item.setFont(item.font())
+                frozen_item.setForeground(item.foreground())
+                frozen_item.setBackground(item.background())
+                
+                # Set the item in the frozen table
+                self.render_table.frozen_table.setItem(row, col, frozen_item)
+                
+                logger.debug(f"Synced item to frozen table: row={row}, col={col}, text='{item.text()}'")
+                
+            except Exception as e:
+                logger.warning(f"Failed to sync item to frozen table: row={row}, col={col}, error={e}")
     
     def _on_table_item_changed(self, item):
         """Handle table item changes and update the model."""

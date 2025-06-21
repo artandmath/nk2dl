@@ -271,25 +271,20 @@ class NodeDataProvider(QtCore.QObject):
     def _get_filename_only(self, node) -> str:
         """Get the filename from a write node's file path.
         
+        Uses node['file'].evaluate() and restores #### and %04d patterns
+        in the filename only (not directories).
+        
         Args:
             node: The Nuke node object
             
         Returns:
-            Just the filename part of the file path
+            Just the filename part of the file path with frame patterns restored
         """
         try:
-            # Fast path: get raw file path first
             if 'file' not in node.knobs():
                 return ""
             
-            raw_path = node['file'].value()
-            if raw_path:
-                # Get basename of raw path first (faster)
-                filename = os.path.basename(raw_path)
-                if filename:
-                    return filename
-            
-            # Fallback to the more expensive pretty path function if needed
+            # Use the existing pretty path function that handles evaluate() and pattern restoration
             full_path = node_pretty_path(node)
             if full_path:
                 return os.path.basename(full_path)

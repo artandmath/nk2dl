@@ -102,6 +102,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         
         # Set selection behavior for frozen table as well
         self.frozen_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
+        # IMPORTANT: Enable sorting on frozen table for sortByColumn() but disable header clicks
+        self.frozen_table.setSortingEnabled(True)
         
         # Connect signals for synchronization
         self._connect_signals()
@@ -113,7 +115,13 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Set same model (will be set by parent)
         self.frozen_table.setFocusPolicy(QtCore.Qt.NoFocus)
         self.frozen_table.verticalHeader().hide()
-        self.frozen_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        
+        # CRITICAL: Set frozen table header to Interactive mode to allow resizing
+        # This is different from Qt's example - we want both tables to be resizable
+        self.frozen_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        
+        # Enable clickable behavior on frozen table header for sorting frozen columns
+        self.frozen_table.horizontalHeader().setSectionsClickable(True)
         
         # Stack the frozen table ON TOP of the main viewport (not under!)
         self.frozen_table.raise_()
@@ -147,8 +155,9 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
     
     def _connect_signals(self):
         """Connect signals for synchronization between main and frozen tables."""
-        # Synchronize horizontal header resizing
+        # BIDIRECTIONAL horizontal header resizing synchronization
         self.horizontalHeader().sectionResized.connect(self._update_frozen_section_width)
+        self.frozen_table.horizontalHeader().sectionResized.connect(self._update_main_section_width)
         
         # Synchronize vertical header resizing
         self.verticalHeader().sectionResized.connect(self._update_frozen_section_height)
@@ -160,6 +169,10 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         self.verticalScrollBar().valueChanged.connect(
             self.frozen_table.verticalScrollBar().setValue
         )
+        
+        # Synchronize sorting - BIDIRECTIONAL between main and frozen tables
+        self.horizontalHeader().sortIndicatorChanged.connect(self._on_main_sort_indicator_changed)
+        self.frozen_table.horizontalHeader().sortIndicatorChanged.connect(self._on_frozen_sort_indicator_changed)
         
         # Handle exclusive selection between frozen and main tables
         self.itemSelectionChanged.connect(self._on_main_table_selection_changed)
@@ -192,9 +205,16 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         super().setColumnCount(columns)
         self.frozen_table.setColumnCount(columns)
         
-        # Hide non-frozen columns in frozen table
-        for col in range(self.frozen_column_count, columns):
-            self.frozen_table.setColumnHidden(col, True)
+        # Hide non-frozen columns in frozen table and show frozen columns
+        for col in range(columns):
+            if col < self.frozen_column_count:
+                # Show frozen columns
+                self.frozen_table.setColumnHidden(col, False)
+                logger.debug(f"Showing frozen column {col}")
+            else:
+                # Hide non-frozen columns
+                self.frozen_table.setColumnHidden(col, True)
+                logger.debug(f"Hiding non-frozen column {col}")
     
     def setRowCount(self, rows):
         """Set row count for both main and frozen tables."""
@@ -249,32 +269,147 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
     def _update_frozen_section_width(self, logical_index, old_size, new_size):
         """Update frozen table column width when main table column is resized."""
         if logical_index < self.frozen_column_count:
-            self.frozen_table.setColumnWidth(logical_index, new_size)
+            # Block signals to prevent infinite recursion
+            self.frozen_table.horizontalHeader().blockSignals(True)
+            try:
+                self.frozen_table.setColumnWidth(logical_index, new_size)
+                logger.debug(f"Main->Frozen: Updated column {logical_index} width to {new_size}")
+            finally:
+                self.frozen_table.horizontalHeader().blockSignals(False)
+            self._update_frozen_table_geometry()
+    
+    def _update_main_section_width(self, logical_index, old_size, new_size):
+        """Update main table column width when frozen table column is resized."""
+        if logical_index < self.frozen_column_count:
+            # Block signals to prevent infinite recursion
+            self.horizontalHeader().blockSignals(True)
+            try:
+                self.setColumnWidth(logical_index, new_size)
+                logger.debug(f"Frozen->Main: Updated column {logical_index} width to {new_size}")
+            finally:
+                self.horizontalHeader().blockSignals(False)
             self._update_frozen_table_geometry()
     
     def _update_frozen_section_height(self, logical_index, old_size, new_size):
         """Update frozen table row height when main table row is resized."""
         self.frozen_table.setRowHeight(logical_index, new_size)
     
+    def _on_main_sort_indicator_changed(self, logical_index, sort_order):
+        """Handle main table sort indicator changes to synchronize frozen table sorting.
+        
+        Based on Qt Centre forum solution but adapted for frozen columns.
+        """
+        try:
+            logger.debug(f"Sort indicator changed: column {logical_index}, order {sort_order}")
+            
+            # Block signals to prevent infinite recursion
+            self.frozen_table.blockSignals(True)
+            
+            try:
+                # Get the current row order from the main table after sorting
+                row_count = self.rowCount()
+                if row_count == 0:
+                    return
+                
+                # Create a list to store the new order of frozen table items
+                frozen_rows_data = []
+                
+                # Collect all frozen column data in the current main table order
+                for row in range(row_count):
+                    row_data = []
+                    for col in range(self.frozen_column_count):
+                        # Get item from main table (which is now sorted)
+                        main_item = self.item(row, col)
+                        if main_item:
+                            # Create a copy for frozen table
+                            frozen_item = QtWidgets.QTableWidgetItem(main_item.text())
+                            frozen_item.setData(QtCore.Qt.UserRole, main_item.data(QtCore.Qt.UserRole))
+                            frozen_item.setFont(main_item.font())
+                            frozen_item.setForeground(main_item.foreground())
+                            frozen_item.setBackground(main_item.background())
+                            row_data.append(frozen_item)
+                        else:
+                            row_data.append(None)
+                    frozen_rows_data.append(row_data)
+                
+                # Update frozen table with the new order
+                for row, row_data in enumerate(frozen_rows_data):
+                    for col, item in enumerate(row_data):
+                        if item:
+                            self.frozen_table.setItem(row, col, item)
+                        else:
+                            # Clear the cell if no item
+                            self.frozen_table.setItem(row, col, QtWidgets.QTableWidgetItem(""))
+                
+                logger.debug(f"Synchronized frozen table row order for {row_count} rows")
+                
+            finally:
+                self.frozen_table.blockSignals(False)
+                
+        except Exception as e:
+            logger.error(f"Error synchronizing frozen table sorting: {e}")
+            # Restore signals even if there was an error
+            self.frozen_table.blockSignals(False)
+    
+    def _on_frozen_sort_indicator_changed(self, logical_index, sort_order):
+        """Handle frozen table sort indicator changes to synchronize main table sorting.
+        
+        When user clicks on frozen column headers, sort the main table by that column.
+        """
+        try:
+            # Only handle sorting for frozen columns
+            if logical_index >= self.frozen_column_count:
+                logger.debug(f"Ignoring sort on non-frozen column {logical_index}")
+                return
+            
+            logger.debug(f"Frozen table sort indicator changed: column {logical_index}, order {sort_order}")
+            
+            # Block signals to prevent infinite recursion
+            self.blockSignals(True)
+            
+            try:
+                # Sort the main table by the same column and order
+                self.sortByColumn(logical_index, sort_order)
+                logger.debug(f"Synchronized main table sorting: column {logical_index}, order {sort_order}")
+                
+                # The main table's sortIndicatorChanged signal will then trigger
+                # _on_main_sort_indicator_changed to update the frozen table
+                
+            finally:
+                self.blockSignals(False)
+                
+        except Exception as e:
+            logger.error(f"Error synchronizing main table sorting from frozen table: {e}")
+            # Restore signals even if there was an error
+            self.blockSignals(False)
+    
     def _update_frozen_table_geometry(self):
         """Update the geometry of the frozen table overlay."""
         frozen_width = self._get_frozen_table_width()
         
-        self.frozen_table.setGeometry(
-            self.verticalHeader().width() + self.frameWidth(),
-            self.frameWidth(),
-            frozen_width,
-            self.viewport().height() + self.horizontalHeader().height()
-        )
+        # Calculate proper positioning
+        x = self.verticalHeader().width() + self.frameWidth()
+        y = self.frameWidth()
+        width = frozen_width
+        height = self.viewport().height() + self.horizontalHeader().height()
+        
+        logger.debug(f"Updating frozen table geometry: x={x}, y={y}, width={width}, height={height}")
+        
+        self.frozen_table.setGeometry(x, y, width, height)
         
         # Ensure frozen table stays on top after geometry changes
         self.frozen_table.raise_()
+        
+        # Force a repaint of the frozen table
+        self.frozen_table.update()
     
     def _get_frozen_table_width(self):
         """Calculate the total width of frozen columns."""
         width = 0
-        for col in range(self.frozen_column_count):
-            width += self.columnWidth(col)
+        for col in range(min(self.frozen_column_count, self.columnCount())):
+            if not self.isColumnHidden(col):
+                width += self.columnWidth(col)
+        logger.debug(f"Calculated frozen table width: {width} (from {self.frozen_column_count} columns)")
         return width
     
     def mousePressEvent(self, event):
@@ -300,6 +435,64 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         
         # Call parent for normal behavior
         super().mousePressEvent(event)
+    
+    def reconnect_frozen_signals(self):
+        """Reconnect all frozen table synchronization signals.
+        
+        This should be called after replacing header views to restore
+        synchronization between main and frozen tables.
+        """
+        logger.debug("Reconnecting frozen table synchronization signals...")
+        
+        # Disconnect any existing connections to avoid duplicates
+        try:
+            self.horizontalHeader().sectionResized.disconnect(self._update_frozen_section_width)
+            self.frozen_table.horizontalHeader().sectionResized.disconnect(self._update_main_section_width)
+            self.verticalHeader().sectionResized.disconnect(self._update_frozen_section_height)
+            self.frozen_table.verticalScrollBar().valueChanged.disconnect(self.verticalScrollBar().setValue)
+            self.verticalScrollBar().valueChanged.disconnect(self.frozen_table.verticalScrollBar().setValue)
+            self.horizontalHeader().sortIndicatorChanged.disconnect(self._on_main_sort_indicator_changed)
+            self.frozen_table.horizontalHeader().sortIndicatorChanged.disconnect(self._on_frozen_sort_indicator_changed)
+            self.itemSelectionChanged.disconnect(self._on_main_table_selection_changed)
+            self.frozen_table.itemSelectionChanged.disconnect(self._on_frozen_table_selection_changed)
+            logger.debug("Disconnected existing signals")
+        except (TypeError, RuntimeError):
+            # Signals may not be connected, which is fine
+            logger.debug("No existing signals to disconnect")
+        
+        # Reconnect all synchronization signals - BIDIRECTIONAL header resize sync
+        self.horizontalHeader().sectionResized.connect(self._update_frozen_section_width)
+        self.frozen_table.horizontalHeader().sectionResized.connect(self._update_main_section_width)
+        self.verticalHeader().sectionResized.connect(self._update_frozen_section_height)
+        self.frozen_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
+        self.verticalScrollBar().valueChanged.connect(self.frozen_table.verticalScrollBar().setValue)
+        self.horizontalHeader().sortIndicatorChanged.connect(self._on_main_sort_indicator_changed)
+        self.frozen_table.horizontalHeader().sortIndicatorChanged.connect(self._on_frozen_sort_indicator_changed)
+        self.itemSelectionChanged.connect(self._on_main_table_selection_changed)
+        self.frozen_table.itemSelectionChanged.connect(self._on_frozen_table_selection_changed)
+        
+        # Ensure frozen table header is interactive (resizable) and clickable for sorting
+        self.frozen_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+        self.frozen_table.horizontalHeader().setSectionsClickable(True)
+        self.frozen_table.setSortingEnabled(True)
+        
+        # Ensure column visibility is correct
+        for col in range(self.columnCount()):
+            if col < self.frozen_column_count:
+                self.frozen_table.setColumnHidden(col, False)
+            else:
+                self.frozen_table.setColumnHidden(col, True)
+        
+        # Force geometry update and repaint
+        self._update_frozen_table_geometry()
+        
+        # Synchronize column widths
+        for col in range(self.frozen_column_count):
+            main_width = self.columnWidth(col)
+            self.frozen_table.setColumnWidth(col, main_width)
+            logger.debug(f"Synchronized column {col} width to {main_width}")
+        
+        logger.debug("Frozen table synchronization signals reconnected successfully")
     
     def blockSignals(self, block):
         """Block signals for both main and frozen tables."""
