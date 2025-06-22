@@ -245,10 +245,7 @@ class CustomHeaderView(QtWidgets.QHeaderView):
     
     def paintSection(self, painter, rect, logicalIndex):
         """Paint header section with custom styling based on column type.
-        
-        This method draws the standard Qt header first, then adds custom
-        background colors and borders on top while preserving sort indicators.
-        
+
         Args:
             painter: QPainter instance
             rect: Rectangle to paint in
@@ -257,16 +254,19 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         if not self.model():
             super().paintSection(painter, rect, logicalIndex)
             return
-            
+
+        painter.save()
+
         # Get column header name to determine styling
         header_name = self._get_header_name(logicalIndex)
         if not header_name:
             super().paintSection(painter, rect, logicalIndex)
+            painter.restore()
             return
-        
-        # Determine column type and colors using constants
+
+        # Determine column type and colors
         setting_type, _ = HeaderSettingsMapping.get_setting_type_and_key(header_name)
-        
+
         if setting_type == "job":
             bg_color = self._job_background
             border_color = self._job_border
@@ -277,21 +277,20 @@ class CustomHeaderView(QtWidgets.QHeaderView):
             # Fixed columns (Order, Node, Filename) or unmapped columns
             bg_color = self._default_background
             border_color = self._default_border
+
+        # Fill background with dark color
+        painter.fillRect(rect, bg_color)
+
+        # Draw the column text
+        display_name = self._get_display_name(header_name)
+        self._draw_header_text(painter, rect, display_name)
+
+        # Draw borders (sides and top with subtle border, bottom with bright color)
+        self._draw_header_borders(painter, rect, border_color)
         
-        painter.save()
-        
-        # STEP 1: Paint the standard Qt header first to get all functionality
-        super().paintSection(painter, rect, logicalIndex)
-        
-        # STEP 2: Add our custom background color (semi-transparent overlay)
-        # Create a new color object to avoid modifying the cached color
-        overlay_color = QtGui.QColor(bg_color)
-        overlay_color.setAlpha(120)  # Semi-transparent overlay to blend with Qt styling
-        painter.fillRect(rect, overlay_color)
-        
-        # STEP 3: Draw custom bottom border for visual grouping
-        self._draw_custom_bottom_border(painter, rect, border_color)
-        
+        # Draw custom sort indicator if column is sorted
+        self._draw_sort_indicator(painter, rect, logicalIndex)
+
         painter.restore()
     
     def _get_header_name(self, logical_index):
@@ -311,27 +310,112 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         display_to_header = {v: k for k, v in TableColumns.HEADER_DISPLAY_NAMES.items()}
         return display_to_header.get(str(header_data), str(header_data))
     
-    def _draw_custom_bottom_border(self, painter, rect, border_color):
-        """Draw custom bottom border for visual column grouping.
+    def _get_display_name(self, header_name):
+        """Get the display name for a header.
+        
+        Args:
+            header_name: Internal header name
+            
+        Returns:
+            str: Display name for the header
+        """
+        return TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
+    
+    def _draw_header_text(self, painter, rect, text):
+        """Draw the header text centered in the rectangle with padding.
         
         Args:
             painter: QPainter instance
-            rect: Rectangle to draw border on
-            border_color: Color for the bottom border
+            rect: Rectangle to draw text in
+            text: Text to draw
         """
-        # Ensure we have a valid color
-        if isinstance(border_color, str):
-            border_color = QtGui.QColor(border_color)
+        # Set text color to white for good contrast on dark backgrounds
+        painter.setPen(QtGui.QColor(255, 255, 255))
         
-        # Set up pen with proper color and width
-        pen = QtGui.QPen(border_color)
-        pen.setWidth(3)  # Make it thicker for better visibility
-        pen.setStyle(QtCore.Qt.SolidLine)
-        painter.setPen(pen)
+        # Use normal font (not bold) for consistent width calculations
+        font = painter.font()
+        font.setBold(False)
+        painter.setFont(font)
         
-        # Draw bottom border line, slightly inset from edges for better appearance
-        left_x = rect.left() + 1
-        right_x = rect.right() - 1
-        bottom_y = rect.bottom()
+        # Add horizontal padding to prevent cramped text
+        padded_rect = rect.adjusted(Sizes.HEADER_TEXT_PADDING, 0, -Sizes.HEADER_TEXT_PADDING, 0)
         
-        painter.drawLine(left_x, bottom_y, right_x, bottom_y) 
+        # Draw text centered in padded rectangle
+        painter.drawText(padded_rect, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter, str(text))
+    
+    def _draw_header_borders(self, painter, rect, border_color):
+        """Draw header borders with bright bottom edge only.
+        
+        Args:
+            painter: QPainter instance
+            rect: Rectangle to draw borders around
+            border_color: Color for the bright bottom border only
+        """
+        # Use system default header border color for sides and top
+        default_border_color = self.palette().color(QtGui.QPalette.Mid)
+        painter.setPen(QtGui.QPen(default_border_color, 1))
+        
+        # Left border (system default)
+        painter.drawLine(rect.topLeft(), rect.bottomLeft())
+        
+        # Right border (system default)
+        painter.drawLine(rect.topRight(), rect.bottomRight())
+        
+        # Top border (system default)
+        painter.drawLine(rect.topLeft(), rect.topRight())
+        
+        # Bright bottom border ONLY (full opacity, slightly thicker)
+        painter.setPen(QtGui.QPen(border_color, 2))
+        painter.drawLine(rect.bottomLeft(), rect.bottomRight())
+    
+    def _draw_sort_indicator(self, painter, rect, logical_index):
+        """Draw custom sort indicator if the column is sorted.
+        
+        Args:
+            painter: QPainter instance
+            rect: Rectangle to draw in
+            logical_index: Logical column index
+        """
+        # Check if this column has sort indicator
+        if not self.isSortIndicatorShown():
+            return
+            
+        sort_section = self.sortIndicatorSection()
+        sort_order = self.sortIndicatorOrder()
+        
+        if sort_section != logical_index:
+            return  # This column is not sorted
+            
+        # Calculate indicator position (right side of header)
+        indicator_size = 8
+        indicator_margin = 4
+        indicator_rect = QtCore.QRect(
+            rect.right() - indicator_size - indicator_margin,
+            rect.center().y() - indicator_size // 2,
+            indicator_size,
+            indicator_size
+        )
+        
+        # Set up drawing properties
+        painter.setPen(QtGui.QColor(255, 255, 255))  # White for visibility
+        painter.setBrush(QtGui.QColor(255, 255, 255))
+        
+        # Draw triangle based on sort order
+        if sort_order == QtCore.Qt.AscendingOrder:
+            # Up arrow (ascending)
+            points = [
+                QtCore.QPoint(indicator_rect.center().x(), indicator_rect.top()),
+                QtCore.QPoint(indicator_rect.left(), indicator_rect.bottom()),
+                QtCore.QPoint(indicator_rect.right(), indicator_rect.bottom())
+            ]
+        else:
+            # Down arrow (descending)
+            points = [
+                QtCore.QPoint(indicator_rect.left(), indicator_rect.top()),
+                QtCore.QPoint(indicator_rect.right(), indicator_rect.top()),
+                QtCore.QPoint(indicator_rect.center().x(), indicator_rect.bottom())
+            ]
+        
+        # Draw the triangle
+        polygon = QtGui.QPolygon(points)
+        painter.drawPolygon(polygon) 
