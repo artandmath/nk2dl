@@ -246,8 +246,8 @@ class CustomHeaderView(QtWidgets.QHeaderView):
     def paintSection(self, painter, rect, logicalIndex):
         """Paint header section with custom styling based on column type.
         
-        This method temporarily modifies the palette to apply custom colors
-        while preserving all Qt functionality including sort indicators.
+        This method draws the standard Qt header first, then adds custom
+        background colors and borders on top while preserving sort indicators.
         
         Args:
             painter: QPainter instance
@@ -264,7 +264,7 @@ class CustomHeaderView(QtWidgets.QHeaderView):
             super().paintSection(painter, rect, logicalIndex)
             return
         
-        # Determine column type and colors
+        # Determine column type and colors using constants
         setting_type, _ = HeaderSettingsMapping.get_setting_type_and_key(header_name)
         
         if setting_type == "job":
@@ -278,34 +278,21 @@ class CustomHeaderView(QtWidgets.QHeaderView):
             bg_color = self._default_background
             border_color = self._default_border
         
-        # Save the current palette
-        original_palette = self.palette()
-        
-        # Create a modified palette with our custom background color
-        custom_palette = QtGui.QPalette(original_palette)
-        custom_palette.setColor(QtGui.QPalette.Button, bg_color)
-        custom_palette.setColor(QtGui.QPalette.Window, bg_color)
-        custom_palette.setColor(QtGui.QPalette.Base, bg_color)
-        
-        # Temporarily apply the custom palette
-        self.setPalette(custom_palette)
-        
-        try:
-            # Paint the standard Qt header with our custom palette
-            # This preserves sort indicators, text, and all Qt functionality
-            super().paintSection(painter, rect, logicalIndex)
-            
-        finally:
-            # Always restore the original palette
-            self.setPalette(original_palette)
-        
-        # Draw custom bottom border AFTER palette restoration
-        # This ensures the border color is not affected by palette changes
         painter.save()
-        try:
-            self._draw_custom_bottom_border(painter, rect, border_color)
-        finally:
-            painter.restore()
+        
+        # STEP 1: Paint the standard Qt header first to get all functionality
+        super().paintSection(painter, rect, logicalIndex)
+        
+        # STEP 2: Add our custom background color (semi-transparent overlay)
+        # Create a new color object to avoid modifying the cached color
+        overlay_color = QtGui.QColor(bg_color)
+        overlay_color.setAlpha(120)  # Semi-transparent overlay to blend with Qt styling
+        painter.fillRect(rect, overlay_color)
+        
+        # STEP 3: Draw custom bottom border for visual grouping
+        self._draw_custom_bottom_border(painter, rect, border_color)
+        
+        painter.restore()
     
     def _get_header_name(self, logical_index):
         """Get the header name for a logical index.
