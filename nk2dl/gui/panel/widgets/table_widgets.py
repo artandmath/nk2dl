@@ -614,10 +614,11 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
                 
                 nuke.tprint(f"[NK2DL DEBUG] Column {col} sample values: {sample_values[:5]}")
                 
-                # Calculate optimal width
+                # Calculate optimal width using the internal header name (which will be converted to display name inside the method)
                 optimal_width = TableColumns.calculate_column_width(header_name, font_metrics, sample_values)
                 display_name = TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
                 nuke.tprint(f"[NK2DL DEBUG] Column {col} ({header_name} -> '{display_name}'): calculated width = {optimal_width}px")
+                nuke.tprint(f"[NK2DL DEBUG] Width calculation used display name: '{display_name}' (length: {len(display_name)} chars)")
                 logger.debug(f"Column {col} ({header_name}): calculated width = {optimal_width}px, samples = {sample_values[:3]}")
                 
                 # Set the column width

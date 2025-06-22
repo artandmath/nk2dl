@@ -321,9 +321,18 @@ class NodeSettingsView(QtWidgets.QWidget):
         self.render_table.setColumnCount(len(headers))
         self.render_table.setHorizontalHeaderLabels(display_headers)
         
+        # Calculate initial column widths BEFORE applying custom headers to prevent flashing
+        # This sets proper widths immediately instead of waiting for events
+        print("[NK2DL DEBUG] Setting initial column widths during table creation")
+        self._set_initial_column_widths(headers)
+        
         # Apply custom header view for job/machine settings styling
         custom_header = CustomHeaderView(QtCore.Qt.Horizontal, self.render_table)
         self.render_table.setHorizontalHeader(custom_header)
+        
+        # Re-apply display headers after custom header is set to ensure they're preserved
+        self.render_table.setHorizontalHeaderLabels(display_headers)
+        print(f"[NK2DL DEBUG] Set display headers: {display_headers[:5]}...")  # Show first 5
         
         # Also apply custom header to frozen table if it exists
         if hasattr(self.render_table, 'frozen_table'):
@@ -331,6 +340,10 @@ class NodeSettingsView(QtWidgets.QWidget):
             
             frozen_custom_header = CustomHeaderView(QtCore.Qt.Horizontal, self.render_table.frozen_table)
             self.render_table.frozen_table.setHorizontalHeader(frozen_custom_header)
+            
+            # Re-apply display headers to frozen table after custom header is set
+            self.render_table.frozen_table.setHorizontalHeaderLabels(display_headers)
+            print(f"[NK2DL DEBUG] Set frozen table display headers: {display_headers[:3]}...")  # Show first 3 frozen
             
             # CRITICAL: Reconnect synchronization after replacing headers
             # When we replace headers, the original signal connections are broken
@@ -670,3 +683,46 @@ class NodeSettingsView(QtWidgets.QWidget):
             
         except Exception as e:
             logger.error(f"Error applying configuration to NodeSettingsView: {e}")
+
+    def _set_initial_column_widths(self, headers):
+        """Set initial column widths during table creation to prevent UI flashing.
+        
+        Args:
+            headers: List of header names (internal names like 'ChunkSize')
+        """
+        try:
+            from ..constants import TableColumns, Sizes
+            
+            # Get font metrics for width calculation
+            font = self.render_table.font()
+            font_metrics = QtGui.QFontMetrics(font)
+            
+            print(f"[NK2DL DEBUG] Calculating initial widths for {len(headers)} columns")
+            
+            # Set default section size to prevent Qt's 100px override
+            self.render_table.horizontalHeader().setDefaultSectionSize(Sizes.HEADER_DEFAULT_SECTION_SIZE)
+            
+            # Ensure header is in Interactive mode for individual column widths
+            self.render_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+            
+            # Calculate and set width for each column
+            for col, header_name in enumerate(headers):
+                # Calculate optimal width using display name
+                optimal_width = TableColumns.calculate_column_width(header_name, font_metrics)
+                
+                # Set the column width immediately
+                self.render_table.setColumnWidth(col, optimal_width)
+                
+                # Also set in frozen table if this is a frozen column
+                if (hasattr(self.render_table, 'frozen_table') and 
+                    hasattr(self.render_table, 'frozen_column_count') and 
+                    col < self.render_table.frozen_column_count):
+                    self.render_table.frozen_table.setColumnWidth(col, optimal_width)
+                
+                display_name = TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
+                print(f"[NK2DL DEBUG] Set initial width for column {col} ({header_name} -> '{display_name}'): {optimal_width}px")
+                
+        except Exception as e:
+            print(f"[NK2DL DEBUG] Exception in _set_initial_column_widths: {e}")
+            import traceback
+            traceback.print_exc()

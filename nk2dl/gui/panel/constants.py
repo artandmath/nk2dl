@@ -225,12 +225,26 @@ class TableColumns:
         # Get display name for header
         display_name = cls.HEADER_DISPLAY_NAMES.get(header_name, header_name)
         
+        # Debug output for width calculation
+        try:
+            import nuke
+            nuke.tprint(f"[NK2DL WIDTH] Calculating width for '{header_name}' -> display: '{display_name}'")
+        except:
+            pass
+        
         # Calculate header text width
         try:
             header_width = font_metrics.horizontalAdvance(display_name)
         except AttributeError:
             # Fallback for older Qt versions
             header_width = font_metrics.width(display_name)
+        
+        # Debug header width calculation
+        try:
+            import nuke
+            nuke.tprint(f"[NK2DL WIDTH] Header '{display_name}' base width: {header_width}px")
+        except:
+            pass
         
         # Add header text padding (double it since padding is applied on both sides)
         header_width += Sizes.HEADER_TEXT_PADDING * 2
@@ -255,7 +269,16 @@ class TableColumns:
         min_width = cls.COLUMN_WIDTH_SETTINGS["min_widths"].get(header_name, 60)
         max_width = cls.COLUMN_WIDTH_SETTINGS["max_widths"].get(header_name, 200)
         
-        return max(min_width, min(calculated_width, max_width))
+        final_width = max(min_width, min(calculated_width, max_width))
+        
+        # Debug final width calculation
+        try:
+            import nuke
+            nuke.tprint(f"[NK2DL WIDTH] Final width for '{display_name}': {final_width}px (calculated: {calculated_width}px, min: {min_width}px, max: {max_width}px)")
+        except:
+            pass
+        
+        return final_width
 
 
 class GSVDefaults:
