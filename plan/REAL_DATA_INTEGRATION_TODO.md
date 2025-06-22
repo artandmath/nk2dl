@@ -135,15 +135,15 @@
 
 ### **4.2.1 UI Bug Fixes** ⏱️ **2-3 hours** ❌ **NOT STARTED - NEXT PRIORITY**
 
-#### **4.2.1.1 Frozen Table Column Issues** ⏱️ **1 hour** ❌ **NOT STARTED**
-- [ ] **Frozen table columns reset size on update**
-  - [ ] Investigate why column widths are not preserved during data refresh
-  - [ ] Fix column width synchronization between main and frozen tables
-  - [ ] Ensure user-resized columns maintain their width after updates
-- [ ] **Repeated column draw on frozen table resize**
-  - [ ] Debug rendering issues during column resize operations
-  - [ ] Fix duplicate/ghost column rendering in frozen table overlay
-  - [ ] Optimize frozen table repaint logic
+#### **4.2.1.1 Frozen Table Column Issues** ⏱️ **1 hour** ✅ **COMPLETED**
+- [x] **Frozen table columns reset size on update** ✅ **FIXED**
+  - [x] Investigate why column widths are not preserved during data refresh
+  - [x] Fix column width synchronization between main and frozen tables
+  - [x] Ensure user-resized columns maintain their width after updates
+- [x] **Repeated column draw on frozen table resize** ✅ **FIXED**
+  - [x] Debug rendering issues during column resize operations
+  - [x] Fix duplicate/ghost column rendering in frozen table overlay
+  - [x] Optimize frozen table repaint logic
 
 #### **4.2.1.2 Header Sorting Issues** ⏱️ **1 hour** ❌ **NOT STARTED**
 - [ ] **Sort indicators missing on headers**

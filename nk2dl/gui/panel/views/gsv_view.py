@@ -392,14 +392,33 @@ class GSVView(QtWidgets.QWidget):
     
     def _on_hierarchy_changed(self):
         """Handle hierarchy changes from the model."""
-        # Use a timer to avoid updating on every keystroke
-        if hasattr(self, '_hierarchy_update_timer'):
-            self._hierarchy_update_timer.stop()
+        # Use event-based debouncing to avoid updating on every keystroke
+        # This queues the update to happen after current input processing
+        self._schedule_hierarchy_update()
+    
+    def _schedule_hierarchy_update(self):
+        """Schedule hierarchy update via event queue with debouncing."""
+        # Cancel any pending update
+        if hasattr(self, '_hierarchy_update_scheduled') and self._hierarchy_update_scheduled:
+            return
         
-        self._hierarchy_update_timer = QtCore.QTimer()
-        self._hierarchy_update_timer.setSingleShot(True)
-        self._hierarchy_update_timer.timeout.connect(self._refresh_hierarchy)
-        self._hierarchy_update_timer.start(500)  # 500ms delay
+        # Mark as scheduled and queue the update
+        self._hierarchy_update_scheduled = True
+        QtCore.QTimer.singleShot(0, self._on_hierarchy_update_ready)
+
+    def _on_hierarchy_update_ready(self):
+        """Handle hierarchy update ready event."""
+        try:
+            # Reset scheduling flag
+            self._hierarchy_update_scheduled = False
+            
+            # Perform the actual hierarchy refresh
+            self._refresh_hierarchy()
+            
+        except Exception as e:
+            # Reset flag even on error
+            self._hierarchy_update_scheduled = False
+            logger.error(f"Error in hierarchy update: {e}", exc_info=True)
     
     def _on_selection_changed(self):
         """Handle selection changes from the model."""

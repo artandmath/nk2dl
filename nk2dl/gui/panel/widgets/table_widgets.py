@@ -32,6 +32,7 @@ except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
 from ....common.logging import setup_logging
+from ..constants import TableColumns, Sizes
 
 # Create a module-specific logger
 logger = setup_logging('nk2dl.gui.panel.widgets.table_widgets')
@@ -55,8 +56,8 @@ class StandardTableWidget(QtWidgets.QTableWidget):
         if event.button() == QtCore.Qt.LeftButton:
             index = self.indexAt(event.pos())
             if index.isValid():
-                # Check if this is a dropdown column
-                headers = ["Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", "BatchMode", "ReloadPlugin"]
+                # Check if this is a dropdown column using the correct header list
+                headers = TableColumns.HEADERS
                 dropdown_columns = ["NodesFrames", "AutoTimeout", "NukeX", "BatchMode", "ReloadPlugin", "RenderMode"]
                 
                 if index.column() < len(headers):
@@ -276,6 +277,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
                 logger.debug(f"Main->Frozen: Updated column {logical_index} width to {new_size}")
             finally:
                 self.frozen_table.horizontalHeader().blockSignals(False)
+            
+            # Update geometry and force repaint to prevent artifacts
             self._update_frozen_table_geometry()
     
     def _update_main_section_width(self, logical_index, old_size, new_size):
@@ -288,6 +291,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
                 logger.debug(f"Frozen->Main: Updated column {logical_index} width to {new_size}")
             finally:
                 self.horizontalHeader().blockSignals(False)
+            
+            # Update geometry and force repaint to prevent artifacts
             self._update_frozen_table_geometry()
     
     def _update_frozen_section_height(self, logical_index, old_size, new_size):
@@ -395,13 +400,32 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         
         logger.debug(f"Updating frozen table geometry: x={x}, y={y}, width={width}, height={height}")
         
+        # Get old geometry to determine what area needs repainting
+        old_geometry = self.frozen_table.geometry()
+        
+        # Update frozen table geometry
         self.frozen_table.setGeometry(x, y, width, height)
         
         # Ensure frozen table stays on top after geometry changes
         self.frozen_table.raise_()
         
-        # Force a repaint of the frozen table
+        # Force a repaint of both the frozen table and the main table viewport
+        # This is critical to prevent rendering artifacts when resizing columns
         self.frozen_table.update()
+        
+        # Calculate the area that needs repainting in the main table
+        # This includes both the old and new frozen table areas
+        repaint_rect = old_geometry.united(self.frozen_table.geometry())
+        
+        # Expand the repaint area slightly to ensure complete cleanup
+        repaint_rect = repaint_rect.adjusted(-2, -2, 2, 2)
+        
+        # Force repaint of the main table viewport in the affected area
+        self.viewport().update(repaint_rect)
+        
+        # Also force a full viewport repaint to be absolutely sure
+        # This is more expensive but ensures no artifacts remain
+        self.viewport().repaint()
     
     def _get_frozen_table_width(self):
         """Calculate the total width of frozen columns."""
@@ -417,8 +441,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         if event.button() == QtCore.Qt.LeftButton:
             index = self.indexAt(event.pos())
             if index.isValid():
-                # Check if this is a dropdown column
-                headers = ["Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", "BatchMode", "ReloadPlugin"]
+                # Check if this is a dropdown column using the correct header list
+                headers = TableColumns.HEADERS
                 dropdown_columns = ["NodesFrames", "AutoTimeout", "NukeX", "BatchMode", "ReloadPlugin", "RenderMode"]
                 
                 if index.column() < len(headers):
@@ -498,4 +522,155 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         """Block signals for both main and frozen tables."""
         result = super().blockSignals(block)
         self.frozen_table.blockSignals(block)
-        return result 
+        return result
+
+    def calculate_optimal_column_widths(self, sample_data=None):
+        """Calculate optimal column widths based on font metrics and content.
+        
+        Args:
+            sample_data: Optional list of sample row data to consider for width calculation
+        """
+        try:
+            # Import nuke for debugging output
+            import nuke
+            
+            # Use nuke.tprint for debugging since Qt/PySide can interfere with print/logging
+            nuke.tprint("[NK2DL DEBUG] Starting optimal column width calculation")
+            logger.debug("Starting optimal column width calculation")
+            
+            # Get font metrics from the table
+            font = self.font()
+            font_metrics = QtGui.QFontMetrics(font)
+            nuke.tprint(f"[NK2DL DEBUG] Using font: {font.family()}, {font.pointSize()}pt")
+            
+            # Check default section size
+            default_size = self.horizontalHeader().defaultSectionSize()
+            nuke.tprint(f"[NK2DL DEBUG] Header default section size: {default_size}px")
+            
+            # Set default section size to a reasonable minimum to prevent 100px override
+            self.horizontalHeader().setDefaultSectionSize(Sizes.HEADER_DEFAULT_SECTION_SIZE)
+            nuke.tprint(f"[NK2DL DEBUG] Set header default section size to {Sizes.HEADER_DEFAULT_SECTION_SIZE}px")
+            
+            # Check and fix header resize mode that might be forcing uniform widths
+            resize_mode = self.horizontalHeader().sectionResizeMode(0)  # Check first column's resize mode
+            nuke.tprint(f"[NK2DL DEBUG] Current header resize mode: {resize_mode}")
+            
+            # Ensure header is in Interactive mode (allows individual column widths)
+            self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
+            nuke.tprint("[NK2DL DEBUG] Set header resize mode to Interactive")
+            
+            logger.debug(f"Using font: {font.family()}, {font.pointSize()}pt")
+            
+            # Get headers directly from TableColumns.HEADERS to avoid display name confusion
+            # This ensures we use the correct header names for width calculation
+            headers = TableColumns.HEADERS[:self.columnCount()]
+            
+            nuke.tprint(f"[NK2DL DEBUG] Processing {len(headers)} columns: {headers}")
+            nuke.tprint(f"[NK2DL DEBUG] Table has {self.columnCount()} columns, {self.rowCount()} rows")
+            logger.debug(f"Processing {len(headers)} columns: {headers}")
+            
+            # Calculate width for each column
+            for col, header_name in enumerate(headers):
+                nuke.tprint(f"[NK2DL DEBUG] Processing column {col}: {header_name}")
+                
+                # Collect sample values for this column
+                sample_values = []
+                
+                # Add sample values from actual table data
+                for row in range(min(10, self.rowCount())):  # Sample first 10 rows
+                    item = self.item(row, col)
+                    if item and item.text():
+                        sample_values.append(item.text())
+                
+                # Add sample values from provided data
+                if sample_data:
+                    for row_data in sample_data[:10]:  # Sample first 10 rows
+                        if isinstance(row_data, dict) and header_name in row_data:
+                            value = row_data[header_name]
+                            if value is not None:
+                                sample_values.append(str(value))
+                        elif isinstance(row_data, list) and col < len(row_data):
+                            value = row_data[col]
+                            if value is not None:
+                                sample_values.append(str(value))
+                
+                # Add some typical values for this column type
+                if header_name == "Order":
+                    sample_values.extend(["1", "1000", "2000"])
+                elif header_name == "Node":
+                    sample_values.extend(["Write1", "Write123", "WriteNode_v001"])
+                elif header_name == "Filename":
+                    sample_values.extend(["output.%04d.exr", "/long/path/to/output_file.%04d.exr"])
+                elif header_name == "Priority":
+                    sample_values.extend(["50", "100"])
+                elif header_name in ["NodesFrames", "AutoTimeout", "NukeX", "BatchMode", "ReloadPlugin", "UseGPU", "WorkerTaskLimit"]:
+                    sample_values.extend(["Yes", "No"])
+                elif header_name == "RenderMode":
+                    sample_values.extend(["Full", "Proxy", "Both", "Script"])
+                elif header_name in ["Pool", "SecondaryPool"]:
+                    sample_values.extend(["comp", "lighting", "render"])
+                elif header_name == "Group":
+                    sample_values.extend(["none", "high_priority", "overnight"])
+                
+                nuke.tprint(f"[NK2DL DEBUG] Column {col} sample values: {sample_values[:5]}")
+                
+                # Calculate optimal width
+                optimal_width = TableColumns.calculate_column_width(header_name, font_metrics, sample_values)
+                display_name = TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
+                nuke.tprint(f"[NK2DL DEBUG] Column {col} ({header_name} -> '{display_name}'): calculated width = {optimal_width}px")
+                logger.debug(f"Column {col} ({header_name}): calculated width = {optimal_width}px, samples = {sample_values[:3]}")
+                
+                # Set the column width
+                nuke.tprint(f"[NK2DL DEBUG] About to set column {col} ({header_name}) width to {optimal_width}px")
+                self.setColumnWidth(col, optimal_width)
+                nuke.tprint(f"[NK2DL DEBUG] Set main table column {col} ({header_name}) width to {optimal_width}px")
+                
+                # Verify the width was actually set
+                actual_width = self.columnWidth(col)
+                nuke.tprint(f"[NK2DL DEBUG] Verified main table column {col} ({header_name}) actual width: {actual_width}px")
+                
+                # Check if it was overridden
+                if actual_width != optimal_width:
+                    nuke.tprint(f"[NK2DL ERROR] Column {col} ({header_name}) width was overridden! Expected {optimal_width}px, got {actual_width}px")
+                
+                # Also set in frozen table if this is a frozen column
+                if (hasattr(self, 'frozen_table') and 
+                    hasattr(self, 'frozen_column_count') and 
+                    col < self.frozen_column_count):
+                    self.frozen_table.setColumnWidth(col, optimal_width)
+                    nuke.tprint(f"[NK2DL DEBUG] Set frozen table column {col} ({header_name}) width to {optimal_width}px")
+                    
+                    # Verify frozen table width was actually set
+                    frozen_actual_width = self.frozen_table.columnWidth(col)
+                    nuke.tprint(f"[NK2DL DEBUG] Verified frozen table column {col} ({header_name}) actual width: {frozen_actual_width}px")
+                    logger.debug(f"Set frozen table column {col} width to {optimal_width}px")
+            
+            nuke.tprint(f"[NK2DL DEBUG] Completed optimal column width calculation for {len(headers)} columns")
+            logger.debug(f"Completed optimal column width calculation for {len(headers)} columns")
+            
+            # Final verification - show current state of all column widths
+            nuke.tprint("[NK2DL DEBUG] Final column width verification:")
+            for col in range(min(10, len(headers))):  # Show first 10 columns to see more variety
+                main_width = self.columnWidth(col)
+                frozen_width = self.frozen_table.columnWidth(col) if col < self.frozen_column_count else "N/A"
+                nuke.tprint(f"[NK2DL DEBUG]   Column {col} ({headers[col]}): main={main_width}px, frozen={frozen_width}px")
+            
+            # Also check if all columns are actually the same width
+            all_widths = [self.columnWidth(col) for col in range(len(headers))]
+            unique_widths = set(all_widths)
+            if len(unique_widths) == 1:
+                nuke.tprint(f"[NK2DL ERROR] All {len(headers)} columns have the same width: {list(unique_widths)[0]}px - this suggests a resize mode issue!")
+            else:
+                nuke.tprint(f"[NK2DL DEBUG] Found {len(unique_widths)} different column widths: {sorted(unique_widths)}")
+            
+        except Exception as e:
+            # Import nuke in except block in case it wasn't imported above
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL ERROR] Exception in calculate_optimal_column_widths: {str(e)}")
+                nuke.tprint(f"[NK2DL ERROR] Exception type: {type(e).__name__}")
+                import traceback
+                nuke.tprint(f"[NK2DL ERROR] Traceback: {traceback.format_exc()}")
+            except:
+                pass
+            logger.error(f"Exception in calculate_optimal_column_widths: {str(e)}", exc_info=True) 

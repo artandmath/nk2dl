@@ -41,6 +41,10 @@ class Sizes:
     LINE_EDIT_MIN_WIDTH = 120
     FILTER_EDIT_WIDTH = 150
     
+    # Header dimensions
+    HEADER_TEXT_PADDING = 6  # Horizontal padding for header text (3px each side)
+    HEADER_DEFAULT_SECTION_SIZE = 80  # Default column width to reduce initial flashing (will be overridden by calculations)
+    
     # Responsive behavior
     RESPONSIVE_BREAKPOINT = 1250  # Width below which settings stack vertically
 
@@ -146,37 +150,112 @@ class TableColumns:
         22: ["Yes", "No"]                    # WorkerTaskLimit
     }
     
-    # Column widths (optional, for initial sizing) - updated indices for reordered headers
-    COLUMN_WIDTHS = {
-        0: 60,   # Order
-        1: 100,  # Node
-        2: 200,  # Filename
-        3: 70,   # Priority (moved to position 3)
-        4: 80,   # ChunkSize (moved to position 4)
-        5: 120,  # Frames
-        6: 90,   # NodesFrames
-        7: 90,   # TaskTimeout
-        8: 90,   # AutoTimeout
-        9: 90,   # RenderMode
-        10: 70,  # NukeX
-        11: 90,  # BatchMode
-        12: 100, # ReloadPlugin
-        13: 80,  # Pool
-        14: 100, # SecondaryPool
-        15: 80,  # Group
-        16: 70,  # Threads
-        17: 70,  # MinRam
-        18: 70,  # MaxRam
-        19: 70,  # UseGPU
-        20: 70,  # GPUId
-        21: 100, # ConcurrentTasks
-        22: 110, # WorkerTaskLimit
-        23: 120, # MachineList
-        24: 80   # Limits
+    # Column width calculation settings (replaces hard-coded COLUMN_WIDTHS)
+    COLUMN_WIDTH_SETTINGS = {
+        # Minimum widths for each column type
+        "min_widths": {
+            "Order": 50,
+            "Node": 80, 
+            "Filename": 150,
+            "Priority": 60,
+            "ChunkSize": 70,
+            "Frames": 100,
+            "NodesFrames": 80,
+            "TaskTimeout": 80,
+            "AutoTimeout": 80,
+            "RenderMode": 80,
+            "NukeX": 60,
+            "BatchMode": 80,
+            "ReloadPlugin": 90,
+            "Pool": 70,
+            "SecondaryPool": 90,
+            "Group": 70,
+            "Threads": 60,
+            "MinRam": 60,
+            "MaxRam": 60,
+            "UseGPU": 60,
+            "GPUId": 60,
+            "ConcurrentTasks": 90,
+            "WorkerTaskLimit": 100,
+            "MachineList": 100,
+            "Limits": 70
+        },
+        # Maximum widths for each column type
+        "max_widths": {
+            "Order": 80,
+            "Node": 150,
+            "Filename": 300,
+            "Priority": 80,
+            "ChunkSize": 110,  # Increased for "Chunk Size" text + padding
+            "Frames": 150,
+            "NodesFrames": 120,  # Increased for "Nodes Frames" text + padding
+            "TaskTimeout": 120,  # Increased for "Task Timeout" text + padding
+            "AutoTimeout": 120,  # Increased for "Auto Timeout" text + padding
+            "RenderMode": 120,
+            "NukeX": 80,
+            "BatchMode": 120,  # Increased for "Batch Mode" text + padding
+            "ReloadPlugin": 130,  # Increased for "Reload Plugin" text + padding
+            "Pool": 100,
+            "SecondaryPool": 130,  # Increased for "Secondary Pool" text + padding
+            "Group": 120,  # Increased for better spacing
+            "Threads": 80,
+            "MinRam": 80,
+            "MaxRam": 80,
+            "UseGPU": 80,
+            "GPUId": 80,
+            "ConcurrentTasks": 140,  # Increased for "Concurrent Tasks" text + padding
+            "WorkerTaskLimit": 140,  # Increased for "Worker Task Limit" text + padding
+            "MachineList": 200,
+            "Limits": 120
+        }
     }
     
-    # Machine settings columns (for styling pinned rows) - updated indices
-    MACHINE_SETTINGS_COLUMNS = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    @classmethod
+    def calculate_column_width(cls, header_name, font_metrics, sample_values=None):
+        """Calculate optimal column width based on font metrics and content.
+        
+        Args:
+            header_name: Name of the header (e.g., "Priority", "Node")
+            font_metrics: QFontMetrics instance for measuring text
+            sample_values: Optional list of sample values to consider
+            
+        Returns:
+            int: Calculated column width in pixels
+        """
+        # Get display name for header
+        display_name = cls.HEADER_DISPLAY_NAMES.get(header_name, header_name)
+        
+        # Calculate header text width
+        try:
+            header_width = font_metrics.horizontalAdvance(display_name)
+        except AttributeError:
+            # Fallback for older Qt versions
+            header_width = font_metrics.width(display_name)
+        
+        # Add header text padding (double it since padding is applied on both sides)
+        header_width += Sizes.HEADER_TEXT_PADDING * 2
+        
+        # Calculate content width if sample values provided
+        content_width = 0
+        if sample_values:
+            for value in sample_values:
+                try:
+                    value_width = font_metrics.horizontalAdvance(str(value))
+                except AttributeError:
+                    value_width = font_metrics.width(str(value))
+                content_width = max(content_width, value_width)
+            
+            # Add some padding for content
+            content_width += 16  # 8px each side for content padding
+        
+        # Use the larger of header or content width
+        calculated_width = max(header_width, content_width)
+        
+        # Apply min/max constraints
+        min_width = cls.COLUMN_WIDTH_SETTINGS["min_widths"].get(header_name, 60)
+        max_width = cls.COLUMN_WIDTH_SETTINGS["max_widths"].get(header_name, 200)
+        
+        return max(min_width, min(calculated_width, max_width))
 
 
 class GSVDefaults:
@@ -491,3 +570,6 @@ class HeaderSettingsMapping:
             return cls.MACHINE_SETTINGS_INHERITANCE_LABEL
         else:
             return None 
+
+    # Machine settings columns (for styling pinned rows) - updated indices
+    MACHINE_SETTINGS_COLUMNS = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] 

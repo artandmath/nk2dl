@@ -31,7 +31,7 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from ..constants import Colors, TableColumns, HeaderSettingsMapping
+from ..constants import Colors, TableColumns, HeaderSettingsMapping, Sizes
 from ....common.logging import setup_logging
 
 # Create a module-specific logger
@@ -107,7 +107,7 @@ class GroupedHeaderView(QtWidgets.QHeaderView):
         
         # Add horizontal padding for secondary columns (skip primary column 0)
         if logicalIndex > 0:
-            text_rect = text_rect.adjusted(4, 0, -4, 0)  # 4px left and right padding for secondary GSV headers
+            text_rect = text_rect.adjusted(Sizes.HEADER_TEXT_PADDING, 0, -Sizes.HEADER_TEXT_PADDING, 0)  # Consistent padding for secondary GSV headers
         
         # Draw the column text
         painter.drawText(text_rect, QtCore.Qt.AlignCenter, str(text))
@@ -163,7 +163,7 @@ class GroupedHeaderView(QtWidgets.QHeaderView):
             painter.fillRect(group_rect, group_color)
             
             # Draw group text with horizontal padding
-            text_rect = group_rect.adjusted(3, 0, -3, 0)
+            text_rect = group_rect.adjusted(Sizes.HEADER_TEXT_PADDING, 0, -Sizes.HEADER_TEXT_PADDING, 0)
             painter.drawText(text_rect, QtCore.Qt.AlignCenter, group_name)
         
         # Re-draw group borders to ensure they're on top
@@ -316,7 +316,7 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         return TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
     
     def _draw_header_text(self, painter, rect, text):
-        """Draw the header text centered in the rectangle.
+        """Draw the header text centered in the rectangle with padding.
         
         Args:
             painter: QPainter instance
@@ -331,8 +331,11 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         font.setBold(True)
         painter.setFont(font)
         
-        # Draw text centered
-        painter.drawText(rect, QtCore.Qt.AlignCenter, str(text))
+        # Add horizontal padding to prevent cramped text
+        padded_rect = rect.adjusted(Sizes.HEADER_TEXT_PADDING, 0, -Sizes.HEADER_TEXT_PADDING, 0)
+        
+        # Draw text centered in padded rectangle
+        painter.drawText(padded_rect, QtCore.Qt.AlignCenter, str(text))
     
     def _draw_header_borders(self, painter, rect, border_color):
         """Draw header borders with bright bottom edge only.

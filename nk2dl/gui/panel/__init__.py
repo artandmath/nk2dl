@@ -248,10 +248,35 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             
             def _load_initial_data(self):
                 """Load initial node data from Nuke script."""
-                # Auto-refresh on panel initialization using QTimer to avoid blocking
-                QtCore.QTimer.singleShot(100, self._refresh_node_data)
+                # Auto-refresh on panel initialization using event-based approach
+                # This ensures the panel is fully initialized before data loading
+                self._schedule_initial_data_load()
                 
-                logger.info("Scheduled initial node data refresh")
+                logger.info("Scheduled initial node data refresh via events")
+            
+            def _schedule_initial_data_load(self):
+                """Schedule initial data loading via event queue."""
+                # Use event queue to ensure panel is fully constructed before data loading
+                QtCore.QTimer.singleShot(0, self._on_panel_ready_for_data)
+                logger.debug("Initial data load scheduled via event system")
+            
+            def _on_panel_ready_for_data(self):
+                """Handle panel ready for initial data loading."""
+                try:
+                    # Check if all components are properly initialized
+                    if (hasattr(self, 'table_model') and self.table_model and
+                        hasattr(self, 'node_settings_view') and self.node_settings_view and
+                        hasattr(self, 'console_view') and self.console_view):
+                        
+                        logger.debug("Panel components ready, starting initial data refresh")
+                        self._refresh_node_data()
+                    else:
+                        # Reschedule if components aren't ready yet
+                        logger.debug("Panel components not ready, rescheduling data load")
+                        QtCore.QTimer.singleShot(50, self._on_panel_ready_for_data)
+                        
+                except Exception as e:
+                    logger.error(f"Error in panel ready for data: {e}", exc_info=True)
             
             def _is_nuke_15_1_or_later(self):
                 """Check if Nuke version is 15.1 or later."""

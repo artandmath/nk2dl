@@ -51,6 +51,13 @@ class NodeSettingsView(QtWidgets.QWidget):
     """
     
     def __init__(self, table_model, settings_model=None, parent=None):
+        print("[NK2DL DEBUG] NodeSettingsView.__init__ called")
+        # Also try using nuke.tprint which should definitely show up
+        try:
+            import nuke
+            nuke.tprint("[NK2DL DEBUG] NodeSettingsView.__init__ called via nuke.tprint")
+        except:
+            pass
         super().__init__(parent)
         self.table_model = table_model
         self.settings_model = settings_model
@@ -60,22 +67,193 @@ class NodeSettingsView(QtWidgets.QWidget):
             self.table_model.set_settings_model(self.settings_model)
         
         # Create the main layout and UI components
+        print("[NK2DL DEBUG] About to call _create_ui()")
         self._create_ui()
+        print("[NK2DL DEBUG] About to call _connect_signals()")
         self._connect_signals()
+        print("[NK2DL DEBUG] About to call _load_data_from_model()")
         self._load_data_from_model()
+        print("[NK2DL DEBUG] NodeSettingsView.__init__ completed")
+        
+        # Connect to table events for column width calculation
+        # This replaces the timer-based approach with proper event handling
+        self._connect_table_events()
+    
+    def _connect_table_events(self):
+        """Connect to table events for responsive column width calculation."""
+        # Connect to table show event for initial column width calculation
+        # This ensures the table is fully visible and fonts are properly loaded
+        if hasattr(self.render_table, 'showEvent'):
+            original_show_event = self.render_table.showEvent
+            
+            def enhanced_show_event(event):
+                # Call original show event first
+                if original_show_event:
+                    original_show_event(event)
+                
+                # Calculate column widths when table becomes visible
+                self._on_table_ready_for_sizing()
+            
+            self.render_table.showEvent = enhanced_show_event
+        
+        # Also connect to resize events for responsive column width updates
+        if hasattr(self.render_table, 'resizeEvent'):
+            original_resize_event = self.render_table.resizeEvent
+            
+            def enhanced_resize_event(event):
+                # Call original resize event first
+                if original_resize_event:
+                    original_resize_event(event)
+                
+                # Recalculate column widths on significant size changes
+                if event.size().width() != event.oldSize().width():
+                    self._on_table_width_changed()
+            
+            self.render_table.resizeEvent = enhanced_resize_event
+
+    def _on_table_ready_for_sizing(self):
+        """Handle table ready for initial column width calculation."""
+        try:
+            import nuke
+            
+            if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
+                nuke.tprint("[NK2DL DEBUG] Event-based column width calculation (table ready)")
+                self.render_table.calculate_optimal_column_widths()
+            else:
+                nuke.tprint("[NK2DL DEBUG] Event-based column width calculation skipped - table not ready")
+                
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in event-based column width calculation: {e}")
+            except:
+                pass
+
+    def _on_table_width_changed(self):
+        """Handle table width changes for responsive column sizing."""
+        try:
+            import nuke
+            
+            if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
+                nuke.tprint("[NK2DL DEBUG] Event-based column width recalculation (width changed)")
+                self.render_table.calculate_optimal_column_widths()
+                
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in width change column calculation: {e}")
+            except:
+                pass
+
+    def _emit_data_loaded_event(self, data):
+        """Emit a custom event when data loading is complete."""
+        try:
+            import nuke
+            
+            # Use QTimer.singleShot with 0ms delay to queue the column width calculation
+            # This ensures it runs after the current event loop iteration completes
+            # and all table items are fully rendered
+            QtCore.QTimer.singleShot(0, lambda: self._on_data_loaded(data))
+            
+            nuke.tprint("[NK2DL DEBUG] Data loaded event queued for column width calculation")
+            
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in data loaded event emission: {e}")
+            except:
+                pass
+
+    def _on_data_loaded(self, data):
+        """Handle data loaded event for column width calculation."""
+        try:
+            import nuke
+            
+            if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
+                nuke.tprint("[NK2DL DEBUG] Event-based column width calculation (data loaded)")
+                self.render_table.calculate_optimal_column_widths(data)
+            else:
+                nuke.tprint("[NK2DL DEBUG] Event-based column width calculation skipped - table not ready")
+                
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in data loaded column width calculation: {e}")
+            except:
+                pass
+
+    def _schedule_frozen_table_update(self):
+        """Schedule frozen table geometry update via event queue."""
+        try:
+            import nuke
+            
+            # Queue geometry update to happen after current event processing
+            QtCore.QTimer.singleShot(0, self._on_frozen_table_geometry_ready)
+            
+            nuke.tprint("[NK2DL DEBUG] Frozen table geometry update scheduled")
+            
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in frozen table update scheduling: {e}")
+            except:
+                pass
+
+    def _on_frozen_table_geometry_ready(self):
+        """Handle frozen table geometry ready event."""
+        try:
+            import nuke
+            
+            if hasattr(self.render_table, '_update_frozen_table_geometry'):
+                nuke.tprint("[NK2DL DEBUG] Event-based frozen table geometry update")
+                self.render_table._update_frozen_table_geometry()
+                
+                # Queue a repaint after geometry update
+                QtCore.QTimer.singleShot(0, self._on_frozen_table_repaint_ready)
+            else:
+                nuke.tprint("[NK2DL DEBUG] Event-based frozen table geometry update skipped - method not available")
+                
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in frozen table geometry update: {e}")
+            except:
+                pass
+
+    def _on_frozen_table_repaint_ready(self):
+        """Handle frozen table repaint ready event."""
+        try:
+            import nuke
+            
+            if hasattr(self.render_table, 'frozen_table'):
+                nuke.tprint("[NK2DL DEBUG] Event-based frozen table repaint")
+                self.render_table.frozen_table.update()
+            else:
+                nuke.tprint("[NK2DL DEBUG] Event-based frozen table repaint skipped - frozen table not available")
+                
+        except Exception as e:
+            try:
+                import nuke
+                nuke.tprint(f"[NK2DL DEBUG] Exception in frozen table repaint: {e}")
+            except:
+                pass
     
     def _create_ui(self):
         """Create the node settings UI components."""
+        print("[NK2DL DEBUG] _create_ui() called")
         layout = QtWidgets.QVBoxLayout()
         self.setLayout(layout)
         
         # Control buttons with filter
+        print("[NK2DL DEBUG] About to call _create_control_buttons()")
         self._create_control_buttons()
         layout.addLayout(self.button_layout)
         
         # Create the table
+        print("[NK2DL DEBUG] About to call _create_table()")
         self._create_table()
         layout.addWidget(self.render_table)
+        print("[NK2DL DEBUG] Table added to layout")
         
         # Set stretch factor to make table expand
         layout.setStretchFactor(self.render_table, 1)
@@ -123,11 +301,14 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _create_table(self):
         """Create the node settings table."""
+        print("[NK2DL DEBUG] Starting _create_table method")
         from ..widgets import FrozenTableWidget, CustomHeaderView
         from ..delegates import SettingsAwareDelegate
         from ..constants import TableColumns
         
+        print("[NK2DL DEBUG] About to create FrozenTableWidget")
         self.render_table = FrozenTableWidget()
+        print("[NK2DL DEBUG] Created FrozenTableWidget successfully")
         self.render_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         
         # Set up settings-aware delegate for inheritance and override styling
@@ -156,14 +337,17 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Use the FrozenTableWidget's built-in method to restore all synchronization
             self.render_table.reconnect_frozen_signals()
             
-            # Force an immediate geometry update and repaint
-            QtCore.QTimer.singleShot(0, self.render_table._update_frozen_table_geometry)
-            QtCore.QTimer.singleShot(50, lambda: self.render_table.frozen_table.update())
+            # Schedule frozen table geometry update via event system
+            # This ensures proper synchronization without fixed delays
+            self._schedule_frozen_table_update()
             
             logger.debug("Frozen table setup completed")
         
         # Connect table signals
         self.render_table.itemChanged.connect(self._on_table_item_changed)
+        
+        # Column widths will be calculated when data is loaded or via timer
+        # This prevents multiple calculations during initialization
         
         # Table properties are already set in FrozenTableWidget constructor
     
@@ -178,6 +362,7 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _load_data_from_model(self):
         """Load data from the model into the table widget."""
+        print("[NK2DL DEBUG] _load_data_from_model() called")
         # Disable sorting during data loading to prevent sorting synchronization
         # from interfering with initial data population. The FrozenTableWidget
         # has complex sorting sync between main and frozen tables that can corrupt
@@ -228,8 +413,11 @@ class NodeSettingsView(QtWidgets.QWidget):
                     # Sync to frozen table if this is a frozen column
                     self._sync_frozen_item(row, col, item)
             
-            # Resize columns to content
-            self.render_table.resizeColumnsToContents()
+            # Emit data loaded event to trigger column width calculation
+            # This event-based approach ensures column widths are calculated
+            # after all data is loaded and the table is properly rendered
+            print("[NK2DL DEBUG] Emitting data loaded event for column width calculation")
+            self._emit_data_loaded_event(data)
             
         finally:
             # Re-enable signals after loading is complete
