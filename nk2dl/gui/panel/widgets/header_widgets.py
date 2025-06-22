@@ -326,16 +326,52 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         # Set text color to white for good contrast on dark backgrounds
         painter.setPen(QtGui.QColor(255, 255, 255))
         
-        # Set font (slightly bold for headers)
+        # FIXED: Only use bold font if this column is selected, not always
+        # This matches the width calculations which use normal font
         font = painter.font()
-        font.setBold(True)
+        
+        # Check if this column is selected by examining the table's selection
+        is_selected = False
+        if self.parent() and hasattr(self.parent(), 'selectionModel'):
+            selection_model = self.parent().selectionModel()
+            if selection_model and selection_model.hasSelection():
+                # Check if any cell in this column is selected
+                selected_indexes = selection_model.selectedIndexes()
+                for index in selected_indexes:
+                    if index.column() == self.logicalIndexAt(rect.center()):
+                        is_selected = True
+                        break
+        
+        # Only set bold if column is selected (matches standard Qt header behavior)
+        font.setBold(is_selected)
         painter.setFont(font)
         
         # Add horizontal padding to prevent cramped text
         padded_rect = rect.adjusted(Sizes.HEADER_TEXT_PADDING, 0, -Sizes.HEADER_TEXT_PADDING, 0)
         
-        # Draw text centered in padded rectangle
-        painter.drawText(padded_rect, QtCore.Qt.AlignCenter, str(text))
+        # Debug: Check if text fits in the available space
+        font_metrics = QtGui.QFontMetrics(font)
+        try:
+            text_width = font_metrics.horizontalAdvance(str(text))
+        except AttributeError:
+            text_width = font_metrics.width(str(text))
+        
+        available_width = padded_rect.width()
+        
+        # Use Qt logger for debugging (will only show if DEBUG level is enabled)
+        from ....common.logging import qt_logger
+        qt_logger.debug(f"Header '{text}': text_width={text_width}px, available_width={available_width}px, fits={text_width <= available_width}, bold={is_selected}")
+        
+        # If text doesn't fit, we might need to use elided text
+        if text_width > available_width:
+            # Try to elide the text to fit
+            elided_text = font_metrics.elidedText(str(text), QtCore.Qt.ElideRight, available_width)
+            qt_logger.warning(f"Header text '{text}' truncated to '{elided_text}' (width: {text_width}px > {available_width}px, bold={is_selected})")
+            text = elided_text
+        
+        # Draw text centered in padded rectangle with proper alignment
+        # Use AlignVCenter | AlignHCenter for better centering
+        painter.drawText(padded_rect, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter, str(text))
     
     def _draw_header_borders(self, painter, rect, border_color):
         """Draw header borders with bright bottom edge only.
