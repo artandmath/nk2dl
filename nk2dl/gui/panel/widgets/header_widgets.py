@@ -206,6 +206,9 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         self.setSectionsMovable(False)
         self.setStretchLastSection(False)
         
+        # CRITICAL: Enable sort indicators - this was missing!
+        self.setSortIndicatorShown(True)
+        
         # Enable section resize mode to maintain standard behavior
         self.setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
         
@@ -217,7 +220,7 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         self._default_background = QtGui.QColor("#2a2a2a")  # Dark gray for fixed columns
         self._default_border = QtGui.QColor("#555555")      # Medium gray border
         
-        logger.info("CustomHeaderView created with job/machine color schemes")
+        logger.info("CustomHeaderView created with job/machine color schemes and sort indicators enabled")
     
     def resizeEvent(self, event):
         """Override resize event to maintain proper header behavior."""
@@ -243,6 +246,9 @@ class CustomHeaderView(QtWidgets.QHeaderView):
     def paintSection(self, painter, rect, logicalIndex):
         """Paint header section with custom styling based on column type.
         
+        This method temporarily modifies the palette to apply custom colors
+        while preserving all Qt functionality including sort indicators.
+        
         Args:
             painter: QPainter instance
             rect: Rectangle to paint in
@@ -252,13 +258,10 @@ class CustomHeaderView(QtWidgets.QHeaderView):
             super().paintSection(painter, rect, logicalIndex)
             return
             
-        painter.save()
-        
         # Get column header name to determine styling
         header_name = self._get_header_name(logicalIndex)
         if not header_name:
             super().paintSection(painter, rect, logicalIndex)
-            painter.restore()
             return
         
         # Determine column type and colors
@@ -275,17 +278,34 @@ class CustomHeaderView(QtWidgets.QHeaderView):
             bg_color = self._default_background
             border_color = self._default_border
         
-        # Fill background with dark color
-        painter.fillRect(rect, bg_color)
+        # Save the current palette
+        original_palette = self.palette()
         
-        # Draw the column text
-        display_name = self._get_display_name(header_name)
-        self._draw_header_text(painter, rect, display_name)
+        # Create a modified palette with our custom background color
+        custom_palette = QtGui.QPalette(original_palette)
+        custom_palette.setColor(QtGui.QPalette.Button, bg_color)
+        custom_palette.setColor(QtGui.QPalette.Window, bg_color)
+        custom_palette.setColor(QtGui.QPalette.Base, bg_color)
         
-        # Draw borders (sides and top with subtle border, bottom with bright color)
-        self._draw_header_borders(painter, rect, border_color)
+        # Temporarily apply the custom palette
+        self.setPalette(custom_palette)
         
-        painter.restore()
+        try:
+            # Paint the standard Qt header with our custom palette
+            # This preserves sort indicators, text, and all Qt functionality
+            super().paintSection(painter, rect, logicalIndex)
+            
+        finally:
+            # Always restore the original palette
+            self.setPalette(original_palette)
+        
+        # Draw custom bottom border AFTER palette restoration
+        # This ensures the border color is not affected by palette changes
+        painter.save()
+        try:
+            self._draw_custom_bottom_border(painter, rect, border_color)
+        finally:
+            painter.restore()
     
     def _get_header_name(self, logical_index):
         """Get the header name for a logical index.
@@ -304,96 +324,27 @@ class CustomHeaderView(QtWidgets.QHeaderView):
         display_to_header = {v: k for k, v in TableColumns.HEADER_DISPLAY_NAMES.items()}
         return display_to_header.get(str(header_data), str(header_data))
     
-    def _get_display_name(self, header_name):
-        """Get the display name for a header.
-        
-        Args:
-            header_name: Internal header name
-            
-        Returns:
-            str: Display name for the header
-        """
-        return TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
-    
-    def _draw_header_text(self, painter, rect, text):
-        """Draw the header text centered in the rectangle with padding.
+    def _draw_custom_bottom_border(self, painter, rect, border_color):
+        """Draw custom bottom border for visual column grouping.
         
         Args:
             painter: QPainter instance
-            rect: Rectangle to draw text in
-            text: Text to draw
+            rect: Rectangle to draw border on
+            border_color: Color for the bottom border
         """
-        # Set text color to white for good contrast on dark backgrounds
-        painter.setPen(QtGui.QColor(255, 255, 255))
+        # Ensure we have a valid color
+        if isinstance(border_color, str):
+            border_color = QtGui.QColor(border_color)
         
-        # FIXED: Only use bold font if this column is selected, not always
-        # This matches the width calculations which use normal font
-        font = painter.font()
+        # Set up pen with proper color and width
+        pen = QtGui.QPen(border_color)
+        pen.setWidth(3)  # Make it thicker for better visibility
+        pen.setStyle(QtCore.Qt.SolidLine)
+        painter.setPen(pen)
         
-        # Check if this column is selected by examining the table's selection
-        is_selected = False
-        if self.parent() and hasattr(self.parent(), 'selectionModel'):
-            selection_model = self.parent().selectionModel()
-            if selection_model and selection_model.hasSelection():
-                # Check if any cell in this column is selected
-                selected_indexes = selection_model.selectedIndexes()
-                for index in selected_indexes:
-                    if index.column() == self.logicalIndexAt(rect.center()):
-                        is_selected = True
-                        break
+        # Draw bottom border line, slightly inset from edges for better appearance
+        left_x = rect.left() + 1
+        right_x = rect.right() - 1
+        bottom_y = rect.bottom()
         
-        # Only set bold if column is selected (matches standard Qt header behavior)
-        font.setBold(is_selected)
-        painter.setFont(font)
-        
-        # Add horizontal padding to prevent cramped text
-        padded_rect = rect.adjusted(Sizes.HEADER_TEXT_PADDING, 0, -Sizes.HEADER_TEXT_PADDING, 0)
-        
-        # Debug: Check if text fits in the available space
-        font_metrics = QtGui.QFontMetrics(font)
-        try:
-            text_width = font_metrics.horizontalAdvance(str(text))
-        except AttributeError:
-            text_width = font_metrics.width(str(text))
-        
-        available_width = padded_rect.width()
-        
-        # Use Qt logger for debugging (will only show if DEBUG level is enabled)
-        from ....common.logging import qt_logger
-        qt_logger.debug(f"Header '{text}': text_width={text_width}px, available_width={available_width}px, fits={text_width <= available_width}, bold={is_selected}")
-        
-        # If text doesn't fit, we might need to use elided text
-        if text_width > available_width:
-            # Try to elide the text to fit
-            elided_text = font_metrics.elidedText(str(text), QtCore.Qt.ElideRight, available_width)
-            qt_logger.warning(f"Header text '{text}' truncated to '{elided_text}' (width: {text_width}px > {available_width}px, bold={is_selected})")
-            text = elided_text
-        
-        # Draw text centered in padded rectangle with proper alignment
-        # Use AlignVCenter | AlignHCenter for better centering
-        painter.drawText(padded_rect, QtCore.Qt.AlignVCenter | QtCore.Qt.AlignHCenter, str(text))
-    
-    def _draw_header_borders(self, painter, rect, border_color):
-        """Draw header borders with bright bottom edge only.
-        
-        Args:
-            painter: QPainter instance
-            rect: Rectangle to draw borders around
-            border_color: Color for the bright bottom border only
-        """
-        # Use system default header border color for sides and top
-        default_border_color = self.palette().color(QtGui.QPalette.Mid)
-        painter.setPen(QtGui.QPen(default_border_color, 1))
-        
-        # Left border (system default)
-        painter.drawLine(rect.topLeft(), rect.bottomLeft())
-        
-        # Right border (system default)
-        painter.drawLine(rect.topRight(), rect.bottomRight())
-        
-        # Top border (system default)
-        painter.drawLine(rect.topLeft(), rect.topRight())
-        
-        # Bright bottom border ONLY (full opacity, slightly thicker)
-        painter.setPen(QtGui.QPen(border_color, 2))
-        painter.drawLine(rect.bottomLeft(), rect.bottomRight()) 
+        painter.drawLine(left_x, bottom_y, right_x, bottom_y) 
