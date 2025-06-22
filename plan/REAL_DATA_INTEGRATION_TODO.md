@@ -133,7 +133,7 @@
 - [x] Handle column-specific merge rules
 - [x] Preserve user overrides during refresh
 
-### **4.2.1 UI Bug Fixes** ⏱️ **2-3 hours** ❌ **NOT STARTED - NEXT PRIORITY**
+### **4.2.1 UI Bug Fixes** ⏱️ **3-4 hours** ⚠️ **PARTIALLY COMPLETED - NEXT PRIORITY**
 
 #### **4.2.1.1 Frozen Table Column Issues** ⏱️ **1 hour** ✅ **COMPLETED**
 - [x] **Frozen table columns reset size on update** ✅ **FIXED**
@@ -145,15 +145,21 @@
   - [x] Fix duplicate/ghost column rendering in frozen table overlay
   - [x] Optimize frozen table repaint logic
 
-#### **4.2.1.2 Header Sorting Issues** ⏱️ **1 hour** ❌ **NOT STARTED**
-- [ ] **Sort indicators missing on headers**
-  - [ ] Fix missing sort arrow indicators on column headers
-  - [ ] Ensure sort indicators show on both main and frozen table headers
-  - [ ] Verify sort indicator synchronization between tables
+#### **4.2.1.2 Header Sorting Issues** ⏱️ **2-3 hours** ⚠️ **PARTIALLY COMPLETED**
+- [x] **Sort indicators missing on headers** ✅ **COMPLETED**
+  - [x] Fix missing sort arrow indicators on column headers
+  - [x] Ensure sort indicators show on both main and frozen table headers
+  - [x] Verify sort indicator synchronization between tables
 - [ ] **Sort should take into account current sort order**
   - [ ] Fix sorting logic to respect current sort order for secondary sorts
   - [ ] Investigate if sorting is using row order instead of data order
   - [ ] Ensure stable sorting behavior across table updates
+- [ ] **Enhanced Sort Indicator Styling** ⏱️ **1-2 hours** ❌ **NOT STARTED**
+  - [ ] sharper, more equilateral triangle sort indicators
+  - [ ] sort indicators should draw with the header BG behind them so they don't conflict with text when drawn over text
+  - [ ] sort indicators should push text to the left when resizing the columns smaller then introduce ellipses when the text has hit the leftmost bounds of the cell
+  - [ ] headers should be created with room for sort indicators
+  - [ ] header text should be drawn 1 or 2 pixels above their current position to account for the header cell highlight line
 
 #### **4.2.1.3 Testing & Validation** ⏱️ **30 min** ❌ **NOT STARTED**
 - [ ] Test column resizing behavior after data updates
