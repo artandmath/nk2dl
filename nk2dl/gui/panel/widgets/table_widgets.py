@@ -305,12 +305,27 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         Based on Qt Centre forum solution but adapted for frozen columns.
         """
         try:
-            logger.debug(f"Sort indicator changed: column {logical_index}, order {sort_order}")
+            logger.debug(f"Main table sort indicator changed: column {logical_index}, order {sort_order}")
             
             # Block signals to prevent infinite recursion
             self.frozen_table.blockSignals(True)
             
             try:
+                # CRITICAL: Manage sort indicators - only one table should show indicator at a time
+                if logical_index >= self.frozen_column_count:
+                    # Main table is sorting a non-frozen column, hide frozen table sort indicator
+                    # and ensure main table indicator is shown
+                    self.frozen_table.horizontalHeader().setSortIndicatorShown(False)
+                    self.horizontalHeader().setSortIndicatorShown(True)
+                    logger.debug("Hidden frozen table sort indicator, shown main table indicator (sorting non-frozen column)")
+                else:
+                    # Main table is sorting a frozen column, show the indicator on frozen table too
+                    # and hide main table indicator
+                    self.horizontalHeader().setSortIndicatorShown(False)
+                    self.frozen_table.horizontalHeader().setSortIndicatorShown(True)
+                    self.frozen_table.horizontalHeader().setSortIndicator(logical_index, sort_order)
+                    logger.debug(f"Hidden main table indicator, shown frozen table sort indicator: column {logical_index}, order {sort_order}")
+                
                 # Get the current row order from the main table after sorting
                 row_count = self.rowCount()
                 if row_count == 0:
@@ -373,6 +388,11 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             self.blockSignals(True)
             
             try:
+                # CRITICAL: Hide sort indicator on main table when frozen table is sorted
+                # Only one table should show sort indicator at a time
+                self.horizontalHeader().setSortIndicatorShown(False)
+                logger.debug("Hidden main table sort indicator (frozen table sorting)")
+                
                 # Sort the main table by the same column and order
                 self.sortByColumn(logical_index, sort_order)
                 logger.debug(f"Synchronized main table sorting: column {logical_index}, order {sort_order}")
