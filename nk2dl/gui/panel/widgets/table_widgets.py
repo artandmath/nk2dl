@@ -531,33 +531,32 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             sample_data: Optional list of sample row data to consider for width calculation
         """
         try:
-            # Import nuke for debugging output
-            import nuke
+            # Get Qt logger for debugging
+            from ....common.logging import qt_logger
             
-            # Use nuke.tprint for debugging since Qt/PySide can interfere with print/logging
-            nuke.tprint("[NK2DL DEBUG] Starting optimal column width calculation")
+            qt_logger.debug("Starting optimal column width calculation")
             logger.debug("Starting optimal column width calculation")
             
             # Get font metrics from the table
             font = self.font()
             font_metrics = QtGui.QFontMetrics(font)
-            nuke.tprint(f"[NK2DL DEBUG] Using font: {font.family()}, {font.pointSize()}pt")
+            qt_logger.debug(f"Using font: {font.family()}, {font.pointSize()}pt")
             
             # Check default section size
             default_size = self.horizontalHeader().defaultSectionSize()
-            nuke.tprint(f"[NK2DL DEBUG] Header default section size: {default_size}px")
+            qt_logger.debug(f"Header default section size: {default_size}px")
             
             # Set default section size to a reasonable minimum to prevent 100px override
             self.horizontalHeader().setDefaultSectionSize(Sizes.HEADER_DEFAULT_SECTION_SIZE)
-            nuke.tprint(f"[NK2DL DEBUG] Set header default section size to {Sizes.HEADER_DEFAULT_SECTION_SIZE}px")
+            qt_logger.debug(f"Set header default section size to {Sizes.HEADER_DEFAULT_SECTION_SIZE}px")
             
             # Check and fix header resize mode that might be forcing uniform widths
             resize_mode = self.horizontalHeader().sectionResizeMode(0)  # Check first column's resize mode
-            nuke.tprint(f"[NK2DL DEBUG] Current header resize mode: {resize_mode}")
+            qt_logger.debug(f"Current header resize mode: {resize_mode}")
             
             # Ensure header is in Interactive mode (allows individual column widths)
             self.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
-            nuke.tprint("[NK2DL DEBUG] Set header resize mode to Interactive")
+            qt_logger.debug("Set header resize mode to Interactive")
             
             logger.debug(f"Using font: {font.family()}, {font.pointSize()}pt")
             
@@ -565,13 +564,16 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             # This ensures we use the correct header names for width calculation
             headers = TableColumns.HEADERS[:self.columnCount()]
             
-            nuke.tprint(f"[NK2DL DEBUG] Processing {len(headers)} columns: {headers}")
-            nuke.tprint(f"[NK2DL DEBUG] Table has {self.columnCount()} columns, {self.rowCount()} rows")
+            qt_logger.debug(f"Processing {len(headers)} columns: {headers}")
+            qt_logger.debug(f"Table has {self.columnCount()} columns, {self.rowCount()} rows")
             logger.debug(f"Processing {len(headers)} columns: {headers}")
             
-            # Calculate width for each column
+            # PHASE 1: Calculate all optimal widths without setting them (prevents UI flashing)
+            calculated_widths = {}
+            qt_logger.debug("=== PHASE 1: Calculating all column widths ===")
+            
             for col, header_name in enumerate(headers):
-                nuke.tprint(f"[NK2DL DEBUG] Processing column {col}: {header_name}")
+                qt_logger.debug(f"Processing column {col}: {header_name}")
                 
                 # Collect sample values for this column
                 sample_values = []
@@ -612,66 +614,113 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
                 elif header_name == "Group":
                     sample_values.extend(["none", "high_priority", "overnight"])
                 
-                nuke.tprint(f"[NK2DL DEBUG] Column {col} sample values: {sample_values[:5]}")
+                qt_logger.debug(f"Column {col} sample values: {sample_values[:5]}")
                 
                 # Calculate optimal width using the internal header name (which will be converted to display name inside the method)
                 optimal_width = TableColumns.calculate_column_width(header_name, font_metrics, sample_values)
                 display_name = TableColumns.HEADER_DISPLAY_NAMES.get(header_name, header_name)
-                nuke.tprint(f"[NK2DL DEBUG] Column {col} ({header_name} -> '{display_name}'): calculated width = {optimal_width}px")
-                nuke.tprint(f"[NK2DL DEBUG] Width calculation used display name: '{display_name}' (length: {len(display_name)} chars)")
+                qt_logger.debug(f"Column {col} ({header_name} -> '{display_name}'): calculated width = {optimal_width}px")
+                qt_logger.debug(f"Width calculation used display name: '{display_name}' (length: {len(display_name)} chars)")
                 logger.debug(f"Column {col} ({header_name}): calculated width = {optimal_width}px, samples = {sample_values[:3]}")
                 
-                # Set the column width
-                nuke.tprint(f"[NK2DL DEBUG] About to set column {col} ({header_name}) width to {optimal_width}px")
-                self.setColumnWidth(col, optimal_width)
-                nuke.tprint(f"[NK2DL DEBUG] Set main table column {col} ({header_name}) width to {optimal_width}px")
-                
-                # Verify the width was actually set
-                actual_width = self.columnWidth(col)
-                nuke.tprint(f"[NK2DL DEBUG] Verified main table column {col} ({header_name}) actual width: {actual_width}px")
-                
-                # Check if it was overridden
-                if actual_width != optimal_width:
-                    nuke.tprint(f"[NK2DL ERROR] Column {col} ({header_name}) width was overridden! Expected {optimal_width}px, got {actual_width}px")
-                
-                # Also set in frozen table if this is a frozen column
-                if (hasattr(self, 'frozen_table') and 
-                    hasattr(self, 'frozen_column_count') and 
-                    col < self.frozen_column_count):
-                    self.frozen_table.setColumnWidth(col, optimal_width)
-                    nuke.tprint(f"[NK2DL DEBUG] Set frozen table column {col} ({header_name}) width to {optimal_width}px")
-                    
-                    # Verify frozen table width was actually set
-                    frozen_actual_width = self.frozen_table.columnWidth(col)
-                    nuke.tprint(f"[NK2DL DEBUG] Verified frozen table column {col} ({header_name}) actual width: {frozen_actual_width}px")
-                    logger.debug(f"Set frozen table column {col} width to {optimal_width}px")
+                # Store the calculated width for batch application
+                calculated_widths[col] = optimal_width
             
-            nuke.tprint(f"[NK2DL DEBUG] Completed optimal column width calculation for {len(headers)} columns")
+            # PHASE 2: Apply all widths in a single batch operation (prevents UI flashing)
+            qt_logger.debug("=== PHASE 2: Applying all column widths in batch ===")
+            
+            # Block signals to prevent multiple repaints and signal emissions during width setting
+            qt_logger.debug("Blocking signals for batch width update")
+            self.blockSignals(True)
+            if hasattr(self, 'frozen_table'):
+                self.frozen_table.blockSignals(True)
+            
+            # Temporarily disconnect resize signals to prevent cascade updates
+            try:
+                self.horizontalHeader().sectionResized.disconnect()
+                if hasattr(self, 'frozen_table'):
+                    self.frozen_table.horizontalHeader().sectionResized.disconnect()
+                qt_logger.debug("Disconnected resize signals for batch update")
+            except (TypeError, RuntimeError):
+                qt_logger.debug("No resize signals to disconnect")
+            
+            try:
+                # Apply all calculated widths at once
+                for col, optimal_width in calculated_widths.items():
+                    header_name = headers[col]
+                    
+                    # Set main table column width
+                    qt_logger.debug(f"Setting column {col} ({header_name}) width to {optimal_width}px")
+                    self.setColumnWidth(col, optimal_width)
+                    
+                    # Set frozen table column width if applicable
+                    if (hasattr(self, 'frozen_table') and 
+                        hasattr(self, 'frozen_column_count') and 
+                        col < self.frozen_column_count):
+                        self.frozen_table.setColumnWidth(col, optimal_width)
+                        qt_logger.debug(f"Set frozen table column {col} ({header_name}) width to {optimal_width}px")
+                
+                qt_logger.debug(f"Applied {len(calculated_widths)} column widths in batch")
+                
+            finally:
+                # Re-enable signals and reconnect resize signals
+                qt_logger.debug("Re-enabling signals after batch update")
+                self.blockSignals(False)
+                if hasattr(self, 'frozen_table'):
+                    self.frozen_table.blockSignals(False)
+                
+                # Reconnect resize signals
+                try:
+                    self.horizontalHeader().sectionResized.connect(self._update_frozen_section_width)
+                    if hasattr(self, 'frozen_table'):
+                        self.frozen_table.horizontalHeader().sectionResized.connect(self._update_main_section_width)
+                    qt_logger.debug("Reconnected resize signals after batch update")
+                except (TypeError, RuntimeError):
+                    qt_logger.debug("Could not reconnect some resize signals")
+            
+            # PHASE 3: Single UI update and verification
+            qt_logger.debug("=== PHASE 3: Final verification and single UI update ===")
+            
+            # Force a single geometry update for both tables
+            self.updateGeometry()
+            if hasattr(self, 'frozen_table'):
+                self.frozen_table.updateGeometry()
+                self._update_frozen_table_geometry()
+            
+            # Single repaint to show all changes at once
+            self.update()
+            if hasattr(self, 'frozen_table'):
+                self.frozen_table.update()
+            
+            qt_logger.debug(f"Completed optimal column width calculation for {len(headers)} columns")
             logger.debug(f"Completed optimal column width calculation for {len(headers)} columns")
             
             # Final verification - show current state of all column widths
-            nuke.tprint("[NK2DL DEBUG] Final column width verification:")
+            qt_logger.debug("Final column width verification:")
             for col in range(min(10, len(headers))):  # Show first 10 columns to see more variety
                 main_width = self.columnWidth(col)
                 frozen_width = self.frozen_table.columnWidth(col) if col < self.frozen_column_count else "N/A"
-                nuke.tprint(f"[NK2DL DEBUG]   Column {col} ({headers[col]}): main={main_width}px, frozen={frozen_width}px")
+                qt_logger.debug(f"  Column {col} ({headers[col]}): main={main_width}px, frozen={frozen_width}px")
             
             # Also check if all columns are actually the same width
             all_widths = [self.columnWidth(col) for col in range(len(headers))]
             unique_widths = set(all_widths)
             if len(unique_widths) == 1:
-                nuke.tprint(f"[NK2DL ERROR] All {len(headers)} columns have the same width: {list(unique_widths)[0]}px - this suggests a resize mode issue!")
+                qt_logger.error(f"All {len(headers)} columns have the same width: {list(unique_widths)[0]}px - this suggests a resize mode issue!")
             else:
-                nuke.tprint(f"[NK2DL DEBUG] Found {len(unique_widths)} different column widths: {sorted(unique_widths)}")
+                qt_logger.debug(f"Found {len(unique_widths)} different column widths: {sorted(unique_widths)}")
             
         except Exception as e:
-            # Import nuke in except block in case it wasn't imported above
+            qt_logger.error(f"Exception in calculate_optimal_column_widths: {str(e)}")
+            qt_logger.error(f"Exception type: {type(e).__name__}")
+            import traceback
+            qt_logger.error(f"Traceback: {traceback.format_exc()}")
+            logger.error(f"Exception in calculate_optimal_column_widths: {str(e)}", exc_info=True)
+            
+            # Ensure signals are re-enabled even if an exception occurs
             try:
-                import nuke
-                nuke.tprint(f"[NK2DL ERROR] Exception in calculate_optimal_column_widths: {str(e)}")
-                nuke.tprint(f"[NK2DL ERROR] Exception type: {type(e).__name__}")
-                import traceback
-                nuke.tprint(f"[NK2DL ERROR] Traceback: {traceback.format_exc()}")
+                self.blockSignals(False)
+                if hasattr(self, 'frozen_table'):
+                    self.frozen_table.blockSignals(False)
             except:
-                pass
-            logger.error(f"Exception in calculate_optimal_column_widths: {str(e)}", exc_info=True) 
+                pass 
