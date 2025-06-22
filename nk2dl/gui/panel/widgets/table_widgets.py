@@ -534,6 +534,9 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             # Get Qt logger for debugging
             from ....common.logging import qt_logger
             
+            # Enable UI operation mode to reduce logging verbosity during width calculation
+            qt_logger.set_ui_operation_mode(True)
+            
             qt_logger.debug("Starting optimal column width calculation")
             logger.debug("Starting optimal column width calculation")
             
@@ -722,5 +725,12 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
                 self.blockSignals(False)
                 if hasattr(self, 'frozen_table'):
                     self.frozen_table.blockSignals(False)
+            except:
+                pass
+        
+        finally:
+            # Disable UI operation mode to restore full logging
+            try:
+                qt_logger.set_ui_operation_mode(False)
             except:
                 pass 
