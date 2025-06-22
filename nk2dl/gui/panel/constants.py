@@ -212,44 +212,57 @@ class TableColumns:
     
     @classmethod
     def calculate_column_width(cls, header_name, font_metrics, sample_values=None):
-        """Calculate optimal column width based on font metrics and content.
+        """Calculate optimal column width based on header text and sample content.
         
         Args:
-            header_name: Name of the header (e.g., "Priority", "Node")
-            font_metrics: QFontMetrics instance for measuring text
-            sample_values: Optional list of sample values to consider
+            header_name (str): Internal header name (e.g., "ConcurrentTasks")
+            font_metrics (QFontMetrics): Font metrics for content text
+            sample_values (list, optional): Sample values to consider for width
             
         Returns:
-            int: Calculated column width in pixels
+            int: Calculated optimal width in pixels
         """
         # Get display name for header
         display_name = cls.HEADER_DISPLAY_NAMES.get(header_name, header_name)
         
         # Debug output for width calculation
-        try:
-            import nuke
-            nuke.tprint(f"[NK2DL WIDTH] Calculating width for '{header_name}' -> display: '{display_name}'")
-        except:
-            pass
+        from ...common.logging import qt_logger
+        qt_logger.debug(f"Calculating width for '{header_name}' -> display: '{display_name}'")
         
-        # Calculate header text width
+        # FIXED: Calculate header text width using BOLD font to ensure it never truncates when selected
+        # Create bold font metrics for header width calculation
+        # Note: We need to create a new font since QFontMetrics doesn't expose its font
         try:
-            header_width = font_metrics.horizontalAdvance(display_name)
+            # Try to get font from QApplication (most reliable)
+            from PySide2.QtWidgets import QApplication
+            app_font = QApplication.font()
+        except:
+            try:
+                from PySide6.QtWidgets import QApplication
+                app_font = QApplication.font()
+            except:
+                # Fallback to default font
+                from PySide2.QtGui import QFont
+                app_font = QFont()
+        
+        bold_font = app_font
+        bold_font.setBold(True)
+        bold_font_metrics = font_metrics.__class__(bold_font)
+        
+        # Calculate header text width using bold font
+        try:
+            header_width = bold_font_metrics.horizontalAdvance(display_name)
         except AttributeError:
             # Fallback for older Qt versions
-            header_width = font_metrics.width(display_name)
+            header_width = bold_font_metrics.width(display_name)
         
-        # Debug header width calculation
-        try:
-            import nuke
-            nuke.tprint(f"[NK2DL WIDTH] Header '{display_name}' base width: {header_width}px")
-        except:
-            pass
+        # Debug header width calculation  
+        qt_logger.debug(f"Header '{display_name}' base width (bold): {header_width}px")
         
         # Add header text padding (double it since padding is applied on both sides)
         header_width += Sizes.HEADER_TEXT_PADDING * 2
         
-        # Calculate content width if sample values provided
+        # Calculate content width if sample values provided (using normal font for content)
         content_width = 0
         if sample_values:
             for value in sample_values:
@@ -272,11 +285,7 @@ class TableColumns:
         final_width = max(min_width, min(calculated_width, max_width))
         
         # Debug final width calculation
-        try:
-            import nuke
-            nuke.tprint(f"[NK2DL WIDTH] Final width for '{display_name}': {final_width}px (calculated: {calculated_width}px, min: {min_width}px, max: {max_width}px)")
-        except:
-            pass
+        qt_logger.debug(f"Final width for '{display_name}': {final_width}px (calculated: {calculated_width}px, header_bold: {header_width-Sizes.HEADER_TEXT_PADDING*2}px, content: {content_width}px, min: {min_width}px, max: {max_width}px)")
         
         return final_width
 
