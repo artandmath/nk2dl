@@ -45,6 +45,7 @@ class TableDataModel(QtCore.QObject):
     - Override detection (explicit values override settings)
     - Change notifications
     - Real node data integration with background loading
+    - Multi-level sorting with configurable primary/secondary sort columns
     """
     
     # Signals
@@ -53,6 +54,7 @@ class TableDataModel(QtCore.QObject):
     loadingFinished = QtCore.Signal()
     loadingProgress = QtCore.Signal(int, str)
     debugInfo = QtCore.Signal(str)
+    sortOrderChanged = QtCore.Signal(int, int)  # primary_column, secondary_column
     
     def __init__(self, settings_model=None, parent=None):
         super().__init__(parent)
@@ -67,6 +69,149 @@ class TableDataModel(QtCore.QObject):
         self._node_data_provider = None
         self._settings_storage = None
         
+        # Multi-level sorting state
+        self._primary_sort_column = None    # Column index for primary sort
+        self._secondary_sort_column = None  # Column index for secondary sort  
+        self._primary_sort_order = QtCore.Qt.AscendingOrder
+        self._secondary_sort_order = QtCore.Qt.AscendingOrder
+        
+        # Initialize default sort order: Order (primary), Node (secondary)
+        self._set_initial_sort_order()
+        
+    def _set_initial_sort_order(self):
+        """Set the initial sort order: Order (primary) and Node (secondary)."""
+        try:
+            # Find Order column index
+            order_column = self._headers.index("Order") if "Order" in self._headers else None
+            # Find Node column index  
+            node_column = self._headers.index("Node") if "Node" in self._headers else None
+            
+            if order_column is not None:
+                self._primary_sort_column = order_column
+                self._primary_sort_order = QtCore.Qt.AscendingOrder
+                
+            if node_column is not None:
+                self._secondary_sort_column = node_column
+                self._secondary_sort_order = QtCore.Qt.AscendingOrder
+                
+        except ValueError:
+            # Fallback if columns not found
+            self._primary_sort_column = 0 if len(self._headers) > 0 else None
+            self._secondary_sort_column = 1 if len(self._headers) > 1 else None
+            
+    def apply_sort(self, clicked_column, clicked_order):
+        """Apply multi-level sorting when a column header is clicked.
+        
+        Args:
+            clicked_column (int): Column index that was clicked
+            clicked_order (int): Qt.AscendingOrder or Qt.DescendingOrder
+        """
+        # Store the previous primary as the new secondary
+        if self._primary_sort_column is not None and self._primary_sort_column != clicked_column:
+            self._secondary_sort_column = self._primary_sort_column
+            self._secondary_sort_order = self._primary_sort_order
+        
+        # Set the clicked column as the new primary
+        self._primary_sort_column = clicked_column
+        self._primary_sort_order = clicked_order
+        
+        # Apply the sort
+        self._sort_data()
+        
+        # Emit signals
+        self.sortOrderChanged.emit(self._primary_sort_column or -1, self._secondary_sort_column or -1)
+        self.dataChanged.emit()
+        
+    def _sort_data(self):
+        """Sort the data using multi-level sorting logic."""
+        if not self._data or self._primary_sort_column is None:
+            return
+            
+        def sort_key(row_data):
+            """Generate sort key for a row using primary and secondary columns."""
+            # Get primary sort value
+            primary_header = self._headers[self._primary_sort_column]
+            primary_value = row_data.get(primary_header, "")
+            
+            # Convert to appropriate type for sorting
+            primary_sort_value = self._convert_value_for_sorting(primary_value)
+            
+            # Get secondary sort value if secondary column is set
+            secondary_sort_value = ""
+            if self._secondary_sort_column is not None:
+                secondary_header = self._headers[self._secondary_sort_column]
+                secondary_value = row_data.get(secondary_header, "")
+                secondary_sort_value = self._convert_value_for_sorting(secondary_value)
+            
+            # Return tuple for multi-level sorting
+            # Reverse for descending order by using negative values for numeric types
+            if self._primary_sort_order == QtCore.Qt.DescendingOrder:
+                if isinstance(primary_sort_value, (int, float)):
+                    primary_sort_value = -primary_sort_value
+                else:
+                    # For strings, we'll reverse the list after sorting
+                    pass
+            
+            if self._secondary_sort_column is not None and self._secondary_sort_order == QtCore.Qt.DescendingOrder:
+                if isinstance(secondary_sort_value, (int, float)):
+                    secondary_sort_value = -secondary_sort_value
+                    
+            return (primary_sort_value, secondary_sort_value)
+        
+        # Sort the data
+        reverse_primary = (self._primary_sort_order == QtCore.Qt.DescendingOrder and 
+                          isinstance(sort_key(self._data[0])[0] if self._data else "", str))
+        
+        self._data.sort(key=sort_key, reverse=reverse_primary)
+    
+    def _convert_value_for_sorting(self, value):
+        """Convert a value to an appropriate type for sorting.
+        
+        Args:
+            value: Raw value from the data
+            
+        Returns:
+            Converted value suitable for sorting
+        """
+        if value is None or value == "":
+            return ""
+            
+        value_str = str(value)
+        
+        # Try to convert to int first
+        try:
+            return int(value_str)
+        except ValueError:
+            pass
+            
+        # Try to convert to float
+        try:
+            return float(value_str)
+        except ValueError:
+            pass
+            
+        # Return as lowercase string for case-insensitive sorting
+        return value_str.lower()
+    
+    def get_sort_state(self):
+        """Get the current sort state.
+        
+        Returns:
+            tuple: (primary_column, primary_order, secondary_column, secondary_order)
+        """
+        return (
+            self._primary_sort_column,
+            self._primary_sort_order, 
+            self._secondary_sort_column,
+            self._secondary_sort_order
+        )
+        
+    def apply_initial_sort(self):
+        """Apply the initial sort order to the data."""
+        if self._data and self._primary_sort_column is not None:
+            self._sort_data()
+            self.dataChanged.emit()
+    
     def set_settings_model(self, settings_model):
         """Set the settings model for inheritance.
         
@@ -125,8 +270,10 @@ class TableDataModel(QtCore.QObject):
             # Update table data
             self._data = merged_data
             
-            # Emit signals
-            self.dataChanged.emit()
+            # Apply initial sort (Order primary, Node secondary)
+            self.apply_initial_sort()
+            
+            # Emit signals (dataChanged already emitted by apply_initial_sort)
             self.loadingFinished.emit()
             
         except Exception as e:

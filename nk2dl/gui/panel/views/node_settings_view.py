@@ -344,6 +344,26 @@ class NodeSettingsView(QtWidgets.QWidget):
         """Connect model signals to view updates."""
         self.table_model.dataChanged.connect(self._on_model_data_changed)
         
+        # DISABLE Qt's built-in sorting to use our custom multi-level sorting
+        self.render_table.setSortingEnabled(False)
+        if hasattr(self.render_table, 'frozen_table'):
+            self.render_table.frozen_table.setSortingEnabled(False)
+            
+            # Disconnect frozen table's existing sort signal connections to avoid conflicts
+            try:
+                self.render_table.horizontalHeader().sortIndicatorChanged.disconnect()
+                self.render_table.frozen_table.horizontalHeader().sortIndicatorChanged.disconnect()
+            except (TypeError, RuntimeError):
+                pass  # Signals may not be connected yet
+        
+        # Connect sort order changes to update header indicators
+        self.table_model.sortOrderChanged.connect(self._on_sort_order_changed)
+        
+        # Connect header clicks to custom sorting instead of Qt's default
+        self.render_table.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
+        if hasattr(self.render_table, 'frozen_table'):
+            self.render_table.frozen_table.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
+        
         # Connect settings model change signals to refresh table
         if self.settings_model:
             self.settings_model.jobSettingsChanged.connect(self._on_settings_changed)
@@ -413,11 +433,11 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Re-enable signals after loading is complete
             self.render_table.blockSignals(False)
             
-            # Re-enable sorting after data loading is complete
-            # This prevents sorting synchronization issues during data population
-            self.render_table.setSortingEnabled(sorting_enabled)
+            # Keep sorting DISABLED - we use custom multi-level sorting instead of Qt's built-in sorting
+            # Note: Qt's sorting is permanently disabled in _connect_signals()
+            self.render_table.setSortingEnabled(False)
             if hasattr(self.render_table, 'frozen_table'):
-                self.render_table.frozen_table.setSortingEnabled(frozen_sorting_enabled)
+                self.render_table.frozen_table.setSortingEnabled(False)
     
     def _apply_cell_styling(self, item, row, col):
         """Apply styling to table cell items based on override status."""
@@ -704,3 +724,53 @@ class NodeSettingsView(QtWidgets.QWidget):
             qt_logger.error(f"Exception in _set_initial_column_widths: {e}")
             import traceback
             traceback.print_exc()
+
+    def _on_header_clicked(self, logical_index):
+        """Handle header clicks for custom multi-level sorting.
+        
+        Args:
+            logical_index (int): Column index that was clicked
+        """
+        # Determine the new sort order (toggle between ascending/descending)
+        current_primary, current_primary_order, _, _ = self.table_model.get_sort_state()
+        
+        if current_primary == logical_index:
+            # Same column clicked - toggle order
+            new_order = (QtCore.Qt.DescendingOrder if current_primary_order == QtCore.Qt.AscendingOrder 
+                        else QtCore.Qt.AscendingOrder)
+        else:
+            # Different column clicked - start with ascending
+            new_order = QtCore.Qt.AscendingOrder
+        
+        # Apply the sort through the model
+        self.table_model.apply_sort(logical_index, new_order)
+        
+    def _on_sort_order_changed(self, primary_column, secondary_column):
+        """Handle sort order changes to update header indicators.
+        
+        Args:
+            primary_column (int): Primary sort column index (-1 if none)
+            secondary_column (int): Secondary sort column index (-1 if none)
+        """
+        # Get the current sort state
+        primary_col, primary_order, secondary_col, secondary_order = self.table_model.get_sort_state()
+        
+        # Update main table header indicators
+        if primary_col is not None:
+            self.render_table.horizontalHeader().setSortIndicator(primary_col, primary_order)
+            self.render_table.horizontalHeader().setSortIndicatorShown(True)
+        else:
+            self.render_table.horizontalHeader().setSortIndicatorShown(False)
+        
+        # Update frozen table header indicators if applicable
+        if hasattr(self.render_table, 'frozen_table') and hasattr(self.render_table, 'frozen_column_count'):
+            frozen_header = self.render_table.frozen_table.horizontalHeader()
+            
+            # Show indicator on frozen table only if primary column is frozen
+            if primary_col is not None and primary_col < self.render_table.frozen_column_count:
+                frozen_header.setSortIndicator(primary_col, primary_order)
+                frozen_header.setSortIndicatorShown(True)
+                # Hide main table indicator when frozen column is sorted
+                self.render_table.horizontalHeader().setSortIndicatorShown(False)
+            else:
+                frozen_header.setSortIndicatorShown(False)
