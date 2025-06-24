@@ -283,10 +283,10 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             # Update geometry and force repaint to prevent artifacts
             self._update_frozen_table_geometry()
         else:
-            # For unfrozen columns, schedule a single deferred viewport update
-            # This prevents double-drawing with the setColumnWidth override
-            logger.debug(f"Main table unfrozen column {logical_index} resized to {new_size}, scheduling viewport update")
-            QtCore.QTimer.singleShot(0, self.viewport().update)
+            # For unfrozen columns, force immediate repaint to ensure cells update
+            # The double-draw at seam is avoided by targeted area repainting
+            logger.debug(f"Main table unfrozen column {logical_index} resized to {new_size}, forcing immediate viewport repaint")
+            self.viewport().repaint()
     
     def _update_main_section_width(self, logical_index, old_size, new_size):
         """Update main table column width when frozen table column is resized."""
@@ -439,15 +439,13 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Force a repaint of the frozen table
         self.frozen_table.update()
         
-        # Calculate the affected area that needs repainting in the main table
-        # This includes both the old and new frozen table areas
-        repaint_rect = old_geometry.united(self.frozen_table.geometry())
+        # Calculate the frozen area that needs repainting (avoid unfrozen area)
+        frozen_width = self._get_frozen_table_width()
+        frozen_rect = QtCore.QRect(0, 0, frozen_width, self.viewport().height())
         
-        # Expand the repaint area slightly to ensure complete cleanup
-        repaint_rect = repaint_rect.adjusted(-2, -2, 2, 2)
-        
-        # Single deferred viewport update to avoid double-draw at seam
-        QtCore.QTimer.singleShot(0, lambda: self.viewport().update(repaint_rect))
+        # Only repaint the frozen area to avoid interfering with unfrozen column repaints
+        # This prevents double-draw at the seam while allowing unfrozen areas to update independently
+        self.viewport().update(frozen_rect)
     
     def _get_frozen_table_width(self):
         """Calculate the total width of frozen columns."""
@@ -762,8 +760,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Call parent method
         super().setColumnWidth(column, width)
         
-        # For unfrozen columns, schedule a single viewport update to prevent double-draw
+        # For unfrozen columns, force immediate repaint to ensure cells update  
         if column >= self.frozen_column_count:
-            logger.debug(f"Column {column} (unfrozen) width set to {width}, scheduling viewport update")
-            # Use single deferred update to avoid multiple repaints
-            QtCore.QTimer.singleShot(1, self.viewport().update) 
+            logger.debug(f"Column {column} (unfrozen) width set to {width}, forcing immediate repaint")
+            # Immediate repaint needed for unfrozen columns
+            self.viewport().repaint() 
