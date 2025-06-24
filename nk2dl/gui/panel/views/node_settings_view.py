@@ -343,6 +343,7 @@ class NodeSettingsView(QtWidgets.QWidget):
     def _connect_signals(self):
         """Connect model signals to view updates."""
         self.table_model.dataChanged.connect(self._on_model_data_changed)
+        self.table_model.dataSorted.connect(self._on_data_sorted)  # Handle sorting without full reload
         
         # DISABLE Qt's built-in sorting to use our custom multi-level sorting
         self.render_table.setSortingEnabled(False)
@@ -542,6 +543,65 @@ class NodeSettingsView(QtWidgets.QWidget):
         """Handle model data changes."""
         # Refresh the table display
         self._load_data_from_model()
+    
+    def _on_data_sorted(self):
+        """Handle data sorting without full reload to preserve column widths."""
+        # Get the sorted data from the model
+        sorted_data = self.table_model.get_data()
+        headers = self.table_model.get_headers()
+        
+        if not sorted_data:
+            return
+            
+        # Block signals to prevent unwanted updates during reordering  
+        self.render_table.blockSignals(True)
+        
+        try:
+            # Store all current table items organized by node name
+            current_items_by_node = {}
+            for row in range(self.render_table.rowCount()):
+                # Get node name from the table item
+                node_item = self.render_table.item(row, 1)  # Node is column 1
+                if node_item:
+                    node_name = node_item.text()
+                    current_items_by_node[node_name] = {}
+                    
+                    # Store all items for this row
+                    for col in range(self.render_table.columnCount()):
+                        item = self.render_table.takeItem(row, col)
+                        if item:
+                            current_items_by_node[node_name][col] = item
+            
+            # Reorder items according to sorted data
+            for new_row, row_data in enumerate(sorted_data):
+                node_name = row_data.get("Node", "")
+                
+                if node_name in current_items_by_node:
+                    # Move items from stored position to new sorted position
+                    for col in range(len(headers)):
+                        if col in current_items_by_node[node_name]:
+                            item = current_items_by_node[node_name][col]
+                            
+                            # Update item data with current values from model
+                            raw_value = self.table_model.get_cell_value(new_row, col)
+                            effective_value = self.table_model.get_effective_cell_value(new_row, col)
+                            
+                            # Update item data and text
+                            item.setData(QtCore.Qt.UserRole, raw_value)
+                            item.setText(str(effective_value))
+                            
+                            # Apply styling 
+                            self._apply_cell_styling(item, new_row, col)
+                            
+                            # Place item in new row position
+                            self.render_table.setItem(new_row, col, item)
+                            
+                            # Sync to frozen table if this is a frozen column
+                            self._sync_frozen_item(new_row, col, item)
+                        
+        finally:
+            # Re-enable signals
+            self.render_table.blockSignals(False)
     
     def _on_settings_changed(self):
         """Handle settings model changes - refresh table to show updated inherited values."""

@@ -150,13 +150,13 @@
   - [x] Fix missing sort arrow indicators on column headers
   - [x] Ensure sort indicators show on both main and frozen table headers
   - [x] Verify sort indicator synchronization between tables
-- [ ] **Sort should take into account current sort order**
-  - [ ] **Initial Sort Behavior:** Table should initialize with render order (Order) as primary sort and node name as secondary sort
-  - [ ] **Header Click Behavior:** When a header is clicked, that column becomes the new primary sort and the previous primary sort becomes the secondary sort
-  - [ ] **Example:** If table is initialized (Order primary, Node secondary) and user clicks "Frames" header, then Frames becomes primary sort and Order becomes secondary sort
-  - [ ] Fix sorting logic to respect current sort order for secondary sorts  
-  - [ ] Investigate if sorting is using row order instead of data order
-  - [ ] Ensure stable sorting behavior across table updates
+- [x] **Sort should take into account current sort order** ✅ **COMPLETED**
+  - [x] **Initial Sort Behavior:** Table should initialize with render order (Order) as primary sort and node name as secondary sort
+  - [x] **Header Click Behavior:** When a header is clicked, that column becomes the new primary sort and the previous primary sort becomes the secondary sort
+  - [x] **Example:** If table is initialized (Order primary, Node secondary) and user clicks "Frames" header, then Frames becomes primary sort and Order becomes secondary sort
+  - [x] Fix sorting logic to respect current sort order for secondary sorts  
+  - [x] Investigate if sorting is using row order instead of data order
+  - [x] Ensure stable sorting behavior across table updates
 - [ ] **Header Resize Synchronization Issue** ❌ **NOT STARTED**
   - [ ] resizing headers is not updating columns on the unfrozen table. frozen table correctly updates columns
 - [ ] **Enhanced Sort Indicator Styling** ⏱️ **1-2 hours** ❌ **NOT STARTED**

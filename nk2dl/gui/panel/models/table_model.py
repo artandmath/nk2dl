@@ -55,6 +55,7 @@ class TableDataModel(QtCore.QObject):
     loadingProgress = QtCore.Signal(int, str)
     debugInfo = QtCore.Signal(str)
     sortOrderChanged = QtCore.Signal(int, int)  # primary_column, secondary_column
+    dataSorted = QtCore.Signal()  # Emitted when data is reordered (not reloaded)
     
     def __init__(self, settings_model=None, parent=None):
         super().__init__(parent)
@@ -118,9 +119,9 @@ class TableDataModel(QtCore.QObject):
         # Apply the sort
         self._sort_data()
         
-        # Emit signals
+        # Emit signals - use dataSorted instead of dataChanged to avoid full reload
         self.sortOrderChanged.emit(self._primary_sort_column or -1, self._secondary_sort_column or -1)
-        self.dataChanged.emit()
+        self.dataSorted.emit()
         
     def _sort_data(self):
         """Sort the data using multi-level sorting logic."""
@@ -210,7 +211,7 @@ class TableDataModel(QtCore.QObject):
         """Apply the initial sort order to the data."""
         if self._data and self._primary_sort_column is not None:
             self._sort_data()
-            self.dataChanged.emit()
+            # Don't emit dataSorted for initial sort - it will be handled by dataChanged
     
     def set_settings_model(self, settings_model):
         """Set the settings model for inheritance.
@@ -273,7 +274,8 @@ class TableDataModel(QtCore.QObject):
             # Apply initial sort (Order primary, Node secondary)
             self.apply_initial_sort()
             
-            # Emit signals (dataChanged already emitted by apply_initial_sort)
+            # Emit signals - dataChanged for initial load, dataSorted emitted by apply_initial_sort
+            self.dataChanged.emit()  # Trigger full reload for initial data
             self.loadingFinished.emit()
             
         except Exception as e:
