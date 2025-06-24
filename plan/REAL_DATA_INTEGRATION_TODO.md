@@ -145,7 +145,7 @@
   - [x] Fix duplicate/ghost column rendering in frozen table overlay
   - [x] Optimize frozen table repaint logic
 
-#### **4.2.1.2 Header Sorting Issues** ⏱️ **2-3 hours** ⚠️ **PARTIALLY COMPLETED**
+#### **4.2.1.2 Header Sorting Issues** ⏱️ **2-3 hours** ✅ **COMPLETED**
 - [x] **Sort indicators missing on headers** ✅ **COMPLETED**
   - [x] Fix missing sort arrow indicators on column headers
   - [x] Ensure sort indicators show on both main and frozen table headers
@@ -159,12 +159,17 @@
   - [x] Ensure stable sorting behavior across table updates
 - [x] **Header Resize Synchronization Issue** ✅ **COMPLETED**
   - [x] resizing headers is not updating columns on the unfrozen table. frozen table correctly updates columns
-- [ ] **Enhanced Sort Indicator Styling** ⏱️ **1-2 hours** ❌ **NOT STARTED**
-  - [ ] sharper, more equilateral triangle sort indicators
-  - [ ] sort indicators should draw with the header BG behind them so they don't conflict with text when drawn over text
-  - [ ] sort indicators should push text to the left when resizing the columns smaller then introduce ellipses when the text has hit the leftmost bounds of the cell
-  - [ ] headers should be created with room for sort indicators
-  - [ ] header text should be drawn 1 or 2 pixels above their current position to account for the header cell highlight line
+- [x] **Update Button Multiple Redraw Fix** ✅ **COMPLETED**
+  - [x] Fix multiple redraw flashes when pressing update button (should be one update)
+  - [x] Prevent multiple concurrent refresh operations
+  - [x] Use dataSorted signal for refreshes to preserve column widths
+  - [x] Fix empty table update not working (dataSorted fallback to dataChanged for empty tables)
+  - [x] Fix auto-load multiple flashes during panel initialization 
+  - [x] Preserve current sort state during refresh instead of reverting to initial sort
+- [x] **Column Width Preservation During Updates** ✅ **COMPLETED - BONUS ENHANCEMENT**
+  - [x] Store column widths before data refresh
+  - [x] Restore column widths after data reload
+  - [x] Preserve user-customized column sizes during updates
 
 #### **4.2.1.3 Testing & Validation** ⏱️ **30 min** ❌ **NOT STARTED**
 - [ ] Test column resizing behavior after data updates
@@ -177,6 +182,14 @@
 - [ ] Add special handling for Node/Filename (read-only)
 - [ ] Add special handling for Order (updates node directly)
 - [ ] Implement cell value setting with storage
+
+### **4.4 Optional UI Enhancements** ⏱️ **1-2 hours** ❌ **NOT STARTED - OPTIONAL**
+- [ ] **Enhanced Sort Indicator Styling** ⏱️ **1-2 hours** ❌ **NOT STARTED**
+  - [ ] sharper, more equilateral triangle sort indicators
+  - [ ] sort indicators should draw with the header BG behind them so they don't conflict with text when drawn over text
+  - [ ] sort indicators should push text to the left when resizing the columns smaller then introduce ellipses when the text has hit the leftmost bounds of the cell
+  - [ ] headers should be created with room for sort indicators
+  - [ ] header text should be drawn 1 or 2 pixels above their current position to account for the header cell highlight line
 
 ---
 

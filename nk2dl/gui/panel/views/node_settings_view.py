@@ -51,11 +51,27 @@ class NodeSettingsView(QtWidgets.QWidget):
     """
     
     def __init__(self, table_model, settings_model=None, parent=None):
+        """Initialize the NodeSettingsView.
+        
+        Args:
+            table_model: The TableDataModel instance
+            settings_model: The SettingsModel instance for inheritance
+            parent: Parent widget
+        """
         from ....common.logging import qt_logger
         qt_logger.debug("NodeSettingsView.__init__ called")
         super().__init__(parent)
         self.table_model = table_model
         self.settings_model = settings_model
+        self.render_table = None
+        self.column_dropdown = None
+        self.current_filter = ""
+        
+        # Track refresh state to prevent multiple concurrent updates
+        self._is_refreshing = False
+        
+        # Store column widths to preserve them during updates
+        self._stored_column_widths = {}
         
         # Connect settings model to table model for inheritance
         if self.settings_model:
@@ -66,13 +82,15 @@ class NodeSettingsView(QtWidgets.QWidget):
         self._create_ui()
         qt_logger.debug("About to call _connect_signals()")
         self._connect_signals()
-        qt_logger.debug("About to call _load_data_from_model()")
-        self._load_data_from_model()
+        qt_logger.debug("About to call _connect_table_events()")
+        self._connect_table_events()
+        qt_logger.debug("About to call _apply_configuration()")
+        QtCore.QTimer.singleShot(0, self._apply_configuration)
         qt_logger.debug("NodeSettingsView.__init__ completed")
         
-        # Connect to table events for column width calculation
-        # This replaces the timer-based approach with proper event handling
-        self._connect_table_events()
+        # Skip initial data load - auto-load will handle it
+        # qt_logger.debug("About to call _load_data_from_model()")
+        # self._load_data_from_model()
     
     def _connect_table_events(self):
         """Connect to table events for responsive column width calculation."""
@@ -543,6 +561,14 @@ class NodeSettingsView(QtWidgets.QWidget):
         """Handle model data changes."""
         # Refresh the table display
         self._load_data_from_model()
+        
+        # Restore column widths if they were stored before refresh
+        if self._stored_column_widths:
+            # Use a timer to ensure table is fully rendered before restoring widths
+            QtCore.QTimer.singleShot(100, self._restore_column_widths)
+        
+        # Reset refresh flag
+        self._is_refreshing = False
     
     def _on_data_sorted(self):
         """Handle data sorting without full reload to preserve column widths."""
@@ -551,6 +577,14 @@ class NodeSettingsView(QtWidgets.QWidget):
         headers = self.table_model.get_headers()
         
         if not sorted_data:
+            # Reset refresh flag even if no data
+            self._is_refreshing = False
+            return
+        
+        # Check if table is empty - if so, fallback to full data load
+        if self.render_table.rowCount() == 0:
+            # Table is empty, need full data load instead of reordering
+            self._on_model_data_changed()
             return
             
         # Block signals to prevent unwanted updates during reordering  
@@ -602,6 +636,9 @@ class NodeSettingsView(QtWidgets.QWidget):
         finally:
             # Re-enable signals
             self.render_table.blockSignals(False)
+            
+            # Reset refresh flag
+            self._is_refreshing = False
     
     def _on_settings_changed(self):
         """Handle settings model changes - refresh table to show updated inherited values."""
@@ -647,11 +684,23 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _on_update_clicked(self):
         """Handle update button click."""
-        # Trigger refresh through the table model
+        # Prevent multiple concurrent refreshes
+        if self._is_refreshing:
+            from ....common.logging import qt_logger
+            qt_logger.debug("Update already in progress, ignoring additional click")
+            return
+        
+        # Store current column widths if table has existing data
+        if self.render_table and self.render_table.rowCount() > 0:
+            self._store_column_widths()
+        
+        # Mark as refreshing and trigger refresh through the table model
+        self._is_refreshing = True
         if hasattr(self.table_model, 'refresh_from_nodes_async'):
             self.table_model.refresh_from_nodes_async()
         else:
             # Fallback message if real functionality not available
+            self._is_refreshing = False
             if NUKE_AVAILABLE:
                 nuke.message('Update functionality will be implemented in the final integration phase.')
             else:
@@ -834,3 +883,39 @@ class NodeSettingsView(QtWidgets.QWidget):
                 self.render_table.horizontalHeader().setSortIndicatorShown(False)
             else:
                 frozen_header.setSortIndicatorShown(False)
+
+    def _store_column_widths(self):
+        """Store current column widths before data refresh."""
+        if not self.render_table:
+            return
+            
+        self._stored_column_widths = {}
+        headers = self.table_model.get_headers()
+        
+        for col, header in enumerate(headers):
+            width = self.render_table.columnWidth(col)
+            self._stored_column_widths[header] = width
+            
+        from ....common.logging import qt_logger
+        qt_logger.debug(f"Stored column widths: {self._stored_column_widths}")
+    
+    def _restore_column_widths(self):
+        """Restore column widths after data refresh."""
+        if not self.render_table or not self._stored_column_widths:
+            return
+            
+        headers = self.table_model.get_headers()
+        
+        for col, header in enumerate(headers):
+            if header in self._stored_column_widths:
+                stored_width = self._stored_column_widths[header]
+                self.render_table.setColumnWidth(col, stored_width)
+                
+                # Also set on frozen table if applicable
+                if (hasattr(self.render_table, 'frozen_table') and 
+                    hasattr(self.render_table, 'frozen_column_count') and
+                    col < self.render_table.frozen_column_count):
+                    self.render_table.frozen_table.setColumnWidth(col, stored_width)
+        
+        from ....common.logging import qt_logger
+        qt_logger.debug(f"Restored column widths for {len(self._stored_column_widths)} columns")

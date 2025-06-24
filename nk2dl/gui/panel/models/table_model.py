@@ -58,25 +58,36 @@ class TableDataModel(QtCore.QObject):
     dataSorted = QtCore.Signal()  # Emitted when data is reordered (not reloaded)
     
     def __init__(self, settings_model=None, parent=None):
+        """Initialize the table data model.
+        
+        Args:
+            settings_model: Optional settings model for inheritance
+            parent: Parent QObject
+        """
         super().__init__(parent)
-        self._data = []  # List of dictionaries, one per row
+        self._data = []
         self._headers = TableColumns.HEADERS.copy()
+        
+        # Settings integration
         self.settings_model = settings_model
+        
+        # Real data integration attributes  
+        self._node_data_provider = None
+        self._settings_storage = None
         
         # Column visibility tracking
         self._visible_columns = set(self._headers)  # All columns visible by default
         
-        # Repository integration
-        self._node_data_provider = None
-        self._settings_storage = None
-        
         # Multi-level sorting state
-        self._primary_sort_column = None    # Column index for primary sort
-        self._secondary_sort_column = None  # Column index for secondary sort  
+        self._primary_sort_column = None  # Initially None, will be set by _set_initial_sort_order
+        self._secondary_sort_column = None  
         self._primary_sort_order = QtCore.Qt.AscendingOrder
         self._secondary_sort_order = QtCore.Qt.AscendingOrder
         
-        # Initialize default sort order: Order (primary), Node (secondary)
+        # Track initial data state to prevent multiple redraws
+        self._has_initial_data = False
+        
+        # Set initial sort order (Order primary, Node secondary)
         self._set_initial_sort_order()
         
     def _set_initial_sort_order(self):
@@ -268,14 +279,36 @@ class TableDataModel(QtCore.QObject):
             # Merge node data with stored overrides
             merged_data = self._merge_node_data_with_overrides(node_data_list)
             
+            # Store the current sort state before updating data
+            current_sort_state = self.get_sort_state()
+            
             # Update table data
+            old_data_count = len(self._data)
             self._data = merged_data
+            new_data_count = len(self._data)
             
-            # Apply initial sort (Order primary, Node secondary)
-            self.apply_initial_sort()
+            # Apply sorting - preserve current sort state if we have data, use initial sort if empty
+            if old_data_count == 0:
+                # Empty table - apply initial sort (Order primary, Node secondary)
+                self.apply_initial_sort()
+            else:
+                # Table had data - preserve current sort state
+                if current_sort_state[0] is not None:  # If we have a valid primary sort
+                    self._primary_sort_column = current_sort_state[0]
+                    self._primary_sort_order = current_sort_state[1]
+                    self._secondary_sort_column = current_sort_state[2]
+                    self._secondary_sort_order = current_sort_state[3]
+                    self._sort_data()
             
-            # Emit signals - dataChanged for initial load, dataSorted emitted by apply_initial_sort
-            self.dataChanged.emit()  # Trigger full reload for initial data
+            # Determine signal to emit based on whether table was empty
+            if old_data_count == 0:
+                # Empty table needs full reload (dataChanged)
+                self._has_initial_data = True
+                self.dataChanged.emit()
+            else:
+                # Table had data - use dataSorted to preserve column widths
+                self.dataSorted.emit()
+            
             self.loadingFinished.emit()
             
         except Exception as e:
