@@ -247,8 +247,7 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         super().resizeEvent(event)
         self._update_frozen_table_geometry()
         
-        # Force viewport repaint to ensure proper cell display after resize
-        self.viewport().update()
+        # Note: viewport update handled by _update_frozen_table_geometry
     
     def moveCursor(self, cursor_action, modifiers):
         """Handle cursor movement to ensure visibility."""
@@ -284,10 +283,10 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             # Update geometry and force repaint to prevent artifacts
             self._update_frozen_table_geometry()
         else:
-            # For unfrozen columns, force a viewport repaint to update cell display
-            logger.debug(f"Main table unfrozen column {logical_index} resized to {new_size}, forcing viewport repaint")
-            self.viewport().update()
-            self.viewport().repaint()
+            # For unfrozen columns, schedule a single deferred viewport update
+            # This prevents double-drawing with the setColumnWidth override
+            logger.debug(f"Main table unfrozen column {logical_index} resized to {new_size}, scheduling viewport update")
+            QtCore.QTimer.singleShot(0, self.viewport().update)
     
     def _update_main_section_width(self, logical_index, old_size, new_size):
         """Update main table column width when frozen table column is resized."""
@@ -437,36 +436,18 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Ensure frozen table stays on top after geometry changes
         self.frozen_table.raise_()
         
-        # Force a repaint of both the frozen table and the main table viewport
-        # This is critical to prevent rendering artifacts when resizing columns
+        # Force a repaint of the frozen table
         self.frozen_table.update()
-        self.frozen_table.repaint()
         
-        # Calculate the area that needs repainting in the main table
+        # Calculate the affected area that needs repainting in the main table
         # This includes both the old and new frozen table areas
         repaint_rect = old_geometry.united(self.frozen_table.geometry())
         
         # Expand the repaint area slightly to ensure complete cleanup
         repaint_rect = repaint_rect.adjusted(-2, -2, 2, 2)
         
-        # Force repaint of the main table viewport in the affected area
-        self.viewport().update(repaint_rect)
-        
-        # Also force a full viewport repaint to be absolutely sure
-        # This is more expensive but ensures no artifacts remain
-        self.viewport().repaint()
-        
-        # CRITICAL: Force immediate repaint for unfrozen areas as well
-        # Calculate the unfrozen area and repaint it explicitly
-        frozen_width = self._get_frozen_table_width()
-        unfrozen_rect = QtCore.QRect(
-            frozen_width, 
-            0, 
-            self.viewport().width() - frozen_width, 
-            self.viewport().height()
-        )
-        self.viewport().update(unfrozen_rect)
-        self.viewport().repaint(unfrozen_rect)
+        # Single deferred viewport update to avoid double-draw at seam
+        QtCore.QTimer.singleShot(0, lambda: self.viewport().update(repaint_rect))
     
     def _get_frozen_table_width(self):
         """Calculate the total width of frozen columns."""
@@ -781,9 +762,8 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Call parent method
         super().setColumnWidth(column, width)
         
-        # Force viewport repaint for unfrozen columns to prevent display lag
+        # For unfrozen columns, schedule a single viewport update to prevent double-draw
         if column >= self.frozen_column_count:
-            logger.debug(f"Column {column} (unfrozen) width set to {width}, forcing viewport repaint")
-            self.viewport().update()
-            # Use QTimer.singleShot for immediate repaint without blocking
-            QtCore.QTimer.singleShot(0, self.viewport().repaint) 
+            logger.debug(f"Column {column} (unfrozen) width set to {width}, scheduling viewport update")
+            # Use single deferred update to avoid multiple repaints
+            QtCore.QTimer.singleShot(1, self.viewport().update) 
