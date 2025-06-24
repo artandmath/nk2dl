@@ -157,8 +157,8 @@
   - [x] Fix sorting logic to respect current sort order for secondary sorts  
   - [x] Investigate if sorting is using row order instead of data order
   - [x] Ensure stable sorting behavior across table updates
-- [ ] **Header Resize Synchronization Issue** ❌ **NOT STARTED**
-  - [ ] resizing headers is not updating columns on the unfrozen table. frozen table correctly updates columns
+- [x] **Header Resize Synchronization Issue** ✅ **COMPLETED**
+  - [x] resizing headers is not updating columns on the unfrozen table. frozen table correctly updates columns
 - [ ] **Enhanced Sort Indicator Styling** ⏱️ **1-2 hours** ❌ **NOT STARTED**
   - [ ] sharper, more equilateral triangle sort indicators
   - [ ] sort indicators should draw with the header BG behind them so they don't conflict with text when drawn over text
