@@ -439,13 +439,19 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Force a repaint of the frozen table
         self.frozen_table.update()
         
-        # Calculate the frozen area that needs repainting (avoid unfrozen area)
-        frozen_width = self._get_frozen_table_width()
-        frozen_rect = QtCore.QRect(0, 0, frozen_width, self.viewport().height())
+        # When frozen table geometry changes, both frozen and unfrozen areas may need repainting
+        # Check if frozen width has changed (which would shift unfrozen columns)
+        new_frozen_width = self._get_frozen_table_width()
+        old_frozen_width = old_geometry.width() if old_geometry.isValid() else 0
         
-        # Only repaint the frozen area to avoid interfering with unfrozen column repaints
-        # This prevents double-draw at the seam while allowing unfrozen areas to update independently
-        self.viewport().update(frozen_rect)
+        if new_frozen_width != old_frozen_width:
+            # Frozen width changed - unfrozen columns have shifted, repaint entire viewport
+            logger.debug(f"Frozen width changed from {old_frozen_width} to {new_frozen_width}, repainting entire viewport")
+            self.viewport().update()
+        else:
+            # Frozen width unchanged - only repaint frozen area to avoid double-draw
+            frozen_rect = QtCore.QRect(0, 0, new_frozen_width, self.viewport().height())
+            self.viewport().update(frozen_rect)
     
     def _get_frozen_table_width(self):
         """Calculate the total width of frozen columns."""
