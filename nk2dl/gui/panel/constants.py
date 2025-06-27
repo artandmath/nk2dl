@@ -45,6 +45,9 @@ class Sizes:
     HEADER_TEXT_PADDING = 6  # Horizontal padding for header text (3px each side)
     HEADER_DEFAULT_SECTION_SIZE = 80  # Default column width to reduce initial flashing (will be overridden by calculations)
     
+    # Checkbox column dimensions
+    CHECKBOX_COLUMN_PADDING = 5  # 5 pixels padding each side of checkbox
+    
     # Responsive behavior
     RESPONSIVE_BREAKPOINT = 1250  # Width below which settings stack vertically
 
@@ -82,9 +85,9 @@ class Colors:
 class TableColumns:
     """Table column definitions and properties."""
     
-    # Standard table headers (reordered to put Priority before ChunkSize)
+    # Standard table headers (Render column added as first column)
     HEADERS = [
-        "Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", 
+        "Render", "Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", 
         "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", 
         "NukeX", "BatchMode", "ReloadPlugin", "Pool", "SecondaryPool", 
         "Group", "Threads", "MinRam", "MaxRam", "UseGPU", "GPUId", 
@@ -93,6 +96,7 @@ class TableColumns:
     
     # Display names for headers (more readable versions)
     HEADER_DISPLAY_NAMES = {
+        "Render": "",  # Empty string = no header text shown for checkbox column
         "Order": "Order",
         "Node": "Node", 
         "Filename": "Filename",
@@ -122,7 +126,7 @@ class TableColumns:
     
     # Column groups for visibility dropdown
     COLUMN_GROUPS = {
-        "Fixed": ["Order", "Node", "Filename"],  # Always visible, cannot be hidden
+        "Fixed": ["Render", "Order", "Node", "Filename"],  # Always visible, cannot be hidden
         "Job Settings": [
             "Priority", "ChunkSize", "Frames", "NodesFrames", 
             "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", 
@@ -154,6 +158,7 @@ class TableColumns:
     COLUMN_WIDTH_SETTINGS = {
         # Minimum widths for each column type
         "min_widths": {
+            "Render": 30,  # Checkbox + padding (20px checkbox + 10px padding)
             "Order": 50,
             "Node": 80, 
             "Filename": 150,
@@ -182,6 +187,7 @@ class TableColumns:
         },
         # Maximum widths for each column type
         "max_widths": {
+            "Render": 30,  # Same as min (non-resizable)
             "Order": 80,
             "Node": 150,
             "Filename": 300,
@@ -603,5 +609,5 @@ class HeaderSettingsMapping:
         else:
             return None 
 
-    # Machine settings columns (for styling pinned rows) - updated indices
-    MACHINE_SETTINGS_COLUMNS = [13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24] 
+    # Machine settings columns (for styling pinned rows) - updated indices (+1 due to Render column)
+    MACHINE_SETTINGS_COLUMNS = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25] 

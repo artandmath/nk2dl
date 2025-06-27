@@ -297,7 +297,6 @@ class NodeSettingsView(QtWidgets.QWidget):
         from ....common.logging import qt_logger
         qt_logger.debug("Starting _create_table method")
         from ..widgets import FrozenTableWidget, CustomHeaderView
-        from ..delegates import SettingsAwareDelegate
         from ..constants import TableColumns
         
         qt_logger.debug("About to create FrozenTableWidget")
@@ -305,9 +304,10 @@ class NodeSettingsView(QtWidgets.QWidget):
         qt_logger.debug("Created FrozenTableWidget successfully")
         self.render_table.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         
-        # Set up settings-aware delegate for inheritance and override styling
-        self.settings_delegate = SettingsAwareDelegate(self.table_model)
-        self.render_table.setItemDelegate(self.settings_delegate)
+        # Set up combined delegate for both checkboxes and settings inheritance
+        from ..delegates import CombinedTableDelegate
+        self.combined_delegate = CombinedTableDelegate(self.table_model)
+        self.render_table.setItemDelegate(self.combined_delegate)
         
         # Set up table headers with display names
         headers = self.table_model.get_headers()
@@ -430,17 +430,31 @@ class NodeSettingsView(QtWidgets.QWidget):
                         item = QtWidgets.QTableWidgetItem(str(raw_value))
                         item.setData(QtCore.Qt.UserRole, raw_value)
                     
-                    # Set display text to effective value (for inheritance display)
-                    effective_value = self.table_model.get_effective_cell_value(row, col)
-                    item.setText(str(effective_value))
-                    
-                    # Apply styling based on whether cell is overridden
-                    self._apply_cell_styling(item, row, col)
+                    # Handle checkbox column specially
+                    if col == 0:  # Render column
+                        item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                        # Get checkbox value from model
+                        render_value = self.table_model.get_cell_value(row, col)
+                        checkbox_state = QtCore.Qt.Checked if render_value else QtCore.Qt.Unchecked
+                        item.setCheckState(checkbox_state)
+                        # Don't set text for checkbox column
+                        item.setText("")
+                    else:
+                        # Set display text to effective value (for inheritance display)
+                        effective_value = self.table_model.get_effective_cell_value(row, col)
+                        item.setText(str(effective_value))
+                        
+                        # Apply styling based on whether cell is overridden
+                        self._apply_cell_styling(item, row, col)
                     
                     self.render_table.setItem(row, col, item)
                     
                     # Sync to frozen table if this is a frozen column
                     self._sync_frozen_item(row, col, item)
+            
+            # Setup column resize modes (particularly important for checkbox column)
+            if hasattr(self.render_table, '_setup_column_resize_modes'):
+                self.render_table._setup_column_resize_modes()
             
             # Emit data loaded event to trigger column width calculation
             # This event-based approach ensures column widths are calculated
@@ -460,7 +474,11 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _apply_cell_styling(self, item, row, col):
         """Apply styling to table cell items based on override status."""
-        # Don't apply bold styling to frozen columns (Order, Node, Filename)
+        # Skip styling for Render column (checkbox)
+        if col == 0:
+            return
+            
+        # Don't apply bold styling to other frozen columns (Order, Node, Filename)
         # since they don't support inheritance and are always explicit
         if (hasattr(self.render_table, 'frozen_column_count') and 
             col < self.render_table.frozen_column_count):
@@ -508,6 +526,11 @@ class NodeSettingsView(QtWidgets.QWidget):
                 frozen_item.setForeground(item.foreground())
                 frozen_item.setBackground(item.background())
                 
+                # Copy checkbox state for render column
+                if col == 0:  # Render column
+                    frozen_item.setFlags(frozen_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                    frozen_item.setCheckState(item.checkState())
+                
                 # Set the item in the frozen table
                 self.render_table.frozen_table.setItem(row, col, frozen_item)
                 
@@ -527,6 +550,23 @@ class NodeSettingsView(QtWidgets.QWidget):
         try:
             row = item.row()
             col = item.column()
+            
+            # Handle checkbox column specially
+            if col == 0:  # Render column
+                # Get checkbox state and convert to boolean
+                checkbox_state = item.checkState()
+                model_value = checkbox_state == QtCore.Qt.Checked
+                
+                # Update the model with boolean value
+                self.table_model.set_cell_value(row, col, model_value, emit_signal=False)
+                
+                # Update the item's user data
+                item.setData(QtCore.Qt.UserRole, model_value)
+                
+                # Sync to frozen table if this is a frozen column
+                self._sync_frozen_item(row, col, item)
+                return
+            
             text_value = item.text()
             
             # Determine the value to store in the model
@@ -618,14 +658,22 @@ class NodeSettingsView(QtWidgets.QWidget):
                             
                             # Update item data with current values from model
                             raw_value = self.table_model.get_cell_value(new_row, col)
-                            effective_value = self.table_model.get_effective_cell_value(new_row, col)
                             
-                            # Update item data and text
-                            item.setData(QtCore.Qt.UserRole, raw_value)
-                            item.setText(str(effective_value))
-                            
-                            # Apply styling 
-                            self._apply_cell_styling(item, new_row, col)
+                            # Handle checkbox column specially
+                            if col == 0:  # Render column
+                                item.setData(QtCore.Qt.UserRole, raw_value)
+                                checkbox_state = QtCore.Qt.Checked if raw_value else QtCore.Qt.Unchecked
+                                item.setCheckState(checkbox_state)
+                                item.setText("")  # No text for checkbox
+                            else:
+                                effective_value = self.table_model.get_effective_cell_value(new_row, col)
+                                
+                                # Update item data and text
+                                item.setData(QtCore.Qt.UserRole, raw_value)
+                                item.setText(str(effective_value))
+                                
+                                # Apply styling 
+                                self._apply_cell_styling(item, new_row, col)
                             
                             # Place item in new row position
                             self.render_table.setItem(new_row, col, item)

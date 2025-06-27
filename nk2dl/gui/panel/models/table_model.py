@@ -429,12 +429,18 @@ class TableDataModel(QtCore.QObject):
             column (int): Column index
             
         Returns:
-            str or None: Cell value, None if should inherit, or empty string if bounds invalid
+            str, bool, or None: Cell value, None if should inherit, or empty string if bounds invalid
         """
         if row < 0 or row >= len(self._data) or column < 0 or column >= len(self._headers):
             return ""
         
         header = self._headers[column]
+        
+        # Handle checkbox column specially
+        if header == "Render":
+            # Return boolean value, default to True for new nodes
+            return self._data[row].get(header, True)
+        
         value = self._data[row].get(header, None)  # Default to None for inheritance
         
         return value
@@ -588,13 +594,28 @@ class TableDataModel(QtCore.QObject):
         Args:
             row (int): Row index
             column (int): Column index
-            value: Value to set (None means inherit from settings)
+            value: Value to set (None means inherit from settings, bool for checkbox)
             emit_signal (bool): Whether to emit dataChanged signal
         """
         if row < 0 or row >= len(self._data) or column < 0 or column >= len(self._headers):
             return
         
         header = self._headers[column]
+        
+        # Handle checkbox column
+        if header == "Render":
+            # Store as boolean
+            bool_value = bool(value) if value is not None else True
+            old_value = self._data[row].get(header, True)
+            
+            if old_value != bool_value:
+                self._data[row][header] = bool_value
+                
+                # No settings storage for checkbox column
+                
+                if emit_signal:
+                    self.dataChanged.emit()
+            return
         
         # Keep None as None for inheritance, convert other types to string
         if value is not None:
@@ -689,6 +710,10 @@ class TableDataModel(QtCore.QObject):
             return False
         
         header = self._headers[column]
+        
+        # Render column is editable (checkbox toggle)
+        if header == "Render":
+            return True
         
         # Node and Filename are read-only (extracted from nodes)
         if header in ["Node", "Filename"]:

@@ -32,8 +32,12 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from .constants import HeaderSettingsMapping
+from .constants import HeaderSettingsMapping, Sizes
 
+
+# ============================================================================
+# Settings and Inheritance Delegates
+# ============================================================================
 
 class SettingsAwareDelegate(QtWidgets.QStyledItemDelegate):
     """Delegate that handles settings inheritance and override styling.
@@ -169,6 +173,10 @@ class SettingsAwareDelegate(QtWidgets.QStyledItemDelegate):
             super().setModelData(editor, model, index)
 
 
+# ============================================================================
+# Checkbox Delegates
+# ============================================================================
+
 class CenteredCheckboxDelegate(QtWidgets.QStyledItemDelegate):
     """Custom delegate that centers checkboxes in tree widget columns."""
     
@@ -228,4 +236,80 @@ class CenteredCheckboxDelegate(QtWidgets.QStyledItemDelegate):
             new_value = QtCore.Qt.Unchecked if current_value == QtCore.Qt.Checked else QtCore.Qt.Checked
             return model.setData(index, new_value, QtCore.Qt.CheckStateRole)
         
-        return super().editorEvent(event, model, option, index) 
+        return super().editorEvent(event, model, option, index)
+
+
+class TableCheckboxDelegate(QtWidgets.QStyledItemDelegate):
+    """Custom delegate for checkbox columns in table widgets."""
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+    
+    def paint(self, painter, option, index):
+        """Paint checkbox centered in table cell."""
+        value = index.data(QtCore.Qt.CheckStateRole)
+        
+        if value is not None and index.column() == 0:  # Render column
+            # Use Qt's default checkbox rendering for table widgets
+            # Qt automatically centers checkboxes when ItemIsUserCheckable is set
+            super().paint(painter, option, index)
+        else:
+            # Normal cell rendering for non-checkbox columns
+            super().paint(painter, option, index)
+    
+    def editorEvent(self, event, model, option, index):
+        """Handle mouse events for toggling checkbox."""
+        if (index.column() == 0 and  # Render column
+            event.type() == QtCore.QEvent.MouseButtonRelease and
+            event.button() == QtCore.Qt.LeftButton):
+            
+            # Toggle checkbox state
+            current_value = index.data(QtCore.Qt.CheckStateRole)
+            new_value = QtCore.Qt.Unchecked if current_value == QtCore.Qt.Checked else QtCore.Qt.Checked
+            return model.setData(index, new_value, QtCore.Qt.CheckStateRole)
+        
+        return super().editorEvent(event, model, option, index)
+
+
+# ============================================================================
+# Combined Delegates
+# ============================================================================
+
+class CombinedTableDelegate(QtWidgets.QStyledItemDelegate):
+    """Combined delegate handling both checkboxes and settings inheritance."""
+    
+    def __init__(self, table_model, parent=None):
+        super().__init__(parent)
+        self.table_model = table_model
+        self.checkbox_delegate = TableCheckboxDelegate()
+        self.settings_delegate = SettingsAwareDelegate(table_model)
+    
+    def paint(self, painter, option, index):
+        if index.column() == 0:  # Render column
+            self.checkbox_delegate.paint(painter, option, index)
+        else:
+            self.settings_delegate.paint(painter, option, index)
+    
+    def editorEvent(self, event, model, option, index):
+        if index.column() == 0:  # Render column
+            return self.checkbox_delegate.editorEvent(event, model, option, index)
+        else:
+            return self.settings_delegate.editorEvent(event, model, option, index)
+    
+    def createEditor(self, parent, option, index):
+        if index.column() == 0:  # Render column
+            return None  # No editor needed for checkbox
+        else:
+            return self.settings_delegate.createEditor(parent, option, index)
+    
+    def setEditorData(self, editor, index):
+        if index.column() == 0:  # Render column
+            return  # No editor for checkbox
+        else:
+            return self.settings_delegate.setEditorData(editor, index)
+    
+    def setModelData(self, editor, model, index):
+        if index.column() == 0:  # Render column
+            return  # No editor for checkbox
+        else:
+            return self.settings_delegate.setModelData(editor, model, index) 

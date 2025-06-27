@@ -80,18 +80,18 @@ class StandardTableWidget(QtWidgets.QTableWidget):
 
 
 class FrozenTableWidget(QtWidgets.QTableWidget):
-    """Table widget with frozen first 3 columns (Order, Node, Filename).
+    """Table widget with frozen first 4 columns (Render, Order, Node, Filename).
     
-    Based on Qt's frozen column example. The first 3 columns are pinned and don't scroll
+    Based on Qt's frozen column example. The first 4 columns are pinned and don't scroll
     horizontally, while the rest of the columns scroll normally. This is useful for
-    keeping node-specific information (Order, Node, Filename) always visible.
+    keeping node-specific information (Render, Order, Node, Filename) always visible.
     """
     
     def __init__(self, parent=None):
         super().__init__(parent)
         
-        # Number of columns to freeze (Order, Node, Filename)
-        self.frozen_column_count = 3
+        # Number of columns to freeze (Render, Order, Node, Filename)
+        self.frozen_column_count = 4
         
         # Create the frozen table view as an overlay
         self.frozen_table = QtWidgets.QTableWidget(self)
@@ -118,7 +118,10 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Connect signals for synchronization
         self._connect_signals()
         
-        logger.info("FrozenTableWidget created with 3 frozen columns")
+        logger.info("FrozenTableWidget created with 4 frozen columns")
+        
+        # Set up column resize modes after initialization
+        self._setup_column_resize_modes()
     
     def _init_frozen_table(self):
         """Initialize the frozen table overlay."""
@@ -240,6 +243,14 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         """Set item in both tables (frozen table gets copy for frozen columns)."""
         super().setItem(row, column, item)
         
+        # Handle checkbox column specially
+        if column == 0:  # Render column
+            # Set item as checkable
+            item.setFlags(item.flags() | QtCore.Qt.ItemIsUserCheckable)
+            # Set default checked state if not already set
+            if item.checkState() == QtCore.Qt.PartiallyChecked:
+                item.setCheckState(QtCore.Qt.Checked)  # Default to checked
+        
         # If this is a frozen column, also set in frozen table
         if column < self.frozen_column_count:
             # Create a copy of the item for the frozen table
@@ -248,6 +259,11 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             frozen_item.setFont(item.font())
             frozen_item.setForeground(item.foreground())
             frozen_item.setBackground(item.background())
+            
+            # Copy checkbox state for render column
+            if column == 0:  # Render column
+                frozen_item.setFlags(frozen_item.flags() | QtCore.Qt.ItemIsUserCheckable)
+                frozen_item.setCheckState(item.checkState())
             
             self.frozen_table.setItem(row, column, frozen_item)
     
@@ -552,6 +568,30 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             logger.debug(f"Synchronized column {col} width to {main_width}")
         
         logger.debug("Frozen table synchronization signals reconnected successfully")
+    
+    def _setup_column_resize_modes(self):
+        """Set resize modes for columns."""
+        if self.columnCount() == 0:
+            return  # No columns yet
+            
+        header = self.horizontalHeader()
+        frozen_header = self.frozen_table.horizontalHeader()
+        
+        # Make render column (0) non-resizable and set fixed width
+        if self.columnCount() > 0:
+            header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)
+            frozen_header.setSectionResizeMode(0, QtWidgets.QHeaderView.Fixed)
+            
+            # Set fixed width for render column (checkbox + padding)
+            render_width = 30  # 20px checkbox + 10px padding
+            self.setColumnWidth(0, render_width)
+            self.frozen_table.setColumnWidth(0, render_width)
+        
+        # All other columns remain Interactive (resizable)
+        for col in range(1, self.columnCount()):
+            if col < self.frozen_column_count:
+                frozen_header.setSectionResizeMode(col, QtWidgets.QHeaderView.Interactive)
+            header.setSectionResizeMode(col, QtWidgets.QHeaderView.Interactive)
     
     def blockSignals(self, block):
         """Block signals for both main and frozen tables."""
