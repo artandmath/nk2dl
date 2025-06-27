@@ -107,6 +107,7 @@ class BaselineTestWindow(QtWidgets.QMainWindow):
         test_data = [
             {
                 # Row 1: Mix of explicit and inherited values
+                "Render": True,
                 "Order": "1000", 
                 "Node": "Write1", 
                 "Filename": "output1_%04d.exr",
@@ -120,6 +121,7 @@ class BaselineTestWindow(QtWidgets.QMainWindow):
             },
             {
                 # Row 2: Different mix
+                "Render": False,
                 "Order": "2000",
                 "Node": "Write2", 
                 "Filename": "output2_%04d.exr",
@@ -133,6 +135,7 @@ class BaselineTestWindow(QtWidgets.QMainWindow):
             },
             {
                 # Row 3: More test data for scrolling
+                "Render": True,
                 "Order": "3000",
                 "Node": "Write3",
                 "Filename": "output3_%04d.exr", 
@@ -146,6 +149,7 @@ class BaselineTestWindow(QtWidgets.QMainWindow):
             },
             {
                 # Row 4: Test frozen column visibility during scroll
+                "Render": False,
                 "Order": "4000",
                 "Node": "WriteVeryLongNodeName123",
                 "Filename": "/very/long/path/to/output/file_with_long_name_%04d.exr",
@@ -167,7 +171,7 @@ class BaselineTestWindow(QtWidgets.QMainWindow):
         headers = self.table_model.get_headers()
         print(f"Current column count: {len(headers)}")
         print(f"Headers: {headers[:10]}...")  # Show first 10
-        print(f"Frozen columns expected: 3 (Order, Node, Filename)")
+        print(f"Frozen columns expected: 4 (Render, Order, Node, Filename)")
         
     def _create_controls(self, layout):
         """Create control buttons and status."""
@@ -226,7 +230,7 @@ class BaselineTestWindow(QtWidgets.QMainWindow):
         if hasattr(table, 'frozen_table'):
             frozen_count = getattr(table, 'frozen_column_count', 0)
             print(f"  Frozen column count: {frozen_count}")
-            print(f"  Expected: 3 (Order, Node, Filename)")
+            print(f"  Expected: 4 (Render, Order, Node, Filename)")
             
             # Test frozen table sync
             main_width = table.columnWidth(0)

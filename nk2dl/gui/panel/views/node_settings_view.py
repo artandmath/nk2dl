@@ -635,7 +635,7 @@ class NodeSettingsView(QtWidgets.QWidget):
             current_items_by_node = {}
             for row in range(self.render_table.rowCount()):
                 # Get node name from the table item
-                node_item = self.render_table.item(row, 1)  # Node is column 1
+                node_item = self.render_table.item(row, 2)  # Node is column 2 (after Render)
                 if node_item:
                     node_name = node_item.text()
                     current_items_by_node[node_name] = {}
