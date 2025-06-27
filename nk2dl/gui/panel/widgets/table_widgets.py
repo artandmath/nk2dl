@@ -49,6 +49,9 @@ class StandardTableWidget(QtWidgets.QTableWidget):
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.setSortingEnabled(True)
         
+        # Prevent text wrapping in cells - keep all items on single lines
+        self.setWordWrap(False)
+        
         logger.info("StandardTableWidget created")
     
     def mousePressEvent(self, event):
@@ -101,10 +104,16 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         self.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         self.setSortingEnabled(True)
         
+        # Prevent text wrapping in cells - keep all items on single lines
+        self.setWordWrap(False)
+        
         # Set selection behavior for frozen table as well
         self.frozen_table.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectItems)
         # IMPORTANT: Enable sorting on frozen table for sortByColumn() but disable header clicks
         self.frozen_table.setSortingEnabled(True)
+        
+        # Prevent text wrapping in frozen table cells - keep all items on single lines
+        self.frozen_table.setWordWrap(False)
         
         # Connect signals for synchronization
         self._connect_signals()
