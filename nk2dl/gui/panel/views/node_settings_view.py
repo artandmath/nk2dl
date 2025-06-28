@@ -463,22 +463,33 @@ class NodeSettingsView(QtWidgets.QWidget):
                     self._sync_frozen_item(row, col, item)
             
             # Setup column resize modes (particularly important for checkbox column)
-            # FIXED: Skip ALL column width calculations when clearing data - columns should stay as-is
-            if len(data) == 0:
-                qt_logger.debug("📋 Skipping ALL column width calculations for clear operation - columns stay as-is")
-            else:
-                if hasattr(self.render_table, '_setup_column_resize_modes'):
-                    self.render_table._setup_column_resize_modes()
+            if hasattr(self.render_table, '_setup_column_resize_modes'):
+                self.render_table._setup_column_resize_modes()
+                
+                if len(data) == 0:
+                    # FIXED: For clear operations, skip width calculations but preserve geometry updates
+                    # This maintains frozen table alignment without triggering column width recalculations
+                    qt_logger.debug("📋 Clear operation: Skipping column width calculations, maintaining geometry")
                     
+                    # Essential: Schedule delayed geometry update to ensure vertical header width is calculated correctly
+                    if hasattr(self.render_table, '_update_frozen_table_geometry'):
+                        QtCore.QTimer.singleShot(100, self.render_table._update_frozen_table_geometry)
+                        qt_logger.debug("📋 Scheduled delayed frozen table geometry update for clear operation")
+                else:
                     # FIXED: Skip redundant "data loaded" recalculation since _setup_column_resize_modes 
                     # already calculated optimal column widths during button operations
                     # This prevents the double recalculation cycle that causes flickering
                     self._skip_next_data_loaded_recalculation = True
-                
-                # Emit data loaded event to trigger column width calculation
-                # This event-based approach ensures column widths are calculated
-                # after all data is loaded and the table is properly rendered
-                self._emit_data_loaded_event(data)
+                    
+                    # Emit data loaded event to trigger column width calculation
+                    # This event-based approach ensures column widths are calculated
+                    # after all data is loaded and the table is properly rendered
+                    self._emit_data_loaded_event(data)
+                    
+                    # Schedule delayed geometry update for data loading to ensure vertical header updates
+                    if hasattr(self.render_table, '_update_frozen_table_geometry'):
+                        QtCore.QTimer.singleShot(200, self.render_table._update_frozen_table_geometry)
+                        qt_logger.debug("📋 Scheduled delayed frozen table geometry update for data loading")
             
         finally:
             # Re-enable signals after loading is complete
