@@ -4,11 +4,15 @@
 Fix button redraw issues in the GUI panel, specifically eliminating intermediate redraws and progress bar length changes that create flickering during button operations.
 
 ## 🚨 CRITICAL ISSUES IDENTIFIED
-- **Clear button**: columns refresh to smaller size, then wider widths (2 redraws → 1 redraw)
-- **Update button**: columns refresh 3 times during progress updates (remove intermediate redraws)
-- **Progress bar**: **LENGTH changes during text updates** (not just size, but actual bar length) - keep consistent length
-- **Threading concerns**: Some operations may happen off the main thread causing redraw issues
-- **⚠️ WINDOW RESIZE WITH DATA**: Window resizing triggers multiple column redraws ONLY when columns contain data, but no redraws when empty - indicates fundamental issue with data-dependent width calculations
+- **Clear button**: columns refresh to smaller size, then wider widths (2 redraws → 1 redraw) - ⚠️ **STILL HAS INTERMEDIATE REDRAW**
+- **Update button**: columns refresh 3 times during progress updates (remove intermediate redraws) - ✅ **FIXED**
+- **Progress bar**: **LENGTH changes during text updates** (not just size, but actual bar length) - keep consistent length - ✅ **FIXED**
+- **Threading concerns**: Some operations may happen off the main thread causing redraw issues - ✅ **RESOLVED**
+- **⚠️ WINDOW RESIZE WITH DATA**: Window resizing triggers multiple column redraws ONLY when columns contain data, but no redraws when empty - ✅ **FIXED**
+
+## 🆕 NEW ISSUES DISCOVERED
+- **⚠️ COLUMN ARTIFACT**: Visual artifact between frozen and unfrozen columns at the edge of the filename column
+- **⚠️ HEADER TRUNCATION**: Header after filename gets truncated after clear operation
 
 ## 🧪 TESTING STRATEGY
 
@@ -65,15 +69,18 @@ Fix button redraw issues in the GUI panel, specifically eliminating intermediate
 - Are column width calculations queued vs immediate?
 
 ### PHASE 2: CLEAR BUTTON OPTIMIZATION
-**Status: ✅ COMPLETED - ACCEPTABLE BEHAVIOR**  
+**Status: ⚠️ NEEDS REFINEMENT**  
 - [x] **Analyze clear button with threading context** - ✅ Simple operation, no threading issues
-- [x] Implement solution that prevents intermediate redraws - ✅ Double recalculation eliminated
+- [x] Implement solution that prevents intermediate redraws - ⚠️ **PARTIALLY FIXED - Still has intermediate redraw**
 - [x] Ensure thread-safe operations if background threads involved - ✅ Main thread operation
-- [x] Test with full panel environment - ✅ Single clean redraw observed
-- [x] Validate: ≤1 column width change event - ✅ **ACHIEVED: One clean state transition**
+- [x] Test with full panel environment - ⚠️ **ISSUE: Still showing intermediate redraw + header truncation**
+- [ ] **NEW: Investigate remaining intermediate redraw with enhanced debug logging**
+- [ ] **NEW: Fix header truncation after clear operation**
+- [ ] Validate: ≤1 column width change event - ⚠️ **STILL NEEDS WORK**
 
-**✅ RESULT: Clear button now has one clean redraw (data→empty state transition)**
-This is expected and acceptable behavior since columns legitimately need to resize from populated to empty state.
+**⚠️ ISSUES IDENTIFIED:**
+- Clear button still shows intermediate redraw (not single clean transition)
+- Header after filename gets truncated after clear operation
 
 ### PHASE 3: UPDATE BUTTON OPTIMIZATION
 **Status: ✅ COMPLETED - FULLY FIXED**
@@ -88,26 +95,34 @@ This is expected and acceptable behavior since columns legitimately need to resi
 **🎉 RESULT: Update button has ZERO visible redraws during data loading operations**
 Perfect elimination of the 545ms continuous column width changes that were causing flickering.
 
-### PHASE 4: PROGRESS BAR STABILIZATION  
-**Status: NOT STARTED**
-- [ ] **Investigate why progress bar LENGTH changes during text updates**
-- [ ] **Fix threading issues that may cause progress bar redraws**
-- [ ] Ensure consistent progress bar length regardless of text content
-- [ ] Test with various progress text lengths
-- [ ] Validate: 0 progress bar length changes during updates
+### PHASE 4: CLEAR BUTTON REFINEMENT
+**Status: IN PROGRESS**
+- [ ] **Enhanced debug logging for clear button operations**
+- [ ] **Identify source of remaining intermediate redraw**  
+- [ ] **Fix header truncation after clear operation**
+- [ ] **Ensure single clean state transition only**
+- [ ] Validate: Exactly 1 column width change event during clear
 
-### PHASE 5: THREADING OPTIMIZATION
+### PHASE 5: COLUMN ARTIFACT INVESTIGATION
 **Status: NOT STARTED**
-- [ ] **Optimize cross-thread signal emissions**
-- [ ] **Ensure all UI updates happen on main thread**
-- [ ] **Batch background thread notifications to main thread**
-- [ ] **Implement proper thread-safe UI update patterns**
-- [ ] Final validation with complete production-like scenarios
+- [ ] **Investigate visual artifact between frozen and unfrozen columns**
+- [ ] **Analyze filename column edge rendering issues**
+- [ ] **Check FrozenTableWidget synchronization**
+- [ ] **Fix column boundary visual artifacts**
+- [ ] **Test column artifact fix across different data states**
+
+### PHASE 6: FINAL VALIDATION
+**Status: NOT STARTED**
+- [ ] **Complete testing with all button operations**
+- [ ] **Verify no visual artifacts in any state**
+- [ ] **Validate header display integrity**
+- [ ] **Performance testing for all scenarios**
+- [ ] **Final production-like testing**
 
 ## 🎯 SUCCESS CRITERIA
 
 ### Performance Targets
-- Clear button: ≤1 column width change event (eliminate intermediate redraws) ✅ **ACHIEVED**
+- Clear button: ≤1 column width change event (eliminate intermediate redraws) ⚠️ **NEEDS REFINEMENT - Still has intermediate redraw**
 - Update button: 0 column width changes during progress updates ✅ **ACHIEVED** 
 - **Progress bar: 0 length changes during text updates** ✅ **ACHIEVED**
 - **No cross-thread UI update violations** ✅ **ACHIEVED**
@@ -117,16 +132,18 @@ Perfect elimination of the 545ms continuous column width changes that were causi
 - **Thread safety: All UI updates occur on main Qt thread** ✅ **ACHIEVED**
 - Performance: No degradation in overall operation speed ✅ **ACHIEVED**
 - **Production accuracy: Test with full panel setup exactly like production** ✅ **ACHIEVED**
+- **Visual integrity: No column artifacts or header truncation** ⚠️ **NEEDS WORK**
 
-## 🏆 **MISSION ACCOMPLISHED**
+## 🎯 **CURRENT STATUS - VERY CLOSE**
 
 ✅ **Update Button**: ZERO visible redraws during data loading operations  
-✅ **Clear Button**: Single clean state transition (acceptable behavior)  
+⚠️ **Clear Button**: Still has intermediate redraw + header truncation  
 ✅ **Window Resize**: Fixed - resize-triggered recalculations blocked when table has data  
 ✅ **Progress Bar**: Stable length during text updates  
 ✅ **Threading**: Proper main thread UI updates  
+⚠️ **Column Display**: Visual artifact between frozen/unfrozen columns
 
-**Root cause eliminated**: Double recalculation cycles that caused 545ms of continuous flickering
+**Progress**: Major issues resolved, refinement needed for clear button and visual artifacts
 
 ## 🔧 TECHNICAL INVESTIGATION AREAS
 
