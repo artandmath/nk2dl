@@ -129,6 +129,15 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         self.frozen_table.setFocusPolicy(QtCore.Qt.NoFocus)
         self.frozen_table.verticalHeader().hide()
         
+        # Set static row height for uniform appearance
+        default_row_height = Sizes.TABLE_ROW_HEIGHT
+        self.verticalHeader().setDefaultSectionSize(default_row_height)
+        self.frozen_table.verticalHeader().setDefaultSectionSize(default_row_height)
+        
+        # Disable row resizing to maintain static height
+        self.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        self.frozen_table.verticalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Fixed)
+        
         # CRITICAL: Set frozen table header to Interactive mode to allow resizing
         # This is different from Qt's example - we want both tables to be resizable
         self.frozen_table.horizontalHeader().setSectionResizeMode(QtWidgets.QHeaderView.Interactive)
@@ -172,10 +181,7 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         self.horizontalHeader().sectionResized.connect(self._update_frozen_section_width)
         self.frozen_table.horizontalHeader().sectionResized.connect(self._update_main_section_width)
         
-        # Synchronize vertical header resizing
-        self.verticalHeader().sectionResized.connect(self._update_frozen_section_height)
-        
-        # Synchronize vertical scrolling
+        # Synchronize vertical scrolling (row resizing disabled with static heights)
         self.frozen_table.verticalScrollBar().valueChanged.connect(
             self.verticalScrollBar().setValue
         )
@@ -327,9 +333,7 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
             # Update geometry and force repaint to prevent artifacts
             self._update_frozen_table_geometry()
     
-    def _update_frozen_section_height(self, logical_index, old_size, new_size):
-        """Update frozen table row height when main table row is resized."""
-        self.frozen_table.setRowHeight(logical_index, new_size)
+
     
     def _on_main_sort_indicator_changed(self, logical_index, sort_order):
         """Handle main table sort indicator changes to synchronize frozen table sorting.
@@ -523,7 +527,6 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         try:
             self.horizontalHeader().sectionResized.disconnect(self._update_frozen_section_width)
             self.frozen_table.horizontalHeader().sectionResized.disconnect(self._update_main_section_width)
-            self.verticalHeader().sectionResized.disconnect(self._update_frozen_section_height)
             self.frozen_table.verticalScrollBar().valueChanged.disconnect(self.verticalScrollBar().setValue)
             self.verticalScrollBar().valueChanged.disconnect(self.frozen_table.verticalScrollBar().setValue)
             self.horizontalHeader().sortIndicatorChanged.disconnect(self._on_main_sort_indicator_changed)
@@ -538,7 +541,6 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
         # Reconnect all synchronization signals - BIDIRECTIONAL header resize sync
         self.horizontalHeader().sectionResized.connect(self._update_frozen_section_width)
         self.frozen_table.horizontalHeader().sectionResized.connect(self._update_main_section_width)
-        self.verticalHeader().sectionResized.connect(self._update_frozen_section_height)
         self.frozen_table.verticalScrollBar().valueChanged.connect(self.verticalScrollBar().setValue)
         self.verticalScrollBar().valueChanged.connect(self.frozen_table.verticalScrollBar().setValue)
         self.horizontalHeader().sortIndicatorChanged.connect(self._on_main_sort_indicator_changed)

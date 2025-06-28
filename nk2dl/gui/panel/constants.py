@@ -48,6 +48,9 @@ class Sizes:
     # Checkbox column dimensions
     CHECKBOX_COLUMN_PADDING = 5  # 5 pixels padding each side of checkbox
     
+    # Row dimensions
+    TABLE_ROW_HEIGHT = 24  # Static height for all table rows
+    
     # Responsive behavior
     RESPONSIVE_BREAKPOINT = 1250  # Width below which settings stack vertically
     
