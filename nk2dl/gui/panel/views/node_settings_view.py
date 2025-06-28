@@ -185,6 +185,13 @@ class NodeSettingsView(QtWidgets.QWidget):
         try:
             from ....common.logging import qt_logger
             
+            # FIXED: Skip redundant recalculation if we just did one during button operation
+            # This prevents the double recalculation cycle that causes flickering
+            if getattr(self, '_skip_next_data_loaded_recalculation', False):
+                qt_logger.debug("Event-based column width calculation skipped - redundant recalculation prevented")
+                self._skip_next_data_loaded_recalculation = False  # Reset the flag
+                return
+            
             if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
                 qt_logger.debug("Event-based column width calculation (data loaded)")
                 self.render_table.calculate_optimal_column_widths(data)
@@ -467,6 +474,12 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Setup column resize modes (particularly important for checkbox column)
             if hasattr(self.render_table, '_setup_column_resize_modes'):
                 self.render_table._setup_column_resize_modes()
+                
+                # FIXED: Skip redundant "data loaded" recalculation since _setup_column_resize_modes 
+                # already calculated optimal column widths during button operations
+                # This prevents the double recalculation cycle that causes flickering
+                self._skip_next_data_loaded_recalculation = True
+                qt_logger.debug("📋 Setting flag to skip redundant data loaded recalculation")
             
             # Emit data loaded event to trigger column width calculation
             # This event-based approach ensures column widths are calculated
