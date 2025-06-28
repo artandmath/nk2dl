@@ -208,6 +208,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.progress_bar = QtWidgets.QProgressBar()
                 self.progress_bar.setRange(0, 100)
                 self.progress_bar.setValue(0)
+                self.progress_bar.setFixedWidth(Sizes.PROGRESS_BAR_WIDTH)
                 bottom_layout.addWidget(self.progress_bar)
                 
                 # Render button

@@ -50,6 +50,9 @@ class Sizes:
     
     # Responsive behavior
     RESPONSIVE_BREAKPOINT = 1250  # Width below which settings stack vertically
+    
+    # Progress bar dimensions
+    PROGRESS_BAR_WIDTH = 200  # Fixed width for progress bar in bottom controls
 
 
 class Colors:
