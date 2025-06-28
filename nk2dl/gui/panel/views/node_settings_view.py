@@ -403,7 +403,7 @@ class NodeSettingsView(QtWidgets.QWidget):
     def _load_data_from_model(self):
         """Load data from the model into the table widget."""
         from ....common.logging import qt_logger
-        qt_logger.debug("_load_data_from_model() called")
+        qt_logger.debug("📋 _load_data_from_model() called")
         # Disable sorting during data loading to prevent sorting synchronization
         # from interfering with initial data population. The FrozenTableWidget
         # has complex sorting sync between main and frozen tables that can corrupt
@@ -471,8 +471,9 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Emit data loaded event to trigger column width calculation
             # This event-based approach ensures column widths are calculated
             # after all data is loaded and the table is properly rendered
-            qt_logger.debug("Emitting data loaded event for column width calculation")
+            qt_logger.debug("📋 Emitting data loaded event for column width calculation")
             self._emit_data_loaded_event(data)
+            qt_logger.debug("📋 Data loaded event emitted")
             
         finally:
             # Re-enable signals after loading is complete
@@ -483,6 +484,8 @@ class NodeSettingsView(QtWidgets.QWidget):
             self.render_table.setSortingEnabled(False)
             if hasattr(self.render_table, 'frozen_table'):
                 self.render_table.frozen_table.setSortingEnabled(False)
+            
+            qt_logger.debug("📋 _load_data_from_model() completed")
     
     def _apply_cell_styling(self, item, row, col):
         """Apply styling to table cell items based on override status."""
@@ -611,16 +614,26 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _on_model_data_changed(self):
         """Handle model data changes."""
+        from ....common.logging import qt_logger
+        qt_logger.debug("📈 _on_model_data_changed() called")
+        
         # Refresh the table display
+        qt_logger.debug("📈 Calling _load_data_from_model()")
         self._load_data_from_model()
+        qt_logger.debug("📈 _load_data_from_model() completed")
         
         # Restore column widths if they were stored before refresh
         if self._stored_column_widths:
+            qt_logger.debug("📈 Scheduling _restore_column_widths() with timer")
             # Use a timer to ensure table is fully rendered before restoring widths
             QtCore.QTimer.singleShot(100, self._restore_column_widths)
+        else:
+            qt_logger.debug("📈 No stored column widths to restore")
         
         # Reset refresh flag
+        qt_logger.debug("📈 Setting _is_refreshing = False")
         self._is_refreshing = False
+        qt_logger.debug("📈 _on_model_data_changed() completed")
     
     def _on_data_sorted(self):
         """Handle data sorting without full reload to preserve column widths."""
@@ -744,27 +757,37 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _on_update_clicked(self):
         """Handle update button click."""
+        from ....common.logging import qt_logger
+        qt_logger.debug("🔵 UPDATE BUTTON CLICKED - Starting operation")
+        
         # Prevent multiple concurrent refreshes
         if self._is_refreshing:
-            from ....common.logging import qt_logger
             qt_logger.debug("Update already in progress, ignoring additional click")
             return
         
+        qt_logger.debug("🔵 Checking if need to store column widths...")
         # Store current column widths if table has existing data
         if self.render_table and self.render_table.rowCount() > 0:
+            qt_logger.debug("🔵 Calling _store_column_widths()")
             self._store_column_widths()
+            qt_logger.debug("🔵 _store_column_widths() completed")
         
         # Mark as refreshing and trigger refresh through the table model
+        qt_logger.debug("🔵 Setting _is_refreshing = True")
         self._is_refreshing = True
         if hasattr(self.table_model, 'refresh_from_nodes_async'):
+            qt_logger.debug("🔵 Calling table_model.refresh_from_nodes_async()")
             self.table_model.refresh_from_nodes_async()
+            qt_logger.debug("🔵 table_model.refresh_from_nodes_async() call completed")
         else:
             # Fallback message if real functionality not available
+            qt_logger.debug("🔵 No refresh_from_nodes_async method, using fallback")
             self._is_refreshing = False
             if NUKE_AVAILABLE:
                 nuke.message('Update functionality will be implemented in the final integration phase.')
             else:
                 print("Update functionality will be implemented in the final integration phase.")
+        qt_logger.debug("🔵 UPDATE BUTTON OPERATION COMPLETED")
     
     def _on_all_clicked(self):
         """Handle all button click."""
@@ -775,8 +798,14 @@ class NodeSettingsView(QtWidgets.QWidget):
     
     def _on_clear_clicked(self):
         """Handle clear button click."""
+        from ....common.logging import qt_logger
+        qt_logger.debug("🔴 CLEAR BUTTON CLICKED - Starting operation")
+        
         # Clear all data
+        qt_logger.debug("🔴 Calling table_model.set_data([])")
         self.table_model.set_data([])
+        qt_logger.debug("🔴 table_model.set_data([]) completed")
+        qt_logger.debug("🔴 CLEAR BUTTON OPERATION COMPLETED")
     
     def _on_selection_clicked(self):
         """Handle selection button click."""

@@ -812,6 +812,20 @@ class FrozenTableWidget(QtWidgets.QTableWidget):
 
     def setColumnWidth(self, column, width):
         """Override setColumnWidth to ensure proper viewport repainting."""
+        # ENHANCED DEBUG: Track all setColumnWidth calls with stack trace
+        import traceback
+        from ....common.logging import qt_logger
+        
+        # Get a meaningful stack trace (skip the first few frames which are just this method)
+        stack = traceback.extract_stack()
+        relevant_frames = []
+        for frame in stack[-6:-1]:  # Get last 5 frames before this one
+            if 'nk2dl' in frame.filename or 'test_' in frame.filename:
+                relevant_frames.append(f"{frame.filename.split('/')[-1]}:{frame.lineno} in {frame.name}")
+        
+        caller_info = " → ".join(relevant_frames) if relevant_frames else "unknown"
+        qt_logger.debug(f"🔧 setColumnWidth(col={column}, width={width}) called from: {caller_info}")
+        
         # Call parent method
         super().setColumnWidth(column, width)
         

@@ -386,8 +386,14 @@ class TableDataModel(QtCore.QObject):
         Args:
             data (list): List of dictionaries, one per row
         """
+        from ....common.logging import qt_logger
+        qt_logger.debug(f"📊 TableDataModel.set_data() called with {len(data) if data else 0} rows")
+        
         self._data = data.copy() if data else []
+        
+        qt_logger.debug(f"📊 Emitting dataChanged signal")
         self.dataChanged.emit()
+        qt_logger.debug(f"📊 TableDataModel.set_data() completed")
     
     def get_data(self):
         """Get the raw table data.
