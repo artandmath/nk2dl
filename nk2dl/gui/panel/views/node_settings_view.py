@@ -144,31 +144,14 @@ class NodeSettingsView(QtWidgets.QWidget):
         try:
             from ....common.logging import qt_logger
             
-            # FIXED: Prevent unnecessary column width recalculations during normal window resizing
-            # Only recalculate if the table has no data yet (initial sizing) or if this is a major layout change
-            if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
-                
-                # Check if table has data - if it does, skip resize-triggered recalculations
-                has_data = (hasattr(self.render_table, 'rowCount') and 
-                           self.render_table.rowCount() > 0)
-                
-                # Check if we're in a post-clear state - if so, skip resize-triggered recalculations
-                post_clear_state = getattr(self, '_table_recently_cleared', False)
-                
-                if not has_data and not post_clear_state:
-                    # Only recalculate for truly initial empty tables (not post-clear)
-                    qt_logger.debug("Event-based column width recalculation (empty table initial sizing)")
-                    self.render_table.calculate_optimal_column_widths()
-                else:
-                    # Skip recalculation for populated tables or post-clear tables
-                    if has_data:
-                        qt_logger.debug("Skipping column width recalculation (table has data, resize-triggered)")
-                    else:
-                        qt_logger.debug("Skipping column width recalculation (post-clear state, resize-triggered)")
+            # FIXED: Never trigger column width recalculations on resize events
+            # Column widths should only be calculated when data actually changes, not when window resizes
+            # This prevents all resize-triggered flickering regardless of table state
+            qt_logger.debug("Window resize event - skipping column width recalculation (resize events never trigger recalculations)")
                 
         except Exception as e:
             from ....common.logging import qt_logger
-            qt_logger.error(f"Exception in width change column calculation: {e}")
+            qt_logger.error(f"Exception in width change handling: {e}")
 
     def _emit_data_loaded_event(self, data):
         """Emit a custom event when data loading is complete."""
@@ -198,17 +181,8 @@ class NodeSettingsView(QtWidgets.QWidget):
                 self._skip_next_data_loaded_recalculation = False  # Reset the flag
                 return
             
-            # FIXED: Skip recalculation when clearing data (transitioning from populated to empty)
-            # This prevents the unnecessary full column recalculation that causes clear button flickering
-            if not data or len(data) == 0:
-                # Check if we previously had data (indicating a clear operation)
-                if hasattr(self, 'render_table') and self.render_table and self.render_table.rowCount() > 0:
-                    qt_logger.debug("Event-based column width calculation skipped - clear operation detected (data→empty)")
-                    return
-                else:
-                    qt_logger.debug("Event-based column width recalculation (empty table initial sizing)")
-            else:
-                qt_logger.debug("Event-based column width calculation (data loaded)")
+            # Calculate column widths when data changes (both loading and clearing)
+            qt_logger.debug("Event-based column width calculation (data changed)")
             
             if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
                 self.render_table.calculate_optimal_column_widths(data)
@@ -447,11 +421,6 @@ class NodeSettingsView(QtWidgets.QWidget):
             data = self.table_model.get_data()
             headers = self.table_model.get_headers()
             
-            # Reset post-clear flag when loading data (whether empty or populated)
-            if hasattr(self, '_table_recently_cleared'):
-                self._table_recently_cleared = False
-                qt_logger.debug("🔄 Reset post-clear flag (data loading)")
-            
             # Set table size
             self.render_table.setRowCount(len(data))
             
@@ -494,18 +463,22 @@ class NodeSettingsView(QtWidgets.QWidget):
                     self._sync_frozen_item(row, col, item)
             
             # Setup column resize modes (particularly important for checkbox column)
-            if hasattr(self.render_table, '_setup_column_resize_modes'):
-                self.render_table._setup_column_resize_modes()
+            # FIXED: Skip ALL column width calculations when clearing data - columns should stay as-is
+            if len(data) == 0:
+                qt_logger.debug("📋 Skipping ALL column width calculations for clear operation - columns stay as-is")
+            else:
+                if hasattr(self.render_table, '_setup_column_resize_modes'):
+                    self.render_table._setup_column_resize_modes()
+                    
+                    # FIXED: Skip redundant "data loaded" recalculation since _setup_column_resize_modes 
+                    # already calculated optimal column widths during button operations
+                    # This prevents the double recalculation cycle that causes flickering
+                    self._skip_next_data_loaded_recalculation = True
                 
-                # FIXED: Skip redundant "data loaded" recalculation since _setup_column_resize_modes 
-                # already calculated optimal column widths during button operations
-                # This prevents the double recalculation cycle that causes flickering
-                self._skip_next_data_loaded_recalculation = True
-            
-            # Emit data loaded event to trigger column width calculation
-            # This event-based approach ensures column widths are calculated
-            # after all data is loaded and the table is properly rendered
-            self._emit_data_loaded_event(data)
+                # Emit data loaded event to trigger column width calculation
+                # This event-based approach ensures column widths are calculated
+                # after all data is loaded and the table is properly rendered
+                self._emit_data_loaded_event(data)
             
         finally:
             # Re-enable signals after loading is complete
@@ -833,14 +806,8 @@ class NodeSettingsView(QtWidgets.QWidget):
         from ....common.logging import qt_logger
         qt_logger.debug("🔴 CLEAR BUTTON CLICKED - Starting operation")
         
-        # Set flag to prevent resize-triggered recalculations after clear
-        self._table_recently_cleared = True
-        qt_logger.debug("🔴 Set post-clear flag to prevent resize-triggered recalculations")
-        
         # Clear all data
-        qt_logger.debug("🔴 Calling table_model.set_data([])")
         self.table_model.set_data([])
-        qt_logger.debug("🔴 table_model.set_data([]) completed")
         qt_logger.debug("🔴 CLEAR BUTTON OPERATION COMPLETED")
     
     def _on_selection_clicked(self):
