@@ -144,9 +144,21 @@ class NodeSettingsView(QtWidgets.QWidget):
         try:
             from ....common.logging import qt_logger
             
+            # FIXED: Prevent unnecessary column width recalculations during normal window resizing
+            # Only recalculate if the table has no data yet (initial sizing) or if this is a major layout change
             if hasattr(self, 'render_table') and self.render_table and hasattr(self.render_table, 'calculate_optimal_column_widths'):
-                qt_logger.debug("Event-based column width recalculation (width changed)")
-                self.render_table.calculate_optimal_column_widths()
+                
+                # Check if table has data - if it does, skip resize-triggered recalculations
+                has_data = (hasattr(self.render_table, 'rowCount') and 
+                           self.render_table.rowCount() > 0)
+                
+                if not has_data:
+                    # Only recalculate for empty tables (initial sizing)
+                    qt_logger.debug("Event-based column width recalculation (empty table initial sizing)")
+                    self.render_table.calculate_optimal_column_widths()
+                else:
+                    # Skip recalculation for populated tables to prevent redraw issues
+                    qt_logger.debug("Skipping column width recalculation (table has data, resize-triggered)")
                 
         except Exception as e:
             from ....common.logging import qt_logger
