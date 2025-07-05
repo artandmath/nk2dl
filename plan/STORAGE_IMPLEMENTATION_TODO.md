@@ -89,22 +89,22 @@ Implementation of UI-Submission Parameter Alignment with config system integrati
   - [x] Update MACHINE_DEFAULTS to use submission parameter names
   - [x] Test parameter mappings work correctly
 
-- [ ] **Remove DefaultValues references**
-  - [ ] Update imports in `__init__.py`
-  - [ ] Find and update any remaining `DefaultValues` usage
-  - [ ] Replace with config system references
+- [x] **Remove DefaultValues references**
+  - [x] Update imports in `__init__.py`
+  - [x] Find and update any remaining `DefaultValues` usage
+  - [x] Replace with config system references
 
 ### Settings Model Updates
-- [ ] **Update SettingsModel initialization**
-  - [ ] Replace `DefaultValues.JOB_DEFAULTS.copy()` with config system calls
-  - [ ] Replace `DefaultValues.MACHINE_DEFAULTS.copy()` with config system calls
-  - [ ] Replace `DefaultValues.EXTRA_DEFAULTS.copy()` with config system calls
-  - [ ] Integrate with storage system for persistence
+- [x] **Update SettingsModel initialization**
+  - [x] Replace `DefaultValues.JOB_DEFAULTS.copy()` with config system calls
+  - [x] Replace `DefaultValues.MACHINE_DEFAULTS.copy()` with config system calls
+  - [x] Replace `DefaultValues.EXTRA_DEFAULTS.copy()` with config system calls
+  - [x] Integrate with storage system for persistence (initial integration complete)
 
-- [ ] **Update parameter names in models**
-  - [ ] Rename internal parameter references to match submission args
-  - [ ] Update getter/setter methods to use new parameter names
-  - [ ] Update validation logic for renamed parameters
+- [x] **Update parameter names in models**
+  - [x] Rename internal parameter references to match submission args
+  - [x] Update getter/setter methods to use new parameter names
+  - [x] Update validation logic for renamed parameters
 
 ### UI Control Updates
 - [ ] **Update widget object names**

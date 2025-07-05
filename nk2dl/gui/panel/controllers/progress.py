@@ -8,6 +8,7 @@ info labels, and other UI elements during background operations.
 from typing import Optional
 
 from ....common.logging import setup_logging
+from ..constants import Timing
 
 try:
     import nuke
@@ -111,7 +112,7 @@ class PanelProgressManager:
         logger.debug(f"Progress updated: {progress_percent}% - {status_message}")
     
     def finish_operation(self, success: bool = True, final_message: str = "", 
-                        auto_reset_delay: int = 3000):
+                        auto_reset_delay: int = Timing.PROGRESS_SUCCESS_DELAY):
         """Finish the progress operation.
         
         Args:
@@ -162,7 +163,7 @@ class PanelProgressManager:
             self.info_label.setText(message)
         
         # Reset after a short delay
-        QtCore.QTimer.singleShot(2000, self._reset_ui)
+        QtCore.QTimer.singleShot(Timing.PROGRESS_CANCEL_DELAY, self._reset_ui)
         
         logger.info(f"Progress operation cancelled: {message}")
     

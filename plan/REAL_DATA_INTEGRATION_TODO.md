@@ -171,7 +171,7 @@
   - [x] Restore column widths after data reload
   - [x] Preserve user-customized column sizes during updates
 
-#### **4.2.1.3 Testing & Validation** ⏱️ **30 min** ❌ **NOT STARTED**
+#### **4.2.1.4 Testing & Validation** ⏱️ **30 min** ❌ **NOT STARTED**
 - [ ] Test column resizing behavior after data updates
 - [ ] Verify sorting works correctly with various data types
 - [ ] Test frozen table synchronization edge cases

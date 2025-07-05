@@ -34,7 +34,7 @@ except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
 from ..widgets import ColoredGroupBox
-from ..constants import Settings, Sizes, GSVDefaults
+from ..constants import Settings, Sizes, GSVDefaults, Timing
 from ..config import apply_panel_config
 from ....common.logging import setup_logging
 
@@ -473,7 +473,7 @@ class NodeSettingsView(QtWidgets.QWidget):
                     
                     # Essential: Schedule delayed geometry update to ensure vertical header width is calculated correctly
                     if hasattr(self.render_table, '_update_frozen_table_geometry'):
-                        QtCore.QTimer.singleShot(100, self.render_table._update_frozen_table_geometry)
+                        QtCore.QTimer.singleShot(Timing.FROZEN_TABLE_GEOMETRY_DELAY, self.render_table._update_frozen_table_geometry)
                         qt_logger.debug("📋 Scheduled delayed frozen table geometry update for clear operation")
                 else:
                     # FIXED: Skip redundant "data loaded" recalculation since _setup_column_resize_modes 
@@ -488,7 +488,7 @@ class NodeSettingsView(QtWidgets.QWidget):
                     
                     # Schedule delayed geometry update for data loading to ensure vertical header updates
                     if hasattr(self.render_table, '_update_frozen_table_geometry'):
-                        QtCore.QTimer.singleShot(200, self.render_table._update_frozen_table_geometry)
+                        QtCore.QTimer.singleShot(Timing.FROZEN_TABLE_GEOMETRY_DELAY_LOADING, self.render_table._update_frozen_table_geometry)
                         qt_logger.debug("📋 Scheduled delayed frozen table geometry update for data loading")
             
         finally:
@@ -642,7 +642,7 @@ class NodeSettingsView(QtWidgets.QWidget):
         if self._stored_column_widths:
             qt_logger.debug("📈 Scheduling _restore_column_widths() with timer")
             # Use a timer to ensure table is fully rendered before restoring widths
-            QtCore.QTimer.singleShot(100, self._restore_column_widths)
+            QtCore.QTimer.singleShot(Timing.COLUMN_WIDTH_RESTORE_DELAY, self._restore_column_widths)
         else:
             qt_logger.debug("📈 No stored column widths to restore")
         

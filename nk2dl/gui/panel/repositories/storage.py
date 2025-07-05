@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional, Set
 
 from ....common.logging import setup_logging
 from ....nuke.utils import nuke_module
+from ..constants import Storage
 
 logger = setup_logging('nk2dl.gui.panel.repositories.storage')
 
@@ -24,9 +25,8 @@ class NodeSettingsStorage:
     current nodes in the script.
     """
     
-    # Storage knob names
-    TAB_KNOB_NAME = "nk2dl"
-    SETTINGS_KNOB_NAME = "nk2dl_settings"
+    # Storage format version for data migration
+    STORAGE_VERSION = "0.1"
     
     def __init__(self):
         """Initialize the settings storage."""
@@ -50,7 +50,7 @@ class NodeSettingsStorage:
             
             # Prepare data for storage
             storage_data = {
-                'version': '1.0',
+                'version': self.STORAGE_VERSION,
                 'timestamp': time.time(),
                 'node_overrides': node_overrides
             }
@@ -62,7 +62,7 @@ class NodeSettingsStorage:
             # Save to root node knob
             nuke = nuke_module()
             root_node = nuke.root()
-            settings_knob = root_node[self.SETTINGS_KNOB_NAME]
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
             settings_knob.setValue(yaml_data)
             
             logger.info(f"Saved settings for {len(node_overrides)} nodes to root node")
@@ -83,12 +83,12 @@ class NodeSettingsStorage:
             root_node = nuke.root()
             
             # Check if settings knob exists
-            if self.SETTINGS_KNOB_NAME not in root_node.knobs():
+            if Storage.SETTINGS_KNOB_NAME not in root_node.knobs():
                 logger.debug("No settings knob found - returning empty overrides")
                 return {}
             
             # Get YAML data from knob
-            settings_knob = root_node[self.SETTINGS_KNOB_NAME]
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
             yaml_data = settings_knob.value()
             
             if not yaml_data or not yaml_data.strip():
@@ -247,22 +247,24 @@ class NodeSettingsStorage:
             root_node = nuke.root()
             
             # Check/create tab knob
-            if self.TAB_KNOB_NAME not in root_node.knobs():
-                tab_knob = nuke.Tab_Knob(self.TAB_KNOB_NAME, self.TAB_KNOB_NAME)
+            if Storage.TAB_KNOB_NAME not in root_node.knobs():
+                tab_knob = nuke.Tab_Knob(Storage.TAB_KNOB_NAME, Storage.TAB_KNOB_NAME)
                 root_node.addKnob(tab_knob)
-                logger.debug(f"Created tab knob '{self.TAB_KNOB_NAME}' on root node")
+                logger.debug(f"Created tab knob '{Storage.TAB_KNOB_NAME}' on root node")
             
             # Check/create settings knob
-            if self.SETTINGS_KNOB_NAME not in root_node.knobs():
+            if Storage.SETTINGS_KNOB_NAME not in root_node.knobs():
                 settings_knob = nuke.Multiline_Eval_String_Knob(
-                    self.SETTINGS_KNOB_NAME, 
-                    "Node Settings",
+                    Storage.SETTINGS_KNOB_NAME, 
+                    Storage.SETTINGS_KNOB_DISPLAY_NAME,
                     ""
                 )
                 # Make the knob not visible in the UI (it's for storage only)
                 settings_knob.setFlag(nuke.INVISIBLE)
+                # Make the knob visible in the UI for debugging purposes
+                settings_knob.setFlag(nuke.VISIBLE)
                 root_node.addKnob(settings_knob)
-                logger.debug(f"Created settings knob '{self.SETTINGS_KNOB_NAME}' on root node")
+                logger.debug(f"Created settings knob '{Storage.SETTINGS_KNOB_NAME}' on root node")
             
             return True
             
@@ -280,10 +282,10 @@ class NodeSettingsStorage:
             nuke = nuke_module()
             root_node = nuke.root()
             
-            if self.SETTINGS_KNOB_NAME not in root_node.knobs():
+            if Storage.SETTINGS_KNOB_NAME not in root_node.knobs():
                 return {'version': None, 'timestamp': None, 'node_count': 0}
             
-            settings_knob = root_node[self.SETTINGS_KNOB_NAME]
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
             yaml_data = settings_knob.value()
             
             if not yaml_data or not yaml_data.strip():

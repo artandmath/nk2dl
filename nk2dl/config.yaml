@@ -49,6 +49,10 @@ submission:
   copy_script: false
   submit_copied_script: false
   submit_script_as_auxiliary_file: false
+  enable_auto_timeout: false
+  gpu_override: ""
+  limit_worker_tasks: false
+  limit_groups: ""
 
   # Environment variables
   use_current_environment: false
