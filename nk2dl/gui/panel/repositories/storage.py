@@ -473,4 +473,61 @@ class NodeSettingsStorage:
             
         except Exception as e:
             logger.warning(f"Error getting storage metadata: {e}")
-            return {'version': None, 'timestamp': None, 'node_count': 0} 
+            return {'version': None, 'timestamp': None, 'node_count': 0}
+    
+    def build_submission_args(self, 
+                            script_path: str, 
+                            write_nodes: Optional[List[str]] = None,
+                            **additional_kwargs) -> Dict[str, Any]:
+        """Build arguments for NukeSubmission constructor with zero translation.
+        
+        Combines global settings from SettingsModel with node-specific overrides
+        and formats them for direct passing to NukeSubmission constructor.
+        
+        Args:
+            script_path: Path to the Nuke script
+            write_nodes: List of write nodes to process. If None, uses all nodes with overrides.
+            **additional_kwargs: Additional keyword arguments to include/override
+            
+        Returns:
+            Dictionary of arguments ready for NukeSubmission(**args)
+        """
+        # Start with required parameters
+        args = {
+            'script_path': script_path,
+            'script_is_open': True,  # Common case for panel usage
+        }
+        
+        # Add global settings from SettingsModel
+        if self.settings_model:
+            # Get all parameter names from HeaderSettingsMapping
+            from ..constants import HeaderSettingsMapping
+            
+            for display_name, param_name in HeaderSettingsMapping.items():
+                # Get value from settings model
+                value = self.settings_model.get_setting(param_name)
+                if value is not None:
+                    args[param_name] = value
+        
+        # Handle write nodes with overrides
+        if write_nodes:
+            write_nodes_with_overrides = []
+            
+            for node_name in write_nodes:
+                if node_name in self.node_overrides:
+                    # Node has overrides - create WriteNode dictionary
+                    node_dict = {
+                        'write_node': node_name,
+                        **self.node_overrides[node_name]
+                    }
+                    write_nodes_with_overrides.append(node_dict)
+                else:
+                    # Node has no overrides - use simple string
+                    write_nodes_with_overrides.append(node_name)
+            
+            args['write_nodes'] = write_nodes_with_overrides
+        
+        # Apply additional kwargs (can override any setting)
+        args.update(additional_kwargs)
+        
+        return args 

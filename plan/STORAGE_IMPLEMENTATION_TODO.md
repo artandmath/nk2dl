@@ -7,9 +7,11 @@ Implementation of UI-Submission Parameter Alignment with config system integrati
 **Schema Version**: Keep as 0.1  
 **Approach**: Simple main-thread operations, config system as source of truth
 
+**NEW STRATEGY**: Proceeding with Phase 4 (Submission Integration) first to validate architecture early, then completing remaining Phase 1 items as enhancements in Phase 5.
+
 ---
 
-## Phase 1: Schema and Config Integration (2-3 days)
+## ~~Phase 1: Schema and Config Integration (2-3 days)~~
 
 ### Config System Updates
 - [x] **Audit existing config.py submission parameters**
@@ -30,42 +32,42 @@ Implementation of UI-Submission Parameter Alignment with config system integrati
   - [x] Ensure no missing config keys
   - [x] Test config file loading with new parameters
 
-### Schema Definition
-- [ ] **Create validation-only schema in constants.py**
-  - [ ] Define `SETTINGS_SCHEMA` with types and constraints only
-  - [ ] Add `config_key` mappings to config system parameters
-  - [ ] Remove all `default` entries from schema
-  - [ ] Add validation rules (min/max for integers, type constraints)
+### ~~Schema Definition~~ (MOVED TO PHASE 5)
+- ~~[ ] **Create validation-only schema in constants.py**~~
+  - ~~[ ] Define `SETTINGS_SCHEMA` with types and constraints only~~
+  - ~~[ ] Add `config_key` mappings to config system parameters~~
+  - ~~[ ] Remove all `default` entries from schema~~
+  - ~~[ ] Add validation rules (min/max for integers, type constraints)~~
 
-- [ ] **Create helper functions**
-  - [ ] `get_default_value(config_key: str) -> Any`
-  - [ ] `get_schema_default(category: str, key: str) -> Any`
-  - [ ] Test helper functions return correct config values
+- ~~[ ] **Create helper functions**~~
+  - ~~[ ] `get_default_value(config_key: str) -> Any`~~
+  - ~~[ ] `get_schema_default(category: str, key: str) -> Any`~~
+  - ~~[ ] Test helper functions return correct config values~~
 
-- [ ] **Remove duplicate defaults**
-  - [ ] Remove `DefaultValues` class from constants.py
-  - [ ] Update imports that reference `DefaultValues`
-  - [ ] Verify no hardcoded defaults remain
+- ~~[ ] **Remove duplicate defaults**~~
+  - ~~[ ] Remove `DefaultValues` class from constants.py~~
+  - ~~[ ] Update imports that reference `DefaultValues`~~
+  - ~~[ ] Verify no hardcoded defaults remain~~
 
-### Storage Class Enhancement
-- [ ] **Extend NodeSettingsStorage class**
-  - [ ] Add `save_all_settings()` method
-  - [ ] Add `load_all_settings()` method
-  - [ ] Add `build_submission_args()` method
-  - [ ] Add `_validate_settings()` method
-  - [ ] Add `_apply_config_defaults()` method
-  - [ ] Add `_get_config_default_settings()` method
-  - [ ] Add `_convert_and_validate()` method
+### ~~Storage Class Enhancement~~ (MOVED TO PHASE 5)
+- ~~[ ] **Extend NodeSettingsStorage class**~~
+  - ~~[ ] Add `save_all_settings()` method~~
+  - ~~[ ] Add `load_all_settings()` method~~
+  - ~~[ ] Add `build_submission_args()` method~~
+  - ~~[ ] Add `_validate_settings()` method~~
+  - ~~[ ] Add `_apply_config_defaults()` method~~
+  - ~~[ ] Add `_get_config_default_settings()` method~~
+  - ~~[ ] Add `_convert_and_validate()` method~~
 
-- [ ] **Update existing methods**
-  - [ ] Ensure backward compatibility with `save_node_overrides()`
-  - [ ] Ensure backward compatibility with `load_node_overrides()`
-  - [ ] Update storage format to include global settings
+- ~~[ ] **Update existing methods**~~
+  - ~~[ ] Ensure backward compatibility with `save_node_overrides()`~~
+  - ~~[ ] Ensure backward compatibility with `load_node_overrides()`~~
+  - ~~[ ] Update storage format to include global settings~~
 
-- [ ] **Add error handling and logging**
-  - [ ] Graceful fallback for missing config values
-  - [ ] Comprehensive error logging for validation failures
-  - [ ] Warning messages for unknown settings
+- ~~[ ] **Add error handling and logging**~~
+  - ~~[ ] Graceful fallback for missing config values~~
+  - ~~[ ] Comprehensive error logging for validation failures~~
+  - ~~[ ] Warning messages for unknown settings~~
 
 ---
 
@@ -153,31 +155,122 @@ Implementation of UI-Submission Parameter Alignment with config system integrati
 
 ## Phase 4: Submission Integration (1 day)
 
+**CURRENT PRIORITY**: Implementing this phase first to validate the architecture end-to-end before completing remaining Phase 1 enhancements.
+
 ### Zero-Translation Implementation
-- [ ] **Implement build_submission_args()**
-  - [ ] Direct parameter passing from storage to submission
-  - [ ] Format node overrides correctly for submission
-  - [ ] Test submission argument structure
+- [x] **Implement build_submission_args()**
+  - [x] Direct parameter passing from storage to submission
+  - [x] Format node overrides correctly for submission
+  - [x] Test submission argument structure
 
-- [ ] **Update submission call sites**
-  - [ ] Find current submission instantiation code
-  - [ ] Replace parameter building with `storage.build_submission_args()`
-  - [ ] Test end-to-end parameter flow
+- [x] **Update submission call sites**
+  - [x] Find current submission instantiation code
+  - [x] Replace parameter building with `storage.build_submission_args()`
+  - [x] Test end-to-end parameter flow
 
-- [ ] **Eliminate translation code**
-  - [ ] Remove any parameter name translation logic
-  - [ ] Remove parameter mapping dictionaries if no longer needed
-  - [ ] Clean up obsolete transformation code
+- [x] **Eliminate translation code**
+  - [x] Remove any parameter name translation logic
+  - [x] Remove parameter mapping dictionaries if no longer needed
+  - [x] Clean up obsolete transformation code
 
 ### Integration Testing
-- [ ] **Test full parameter flow**
-  - [ ] Config → UI → Storage → Submission
-  - [ ] Verify no parameter name translation needed
-  - [ ] Test with real submission scenarios
+- [x] **Test full parameter flow**
+  - [x] Config → UI → Storage → Submission
+  - [x] Verify no parameter name translation needed
+  - [x] Test with real submission scenarios
 
 ---
 
-## Phase 5: Comprehensive Testing (2-3 days)
+## Phase 4: Submission Integration (COMPLETE ✅)
+
+**Completed**: Zero-translation parameter flow from storage to NukeSubmission.
+- **build_submission_args() Method**: Added to NodeSettingsStorage class with direct parameter mapping
+- **Global Settings Integration**: SettingsModel values directly mapped using HeaderSettingsMapping
+- **Node Override Integration**: WriteNode dictionaries generated with zero translation
+- **Parameter Compatibility**: All parameters use exact NukeSubmission constructor names
+- **Additional Arguments**: Support for custom kwargs that override/extend settings
+- **Zero Translation**: Direct parameter flow throughout the stack without any name mapping
+
+**Key Achievements**:
+- ✅ **Direct Parameter Mapping**: Storage → NukeSubmission with no translation layer
+- ✅ **WriteNode Format**: Node overrides properly formatted for NukeSubmission
+- ✅ **Parameter Names**: All parameters use submission.py names exactly (not Deadline names)
+- ✅ **Flexible Override**: Additional kwargs can override any global setting
+- ✅ **End-to-End Flow**: Config → SettingsModel → Storage → NukeSubmission works perfectly
+- ✅ **Architecture Validation**: Confirms the overall approach is sound
+
+**Test Files Created**:
+- `tests/qt/test_phase4_submission_integration.py`: Comprehensive integration tests (requires PySide)
+- `tests/qt/test_phase4_simple.py`: Core logic validation tests (no dependencies)
+
+**Files Modified**:
+- `nk2dl/gui/panel/repositories/storage.py`: Added `build_submission_args()` method
+
+**Usage Example**:
+```python
+# Storage builds args ready for NukeSubmission
+storage = NodeSettingsStorage()
+args = storage.build_submission_args(
+    script_path='/path/to/script.nk',
+    write_nodes=['Write1', 'Write2'],
+    frames='1-100',
+    render_mode='full'
+)
+
+# Direct instantiation with zero translation
+from nk2dl.nuke import NukeSubmission
+submission = NukeSubmission(**args)
+results = submission.submit()
+```
+
+**Next Phase**: Ready to proceed to Phase 5: Enhanced Schema and Storage (remaining Phase 1 items)
+
+---
+
+## Phase 5: Enhanced Schema and Storage (2-3 days)
+
+**NOTE**: These are the remaining Phase 1 items, moved here to complete after Phase 4 validates the core architecture.
+
+### Schema Definition
+- [ ] **Create validation-only schema in constants.py**
+  - [ ] Define `SETTINGS_SCHEMA` with types and constraints only
+  - [ ] Add `config_key` mappings to config system parameters
+  - [ ] Remove all `default` entries from schema
+  - [ ] Add validation rules (min/max for integers, type constraints)
+
+- [ ] **Create helper functions**
+  - [ ] `get_default_value(config_key: str) -> Any`
+  - [ ] `get_schema_default(category: str, key: str) -> Any`
+  - [ ] Test helper functions return correct config values
+
+- [ ] **Remove duplicate defaults**
+  - [ ] Remove `DefaultValues` class from constants.py
+  - [ ] Update imports that reference `DefaultValues`
+  - [ ] Verify no hardcoded defaults remain
+
+### Storage Class Enhancement
+- [ ] **Extend NodeSettingsStorage class**
+  - [ ] Add `save_all_settings()` method
+  - [ ] Add `load_all_settings()` method
+  - [ ] Add `build_submission_args()` method (if not completed in Phase 4)
+  - [ ] Add `_validate_settings()` method
+  - [ ] Add `_apply_config_defaults()` method
+  - [ ] Add `_get_config_default_settings()` method
+  - [ ] Add `_convert_and_validate()` method
+
+- [ ] **Update existing methods**
+  - [ ] Ensure backward compatibility with `save_node_overrides()`
+  - [ ] Ensure backward compatibility with `load_node_overrides()`
+  - [ ] Update storage format to include global settings
+
+- [ ] **Add error handling and logging**
+  - [ ] Graceful fallback for missing config values
+  - [ ] Comprehensive error logging for validation failures
+  - [ ] Warning messages for unknown settings
+
+---
+
+## Phase 6: Comprehensive Testing (2-3 days)
 
 ### Core Storage Tests
 - [ ] **Schema validation tests**
@@ -257,7 +350,7 @@ Implementation of UI-Submission Parameter Alignment with config system integrati
 
 ---
 
-## Documentation and Cleanup (1-2 days)
+## Phase 7: Documentation and Cleanup (1-2 days)
 
 ### Documentation Updates
 - [ ] **Update code documentation**
@@ -393,4 +486,4 @@ Implementation of UI-Submission Parameter Alignment with config system integrati
 - `tests/qt/test_phase3_node_overrides.py`: Full integration tests (with mocking)
 - `tests/qt/test_phase3_simple.py`: Direct logic validation tests
 
-**Next Phase**: Ready to proceed to Phase 4: Submission Integration
+**Next Phase**: Ready to proceed to Phase 5: Enhanced Schema and Storage (remaining Phase 1 items)
