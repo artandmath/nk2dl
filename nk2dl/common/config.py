@@ -115,6 +115,7 @@ class Config:
             'use_nuke_x': False,
             'batch_mode': True,
             'use_gpu': False,
+            'gpu_override': '',
             'performance_profiler': False,
             'performance_profiler_path': '',
             'continue_on_error': False,
@@ -130,6 +131,9 @@ class Config:
             'environment': {},
             'omit_environment_keys': [],
             'script_copy_path': '{outdir}/.farm/{nkstem}.nk',
+            'enable_auto_timeout': False,
+            'limit_worker_tasks': False,
+            'limit_groups': '',
             
             # Build job settings
             'build_job_script_path': None,
