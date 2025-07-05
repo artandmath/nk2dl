@@ -10,6 +10,7 @@ import time
 from typing import Dict, Any, List, Optional, Set
 
 from ....common.logging import setup_logging
+from ....common.config import config
 from ....nuke.utils import nuke_module
 from ..constants import Storage
 
@@ -233,6 +234,173 @@ class NodeSettingsStorage:
         except Exception as e:
             logger.error(f"Error setting override for {node_name}.{column}: {e}", exc_info=True)
             return False
+    
+    # Phase 3: New methods for enhanced storage integration
+    
+    def get_config_default_value(self, param_name: str) -> Any:
+        """Get default value for a parameter from config system.
+        
+        Args:
+            param_name: The parameter name (e.g., 'priority', 'chunk_size')
+            
+        Returns:
+            Default value from config system
+        """
+        try:
+            config_key = f'submission.{param_name}'
+            return config.get(config_key)
+        except Exception as e:
+            logger.warning(f"Error getting config default for {param_name}: {e}")
+            return None
+    
+    def validate_node_override(self, param_name: str, value: Any) -> Any:
+        """Validate and convert a node override value.
+        
+        Args:
+            param_name: The parameter name
+            value: The value to validate
+            
+        Returns:
+            Validated/converted value
+        """
+        try:
+            # Get config default to determine expected type
+            config_default = self.get_config_default_value(param_name)
+            
+            if config_default is None:
+                # Unknown parameter, return as-is
+                return value
+            
+            # Type conversion based on config default
+            expected_type = type(config_default)
+            
+            if expected_type == bool:
+                if isinstance(value, str):
+                    return value.lower() in ('true', '1', 'yes', 'on')
+                return bool(value)
+            elif expected_type == int:
+                return int(value)
+            elif expected_type == float:
+                return float(value)
+            elif expected_type == str:
+                return str(value)
+            else:
+                return value
+                
+        except Exception as e:
+            logger.warning(f"Error validating override for {param_name}: {e}")
+            return value
+    
+    def build_write_node_dict(self, node_name: str, node_overrides: Optional[Dict[str, Dict[str, Any]]] = None) -> Dict[str, Any]:
+        """Build WriteNode dictionary for submission with direct parameter mapping.
+        
+        Args:
+            node_name: Name of the write node
+            node_overrides: Pre-loaded overrides (optional, will load if not provided)
+            
+        Returns:
+            Dictionary suitable for WriteNode submission with 'write_node' key and overrides
+        """
+        try:
+            if node_overrides is None:
+                node_overrides = self.load_node_overrides()
+            
+            write_node_dict = {'write_node': node_name}
+            
+            # Add node-specific overrides if they exist
+            if node_name in node_overrides:
+                node_settings = node_overrides[node_name]
+                
+                # Direct parameter mapping since names already match submission
+                for param_name, value in node_settings.items():
+                    if value is not None:  # Only include non-None overrides
+                        validated_value = self.validate_node_override(param_name, value)
+                        write_node_dict[param_name] = validated_value
+            
+            logger.debug(f"Built WriteNode dict for {node_name}: {write_node_dict}")
+            return write_node_dict
+            
+        except Exception as e:
+            logger.error(f"Error building WriteNode dict for {node_name}: {e}", exc_info=True)
+            return {'write_node': node_name}
+    
+    def build_write_nodes_list(self, node_names: List[str]) -> List[Dict[str, Any]]:
+        """Build WriteNodes list for submission with direct parameter mapping.
+        
+        Args:
+            node_names: List of write node names
+            
+        Returns:
+            List of WriteNode dictionaries suitable for submission
+        """
+        try:
+            # Load overrides once for efficiency
+            node_overrides = self.load_node_overrides()
+            
+            write_nodes = []
+            for node_name in node_names:
+                write_node_dict = self.build_write_node_dict(node_name, node_overrides)
+                write_nodes.append(write_node_dict)
+            
+            logger.debug(f"Built WriteNodes list for {len(node_names)} nodes")
+            return write_nodes
+            
+        except Exception as e:
+            logger.error(f"Error building WriteNodes list: {e}", exc_info=True)
+            return [{'write_node': name} for name in node_names]
+    
+    def clear_node_overrides(self, node_name: str) -> bool:
+        """Clear all overrides for a specific node (restore inheritance).
+        
+        Args:
+            node_name: Name of the node to clear overrides for
+            
+        Returns:
+            True if cleared successfully, False otherwise
+        """
+        try:
+            node_overrides = self.load_node_overrides()
+            
+            if node_name in node_overrides:
+                del node_overrides[node_name]
+                logger.info(f"Cleared all overrides for node: {node_name}")
+                return self.save_node_overrides(node_overrides)
+            else:
+                logger.debug(f"No overrides found for node: {node_name}")
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error clearing overrides for {node_name}: {e}", exc_info=True)
+            return False
+    
+    def get_effective_value(self, node_name: str, param_name: str, 
+                           node_overrides: Optional[Dict[str, Dict[str, Any]]] = None) -> Any:
+        """Get the effective value for a parameter (override or config default).
+        
+        Args:
+            node_name: Name of the node
+            param_name: Parameter name
+            node_overrides: Pre-loaded overrides (optional, will load if not provided)
+            
+        Returns:
+            Override value if exists, otherwise config default
+        """
+        try:
+            if node_overrides is None:
+                node_overrides = self.load_node_overrides()
+            
+            # Check if value is overridden
+            if (node_name in node_overrides and 
+                param_name in node_overrides[node_name] and 
+                node_overrides[node_name][param_name] is not None):
+                return node_overrides[node_name][param_name]
+            
+            # Return config default
+            return self.get_config_default_value(param_name)
+            
+        except Exception as e:
+            logger.warning(f"Error getting effective value for {node_name}.{param_name}: {e}")
+            return self.get_config_default_value(param_name)
     
     def _ensure_storage_knobs(self) -> bool:
         """Ensure the storage knobs exist on the root node.
