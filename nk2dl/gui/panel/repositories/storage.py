@@ -500,10 +500,10 @@ class NodeSettingsStorage:
         
         # Add global settings from SettingsModel
         if self.settings_model:
-            # Get all parameter names from HeaderSettingsMapping
+            # Get all settings from the model using HeaderSettingsMapping
             from ..constants import HeaderSettingsMapping
             
-            for display_name, param_name in HeaderSettingsMapping.items():
+            for display_name, param_name in HeaderSettingsMapping.ALL_MAPPINGS.items():
                 # Get value from settings model
                 value = self.settings_model.get_setting(param_name)
                 if value is not None:

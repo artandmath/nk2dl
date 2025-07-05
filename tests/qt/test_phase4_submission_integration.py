@@ -26,7 +26,7 @@ def test_build_submission_args_basic():
     print("Testing basic build_submission_args functionality...")
     
     # Create mock settings model
-    settings_model = Mock(spec=SettingsModel)
+    settings_model = Mock()
     
     # Configure mock to return specific values
     def mock_get_setting(param_name):
@@ -41,7 +41,7 @@ def test_build_submission_args_basic():
         }
         return test_values.get(param_name, None)
     
-    settings_model.get_setting.side_effect = mock_get_setting
+    settings_model.get_setting = Mock(side_effect=mock_get_setting)
     
     # Create storage instance
     storage = NodeSettingsStorage()
@@ -75,7 +75,7 @@ def test_build_submission_args_with_node_overrides():
     print("Testing build_submission_args with node overrides...")
     
     # Create mock settings model
-    settings_model = Mock(spec=SettingsModel)
+    settings_model = Mock()
     
     def mock_get_setting(param_name):
         global_values = {
@@ -86,7 +86,7 @@ def test_build_submission_args_with_node_overrides():
         }
         return global_values.get(param_name, None)
     
-    settings_model.get_setting.side_effect = mock_get_setting
+    settings_model.get_setting = Mock(side_effect=mock_get_setting)
     
     # Create storage instance with node overrides
     storage = NodeSettingsStorage()
@@ -156,12 +156,12 @@ def test_build_submission_args_with_additional_kwargs():
     print("Testing build_submission_args with additional kwargs...")
     
     # Create mock settings model
-    settings_model = Mock(spec=SettingsModel)
+    settings_model = Mock()
     
     def mock_get_setting(param_name):
         return {'priority': 50, 'pool': 'default'}.get(param_name, None)
     
-    settings_model.get_setting.side_effect = mock_get_setting
+    settings_model.get_setting = Mock(side_effect=mock_get_setting)
     
     # Create storage instance
     storage = NodeSettingsStorage()
@@ -205,11 +205,11 @@ def test_parameter_name_mapping():
     print("Testing parameter name mapping...")
     
     # Create mock settings model
-    settings_model = Mock(spec=SettingsModel)
+    settings_model = Mock()
     
     # Create test values for all parameters in HeaderSettingsMapping
     test_values = {}
-    for display_name, param_name in HeaderSettingsMapping.items():
+    for display_name, param_name in HeaderSettingsMapping.ALL_MAPPINGS.items():
         if param_name == 'priority':
             test_values[param_name] = 75
         elif param_name == 'pool':
@@ -230,7 +230,7 @@ def test_parameter_name_mapping():
     def mock_get_setting(param_name):
         return test_values.get(param_name, None)
     
-    settings_model.get_setting.side_effect = mock_get_setting
+    settings_model.get_setting = Mock(side_effect=mock_get_setting)
     
     # Create storage instance
     storage = NodeSettingsStorage()
@@ -241,7 +241,7 @@ def test_parameter_name_mapping():
     args = storage.build_submission_args(script_path)
     
     # Verify all parameter names were correctly mapped
-    for display_name, param_name in HeaderSettingsMapping.items():
+    for display_name, param_name in HeaderSettingsMapping.ALL_MAPPINGS.items():
         assert param_name in args, f"Parameter {param_name} not found in args"
         assert args[param_name] == test_values[param_name], f"Parameter {param_name} value mismatch"
     
@@ -256,7 +256,7 @@ def test_zero_translation_compatibility():
     print("Testing zero-translation compatibility...")
     
     # Create mock settings model
-    settings_model = Mock(spec=SettingsModel)
+    settings_model = Mock()
     
     def mock_get_setting(param_name):
         # Return realistic values for key parameters
@@ -278,7 +278,7 @@ def test_zero_translation_compatibility():
         }
         return realistic_values.get(param_name, None)
     
-    settings_model.get_setting.side_effect = mock_get_setting
+    settings_model.get_setting = Mock(side_effect=mock_get_setting)
     
     # Create storage instance
     storage = NodeSettingsStorage()
