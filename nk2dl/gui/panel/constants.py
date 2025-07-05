@@ -21,6 +21,17 @@ class Settings:
     GROUP_OPTIONS = ["none", "high_priority", "overnight", "weekend"]
 
 
+class Storage:
+    """Storage-related constants for node settings persistence."""
+    
+    # Storage knob names on root node
+    TAB_KNOB_NAME = "nk2dl"
+    SETTINGS_KNOB_NAME = "nk2dl_settings"
+    
+    # Display names for storage knobs
+    SETTINGS_KNOB_DISPLAY_NAME = "Nk2dl Settings"
+
+
 class Sizes:
     """Size and dimension constants for UI components."""
     
@@ -86,6 +97,21 @@ class Colors:
     PINNED_JOB_BORDER = JOB_SETTINGS_COLOR               # Same as job settings border
     PINNED_MACHINE_BACKGROUND = MACHINE_SETTINGS_BACKGROUND  # Same as machine settings title
     PINNED_MACHINE_BORDER = MACHINE_SETTINGS_COLOR       # Same as machine settings border
+
+
+class Timing:
+    """Timing constants for UI operations."""
+    
+    # Progress bar timing (in milliseconds)
+    PROGRESS_SUCCESS_DELAY = 500   # Delay before resetting progress bar after successful operation (reduced from 3000ms)
+    PROGRESS_CANCEL_DELAY = 500    # Delay before resetting progress bar after cancelled operation (reduced from 2000ms)
+    
+    # UI update timing
+    UI_REFRESH_DELAY = 0           # Immediate UI updates via event queue
+    PANEL_INITIALIZATION_DELAY = 50    # Delay for panel data loading initialization
+    FROZEN_TABLE_GEOMETRY_DELAY = 100   # Delay for frozen table geometry updates
+    FROZEN_TABLE_GEOMETRY_DELAY_LOADING = 200  # Delay for frozen table geometry updates during data loading
+    COLUMN_WIDTH_RESTORE_DELAY = 100    # Delay before restoring column widths after data refresh
 
 
 class TableColumns:
@@ -387,13 +413,13 @@ class DefaultValues:
         "chunk_size": 1,
         "frames_mode": "Global",
         "frames": "1001-2315",
-        "nodes_frames": False,
+        "use_node_frame_list": False,
         "task_timeout": 0,
-        "auto_timeout": False,
+        "enable_auto_timeout": False,
         "render_mode": "Full",
-        "use_nukex": False,
-        "use_batch_mode": False,
-        "reload_plugin": False,
+        "use_nuke_x": False,
+        "batch_mode": False,
+        "reload_plugins": False,
         "separate_tasks": False,
         "separate_jobs": False,
         "views_separate_jobs": False,
@@ -402,14 +428,14 @@ class DefaultValues:
         "secondary_pool": "",
         "group": "none",
         "threads": 4,
-        "min_ram": 0,
-        "max_ram": 0,
+        "stack_size": 0,
+        "ram_use": 0,
         "use_gpu": False,
-        "gpu_id": 0,
+        "gpu_override": 0,
         "concurrent_tasks": 2,
-        "worker_task_limit": False,
+        "limit_worker_tasks": False,
         "machine_list": "",
-        "limits": ""
+        "limit_groups": ""
     }
     
     # Machine settings defaults
@@ -418,16 +444,16 @@ class DefaultValues:
         "secondary_pool": "",
         "group": "none",
         "threads": 4,
-        "min_ram": 0,
-        "max_ram": 0,
-        "gpu_device": 0,
+        "stack_size": 0,
+        "ram_use": 0,
+        "gpu_override": 0,
         "use_gpu": False,
         "concurrent_tasks": 2,
-        "limit_tasks": False,
+        "limit_worker_tasks": False,
         "machine_limit": 0,
         "machine_deny_list": False,
         "machine_list": "",
-        "limits": ""
+        "limit_groups": ""
     }
     
     # Extra settings defaults
@@ -514,13 +540,13 @@ class HeaderSettingsMapping:
         "Priority": "priority",
         "ChunkSize": "chunk_size", 
         "Frames": "frames",  # Map Frames column to frames job setting
-        "NodesFrames": "nodes_frames",
+        "NodesFrames": "use_node_frame_list",
         "TaskTimeout": "task_timeout",
-        "AutoTimeout": "auto_timeout",
+        "AutoTimeout": "enable_auto_timeout",
         "RenderMode": "render_mode",
-        "NukeX": "use_nukex",
-        "BatchMode": "use_batch_mode",
-        "ReloadPlugin": "reload_plugin"
+        "NukeX": "use_nuke_x",
+        "BatchMode": "batch_mode",
+        "ReloadPlugin": "reload_plugins"
     }
     
     # Machine Settings Relationships  
@@ -530,14 +556,14 @@ class HeaderSettingsMapping:
         "SecondaryPool": "secondary_pool",
         "Group": "group",
         "Threads": "threads",
-        "MinRam": "min_ram",
-        "MaxRam": "max_ram",
+        "MinRam": "stack_size",
+        "MaxRam": "ram_use",
         "UseGPU": "use_gpu",
-        "GPUId": "gpu_id",
+        "GPUId": "gpu_override",
         "ConcurrentTasks": "concurrent_tasks",
-        "WorkerTaskLimit": "worker_task_limit",
+        "WorkerTaskLimit": "limit_worker_tasks",
         "MachineList": "machine_list",
-        "Limits": "limits"
+        "Limits": "limit_groups"
     }
     
     # Combined mapping for easy lookup
