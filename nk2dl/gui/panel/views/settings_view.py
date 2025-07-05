@@ -532,10 +532,10 @@ class SettingsView(QtWidgets.QWidget):
         self._block_signals(True)
         
         try:
-            # Load job settings
+            # Load job settings (convert to int for spinboxes)
             job_settings = self.settings_model.get_all_job_settings()
-            self.priority_spin.setValue(job_settings.get('priority', 50))
-            self.chunk_size_spin.setValue(job_settings.get('chunk_size', 1))
+            self.priority_spin.setValue(int(job_settings.get('priority', 50)))
+            self.chunk_size_spin.setValue(int(job_settings.get('chunk_size', 1)))
             
             frames_mode = job_settings.get('frames_mode', 'Global')
             index = self.frames_combo.findText(frames_mode)
@@ -544,7 +544,7 @@ class SettingsView(QtWidgets.QWidget):
             
             self.frame_range_edit.setText(job_settings.get('frames', '1001-2315'))
             self.use_node_frame_list_check.setChecked(job_settings.get('use_node_frame_list', False))
-            self.task_timeout_spin.setValue(job_settings.get('task_timeout', 0))
+            self.task_timeout_spin.setValue(int(job_settings.get('task_timeout', 0)))
             self.enable_auto_timeout_check.setChecked(job_settings.get('enable_auto_timeout', False))
             
             render_mode = job_settings.get('render_mode', 'Full')
@@ -577,17 +577,24 @@ class SettingsView(QtWidgets.QWidget):
             if index >= 0:
                 self.group_combo.setCurrentIndex(index)
             
-            self.threads_spin.setValue(machine_settings.get('threads', 4))
-            self.min_ram_spin.setValue(machine_settings.get('stack_size', 0))
-            self.max_ram_spin.setValue(machine_settings.get('ram_use', 0))
-            self.gpu_override_spin.setValue(machine_settings.get('gpu_override', 0))
+            # Convert to int for spinboxes (config values might be strings)
+            self.threads_spin.setValue(int(machine_settings.get('threads', 4)))
+            self.min_ram_spin.setValue(int(machine_settings.get('stack_size', 0)))
+            self.max_ram_spin.setValue(int(machine_settings.get('ram_use', 0)))
+            
+            # Handle gpu_override which can be empty string
+            gpu_override = machine_settings.get('gpu_override', 0)
+            if gpu_override == '' or gpu_override is None:
+                gpu_override = 0
+            self.gpu_override_spin.setValue(int(gpu_override))
+            
             self.use_gpu_check.setChecked(machine_settings.get('use_gpu', False))
-            self.concurrent_tasks_spin.setValue(machine_settings.get('concurrent_tasks', 2))
+            self.concurrent_tasks_spin.setValue(int(machine_settings.get('concurrent_tasks', 2)))
             self.limit_tasks_check.setChecked(machine_settings.get('limit_worker_tasks', False))
-            self.machine_limit_spin.setValue(machine_settings.get('machine_limit', 0))
+            self.machine_limit_spin.setValue(int(machine_settings.get('machine_limit', 0)))
             self.machine_deny_list_check.setChecked(machine_settings.get('machine_deny_list', False))
-            self.machine_list_edit.setText(machine_settings.get('machine_list', ''))
-            self.limits_edit.setText(machine_settings.get('limit_groups', ''))
+            self.machine_list_edit.setText(str(machine_settings.get('machine_list', '')))
+            self.limits_edit.setText(str(machine_settings.get('limit_groups', '')))
             
         finally:
             # Re-enable signals
