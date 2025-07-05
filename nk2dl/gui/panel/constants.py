@@ -805,6 +805,14 @@ class SettingsSchema:
         if not schema:
             return True, ""  # No schema means no validation
         
+        # Required checking (must come first before type conversion)
+        if schema.get('required', False) and value in [None, '', []]:
+            return False, f"Parameter {param_name} is required"
+        
+        # Skip further validation for None/empty values if not required
+        if value in [None, '', []]:
+            return True, ""
+        
         # Type checking
         expected_type = schema.get('type', cls.TYPE_STRING)
         if not isinstance(value, expected_type):
@@ -832,10 +840,6 @@ class SettingsSchema:
         if 'options' in schema:
             if value not in schema['options']:
                 return False, f"Value {value} not in allowed options: {schema['options']}"
-        
-        # Required checking
-        if schema.get('required', False) and value in [None, '', []]:
-            return False, f"Parameter {param_name} is required"
         
         return True, ""
 

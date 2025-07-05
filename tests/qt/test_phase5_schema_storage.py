@@ -97,7 +97,7 @@ def test_settings_schema_validation():
     # Test required field validation
     is_valid, error = SettingsSchema.validate_value('priority', None)
     assert is_valid == False
-    assert "is required" in error
+    assert "Parameter priority is required" in error
     
     print("✓ SettingsSchema validation works correctly")
 
@@ -112,14 +112,14 @@ def test_helper_functions():
     )
     
     # Test get_default_value (mock config)
-    with patch('nk2dl.gui.panel.constants.config') as mock_config:
+    with patch('nk2dl.common.config.config') as mock_config:
         mock_config.get.return_value = 50
         value = get_default_value('submission.priority')
         assert value == 50
         mock_config.get.assert_called_with('submission.priority')
     
     # Test get_schema_default
-    with patch('nk2dl.gui.panel.constants.config') as mock_config:
+    with patch('nk2dl.common.config.config') as mock_config:
         mock_config.get.return_value = 'nuke'
         value = get_schema_default('machine', 'pool')
         assert value == 'nuke'
