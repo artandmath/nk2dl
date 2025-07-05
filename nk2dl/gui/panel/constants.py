@@ -5,6 +5,8 @@ This module contains all constants used by the panel widgets, views, models, and
 Moved from nk2dl/gui/constants.py to be part of the panel module.
 """
 
+from typing import Any, Dict, List, Optional, Tuple
+
 
 class Settings:
     """Settings-related constants."""
@@ -402,6 +404,529 @@ class ValidationRules:
     # Required fields
     REQUIRED_JOB_FIELDS = ["priority", "chunk_size"]
     REQUIRED_MACHINE_FIELDS = ["threads", "concurrent_tasks"]
+
+
+class SettingsSchema:
+    """Schema definition for all settings with types, validation rules, and config mappings.
+    
+    This class defines the complete schema for all settings used in the application,
+    mapping them to their config system keys and providing validation rules.
+    No default values are stored here - they come from the config system.
+    """
+    
+    # Type definitions
+    TYPE_INT = int
+    TYPE_FLOAT = float
+    TYPE_STRING = str
+    TYPE_BOOL = bool
+    TYPE_LIST = list
+    TYPE_DICT = dict
+    
+    # Schema definition - maps parameter names to their properties
+    SCHEMA = {
+        # Job Settings
+        'priority': {
+            'type': TYPE_INT,
+            'config_key': 'submission.priority',
+            'min_value': ValidationRules.MIN_PRIORITY,
+            'max_value': ValidationRules.MAX_PRIORITY,
+            'required': True,
+            'category': 'job'
+        },
+        'chunk_size': {
+            'type': TYPE_INT,
+            'config_key': 'submission.chunk_size',
+            'min_value': ValidationRules.MIN_CHUNK_SIZE,
+            'max_value': ValidationRules.MAX_CHUNK_SIZE,
+            'required': True,
+            'category': 'job'
+        },
+        'frames': {
+            'type': TYPE_STRING,
+            'config_key': None,  # This is set dynamically, not from config
+            'required': False,
+            'category': 'job'
+        },
+        'use_node_frame_list': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.use_node_frame_list',
+            'required': False,
+            'category': 'job'
+        },
+        'task_timeout': {
+            'type': TYPE_INT,
+            'config_key': None,  # Not directly in config
+            'min_value': ValidationRules.MIN_TASK_TIMEOUT,
+            'max_value': ValidationRules.MAX_TASK_TIMEOUT,
+            'required': False,
+            'category': 'job'
+        },
+        'enable_auto_timeout': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.enable_auto_timeout',
+            'required': False,
+            'category': 'job'
+        },
+        'render_mode': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.render_mode',
+            'options': ['full', 'proxy', 'both', 'script'],
+            'required': False,
+            'category': 'job'
+        },
+        'use_nuke_x': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.use_nuke_x',
+            'required': False,
+            'category': 'job'
+        },
+        'batch_mode': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.batch_mode',
+            'required': False,
+            'category': 'job'
+        },
+        'reload_plugins': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.reload_plugins',
+            'required': False,
+            'category': 'job'
+        },
+        
+        # Machine Settings
+        'pool': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.pool',
+            'required': False,
+            'category': 'machine'
+        },
+        'secondary_pool': {
+            'type': TYPE_STRING,
+            'config_key': None,  # Not directly in config
+            'required': False,
+            'category': 'machine'
+        },
+        'group': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.group',
+            'required': False,
+            'category': 'machine'
+        },
+        'threads': {
+            'type': TYPE_INT,
+            'config_key': 'submission.threads',
+            'min_value': ValidationRules.MIN_THREADS,
+            'max_value': ValidationRules.MAX_THREADS,
+            'required': True,
+            'category': 'machine'
+        },
+        'stack_size': {
+            'type': TYPE_INT,
+            'config_key': 'submission.stack_size',
+            'min_value': ValidationRules.MIN_RAM,
+            'required': False,
+            'category': 'machine'
+        },
+        'ram_use': {
+            'type': TYPE_INT,
+            'config_key': 'submission.ram_use',
+            'min_value': ValidationRules.MIN_RAM,
+            'required': False,
+            'category': 'machine'
+        },
+        'use_gpu': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.use_gpu',
+            'required': False,
+            'category': 'machine'
+        },
+        'gpu_override': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.gpu_override',
+            'required': False,
+            'category': 'machine'
+        },
+        'concurrent_tasks': {
+            'type': TYPE_INT,
+            'config_key': 'submission.concurrent_tasks',
+            'min_value': ValidationRules.MIN_CONCURRENT_TASKS,
+            'max_value': ValidationRules.MAX_CONCURRENT_TASKS,
+            'required': True,
+            'category': 'machine'
+        },
+        'limit_worker_tasks': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.limit_worker_tasks',
+            'required': False,
+            'category': 'machine'
+        },
+        'machine_list': {
+            'type': TYPE_STRING,
+            'config_key': None,  # Not directly in config
+            'required': False,
+            'category': 'machine'
+        },
+        'limit_groups': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.limit_groups',
+            'required': False,
+            'category': 'machine'
+        },
+        
+        # Additional submission parameters from config
+        'batch_name_template': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.batch_name_template',
+            'required': False,
+            'category': 'extra'
+        },
+        'job_name_template': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.job_name_template',
+            'required': False,
+            'category': 'extra'
+        },
+        'comment_template': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.comment_template',
+            'required': False,
+            'category': 'extra'
+        },
+        'department': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.department',
+            'required': False,
+            'category': 'extra'
+        },
+        'write_nodes_as_tasks': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.write_nodes_as_tasks',
+            'required': False,
+            'category': 'extra'
+        },
+        'write_nodes_as_separate_jobs': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.write_nodes_as_separate_jobs',
+            'required': False,
+            'category': 'extra'
+        },
+        'render_order_dependencies': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.render_order_dependencies',
+            'required': False,
+            'category': 'extra'
+        },
+        'enforce_render_order': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.enforce_render_order',
+            'required': False,
+            'category': 'extra'
+        },
+        'performance_profiler': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.performance_profiler',
+            'required': False,
+            'category': 'extra'
+        },
+        'performance_profiler_path': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.performance_profiler_path',
+            'required': False,
+            'category': 'extra'
+        },
+        'continue_on_error': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.continue_on_error',
+            'required': False,
+            'category': 'extra'
+        },
+        'use_proxy': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.use_proxy',
+            'required': False,
+            'category': 'extra'
+        },
+        'copy_script': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.copy_script',
+            'required': False,
+            'category': 'extra'
+        },
+        'submit_copied_script': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.submit_copied_script',
+            'required': False,
+            'category': 'extra'
+        },
+        'submit_script_as_auxiliary_file': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.submit_script_as_auxiliary_file',
+            'required': False,
+            'category': 'extra'
+        },
+        'use_current_environment': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.use_current_environment',
+            'required': False,
+            'category': 'extra'
+        },
+        'environment_keys': {
+            'type': TYPE_LIST,
+            'config_key': 'submission.environment_keys',
+            'required': False,
+            'category': 'extra'
+        },
+        'environment': {
+            'type': TYPE_DICT,
+            'config_key': 'submission.environment',
+            'required': False,
+            'category': 'extra'
+        },
+        'omit_environment_keys': {
+            'type': TYPE_LIST,
+            'config_key': 'submission.omit_environment_keys',
+            'required': False,
+            'category': 'extra'
+        },
+        'script_copy_path': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.script_copy_path',
+            'required': False,
+            'category': 'extra'
+        },
+        'custom_write_classes': {
+            'type': TYPE_LIST,
+            'config_key': 'submission.custom_write_classes',
+            'required': False,
+            'category': 'extra'
+        }
+    }
+    
+    @classmethod
+    def get_parameter_schema(cls, param_name: str) -> Dict[str, Any]:
+        """Get the schema definition for a parameter.
+        
+        Args:
+            param_name: The parameter name
+            
+        Returns:
+            Dictionary containing the parameter schema, or empty dict if not found
+        """
+        return cls.SCHEMA.get(param_name, {})
+    
+    @classmethod
+    def get_parameter_type(cls, param_name: str) -> type:
+        """Get the expected type for a parameter.
+        
+        Args:
+            param_name: The parameter name
+            
+        Returns:
+            The expected type, or str as default
+        """
+        schema = cls.get_parameter_schema(param_name)
+        return schema.get('type', cls.TYPE_STRING)
+    
+    @classmethod
+    def get_config_key(cls, param_name: str) -> Optional[str]:
+        """Get the config key for a parameter.
+        
+        Args:
+            param_name: The parameter name
+            
+        Returns:
+            The config key, or None if not mapped to config
+        """
+        schema = cls.get_parameter_schema(param_name)
+        return schema.get('config_key')
+    
+    @classmethod
+    def get_validation_rules(cls, param_name: str) -> Dict[str, Any]:
+        """Get validation rules for a parameter.
+        
+        Args:
+            param_name: The parameter name
+            
+        Returns:
+            Dictionary containing validation rules
+        """
+        schema = cls.get_parameter_schema(param_name)
+        rules = {}
+        
+        if 'min_value' in schema:
+            rules['min_value'] = schema['min_value']
+        if 'max_value' in schema:
+            rules['max_value'] = schema['max_value']
+        if 'options' in schema:
+            rules['options'] = schema['options']
+        if 'required' in schema:
+            rules['required'] = schema['required']
+            
+        return rules
+    
+    @classmethod
+    def get_parameters_by_category(cls, category: str) -> List[str]:
+        """Get all parameters belonging to a category.
+        
+        Args:
+            category: The category name ('job', 'machine', 'extra')
+            
+        Returns:
+            List of parameter names in the category
+        """
+        return [param for param, schema in cls.SCHEMA.items() 
+                if schema.get('category') == category]
+    
+    @classmethod
+    def is_required(cls, param_name: str) -> bool:
+        """Check if a parameter is required.
+        
+        Args:
+            param_name: The parameter name
+            
+        Returns:
+            True if the parameter is required
+        """
+        schema = cls.get_parameter_schema(param_name)
+        return schema.get('required', False)
+    
+    @classmethod
+    def validate_value(cls, param_name: str, value: Any) -> Tuple[bool, str]:
+        """Validate a parameter value against its schema.
+        
+        Args:
+            param_name: The parameter name
+            value: The value to validate
+            
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        schema = cls.get_parameter_schema(param_name)
+        if not schema:
+            return True, ""  # No schema means no validation
+        
+        # Type checking
+        expected_type = schema.get('type', cls.TYPE_STRING)
+        if not isinstance(value, expected_type):
+            try:
+                # Try to convert
+                if expected_type == cls.TYPE_INT:
+                    value = int(value)
+                elif expected_type == cls.TYPE_FLOAT:
+                    value = float(value)
+                elif expected_type == cls.TYPE_BOOL:
+                    value = bool(value)
+                elif expected_type == cls.TYPE_STRING:
+                    value = str(value)
+            except (ValueError, TypeError):
+                return False, f"Expected {expected_type.__name__}, got {type(value).__name__}"
+        
+        # Range checking for numeric types
+        if expected_type in [cls.TYPE_INT, cls.TYPE_FLOAT]:
+            if 'min_value' in schema and value < schema['min_value']:
+                return False, f"Value {value} is less than minimum {schema['min_value']}"
+            if 'max_value' in schema and value > schema['max_value']:
+                return False, f"Value {value} is greater than maximum {schema['max_value']}"
+        
+        # Options checking
+        if 'options' in schema:
+            if value not in schema['options']:
+                return False, f"Value {value} not in allowed options: {schema['options']}"
+        
+        # Required checking
+        if schema.get('required', False) and value in [None, '', []]:
+            return False, f"Parameter {param_name} is required"
+        
+        return True, ""
+
+
+# Helper functions for config system integration
+def get_default_value(config_key: str) -> Any:
+    """Get default value from config system.
+    
+    Args:
+        config_key: The config key (e.g., 'submission.priority')
+        
+    Returns:
+        The default value from config system
+    """
+    from ...common.config import config
+    return config.get(config_key)
+
+
+def get_schema_default(category: str, param_name: str) -> Any:
+    """Get default value for a parameter using schema and config system.
+    
+    Args:
+        category: The category ('job', 'machine', 'extra')
+        param_name: The parameter name
+        
+    Returns:
+        The default value from config system, or None if not found
+    """
+    config_key = SettingsSchema.get_config_key(param_name)
+    if config_key:
+        return get_default_value(config_key)
+    return None
+
+
+def validate_settings(settings: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    """Validate a complete settings dictionary.
+    
+    Args:
+        settings: Dictionary of settings to validate
+        
+    Returns:
+        Tuple of (all_valid, list_of_errors)
+    """
+    errors = []
+    
+    for param_name, value in settings.items():
+        is_valid, error = SettingsSchema.validate_value(param_name, value)
+        if not is_valid:
+            errors.append(f"{param_name}: {error}")
+    
+    return len(errors) == 0, errors
+
+
+def convert_and_validate_setting(param_name: str, value: Any) -> Tuple[Any, bool, str]:
+    """Convert and validate a single setting value.
+    
+    Args:
+        param_name: The parameter name
+        value: The value to convert and validate
+        
+    Returns:
+        Tuple of (converted_value, is_valid, error_message)
+    """
+    schema = SettingsSchema.get_parameter_schema(param_name)
+    if not schema:
+        return value, True, ""
+    
+    expected_type = schema.get('type', SettingsSchema.TYPE_STRING)
+    
+    # Type conversion
+    try:
+        if expected_type == SettingsSchema.TYPE_INT:
+            converted_value = int(value)
+        elif expected_type == SettingsSchema.TYPE_FLOAT:
+            converted_value = float(value)
+        elif expected_type == SettingsSchema.TYPE_BOOL:
+            # Handle string boolean values
+            if isinstance(value, str):
+                converted_value = value.lower() in ['true', '1', 'yes', 'on']
+            else:
+                converted_value = bool(value)
+        elif expected_type == SettingsSchema.TYPE_STRING:
+            converted_value = str(value)
+        else:
+            converted_value = value
+    except (ValueError, TypeError) as e:
+        return value, False, f"Type conversion failed: {str(e)}"
+    
+    # Validation
+    is_valid, error = SettingsSchema.validate_value(param_name, converted_value)
+    return converted_value, is_valid, error
 
 
 class DefaultValues:

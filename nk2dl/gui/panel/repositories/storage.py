@@ -7,7 +7,7 @@ from the root node's custom knobs using YAML storage with sync capabilities.
 
 import yaml
 import time
-from typing import Dict, Any, List, Optional, Set
+from typing import Dict, Any, List, Optional, Set, Tuple
 
 from ....common.logging import setup_logging
 from ....common.config import config
@@ -29,10 +29,30 @@ class NodeSettingsStorage:
     # Storage format version for data migration
     STORAGE_VERSION = "0.1"
     
-    def __init__(self):
-        """Initialize the settings storage."""
+    def __init__(self, settings_model=None):
+        """Initialize the settings storage.
+        
+        Args:
+            settings_model: Optional reference to SettingsModel for global settings access
+        """
         self._last_sync_timestamp = 0
+        self.settings_model = settings_model
+        self.node_overrides = {}  # Cache for node overrides
         logger.debug("NodeSettingsStorage initialized")
+    
+    def refresh_cache(self) -> None:
+        """Refresh the internal cache with current stored node overrides."""
+        self.node_overrides = self.load_node_overrides()
+        logger.debug(f"Refreshed cache with {len(self.node_overrides)} node overrides")
+    
+    def _write_to_knob(self) -> None:
+        """Write current node_overrides cache to storage knob."""
+        self.save_node_overrides(self.node_overrides)
+    
+    def _read_from_knob(self) -> Dict[str, Dict[str, Any]]:
+        """Read node overrides from storage knob and update cache."""
+        self.node_overrides = self.load_node_overrides()
+        return self.node_overrides
     
     def save_node_overrides(self, node_overrides: Dict[str, Dict[str, Any]]) -> bool:
         """Save node override settings to the root node.
@@ -530,4 +550,239 @@ class NodeSettingsStorage:
         # Apply additional kwargs (can override any setting)
         args.update(additional_kwargs)
         
-        return args 
+        return args
+    
+    def save_all_settings(self, global_settings: Dict[str, Any], 
+                         node_overrides: Optional[Dict[str, Dict[str, Any]]] = None) -> bool:
+        """Save complete settings including global settings and node overrides.
+        
+        This method saves both global settings and node-specific overrides to the
+        root node storage. It validates all settings before saving.
+        
+        Args:
+            global_settings: Dictionary of global settings (from SettingsModel)
+            node_overrides: Optional dictionary of node-specific overrides
+            
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            # Use current node overrides if not provided
+            if node_overrides is None:
+                node_overrides = self.load_node_overrides()
+            
+            # Validate settings before saving
+            is_valid, errors = self._validate_settings(global_settings, node_overrides)
+            if not is_valid:
+                logger.error(f"Settings validation failed: {errors}")
+                return False
+            
+            # Apply config defaults for missing values
+            complete_settings = self._apply_config_defaults(global_settings)
+            
+            # Ensure storage knobs exist
+            if not self._ensure_storage_knobs():
+                logger.error("Failed to create storage knobs")
+                return False
+            
+            # Prepare complete data for storage
+            storage_data = {
+                'version': self.STORAGE_VERSION,
+                'timestamp': time.time(),
+                'global_settings': complete_settings,
+                'node_overrides': node_overrides
+            }
+            
+            # Serialize to YAML
+            yaml_data = yaml.dump(storage_data, default_flow_style=False, 
+                                sort_keys=True, indent=2)
+            
+            # Save to root node knob
+            nuke = nuke_module()
+            root_node = nuke.root()
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
+            settings_knob.setValue(yaml_data)
+            
+            logger.info(f"Saved complete settings: {len(complete_settings)} global, {len(node_overrides)} node overrides")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving all settings: {e}", exc_info=True)
+            return False
+    
+    def load_all_settings(self) -> Dict[str, Any]:
+        """Load complete settings including global settings and node overrides.
+        
+        Returns:
+            Dictionary containing 'global_settings' and 'node_overrides' keys
+        """
+        try:
+            nuke = nuke_module()
+            root_node = nuke.root()
+            
+            # Check if settings knob exists
+            if Storage.SETTINGS_KNOB_NAME not in root_node.knobs():
+                logger.debug("No settings knob found - returning default settings")
+                return {
+                    'global_settings': self._get_config_default_settings(),
+                    'node_overrides': {}
+                }
+            
+            # Get YAML data from knob
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
+            yaml_data = settings_knob.value()
+            
+            if not yaml_data or not yaml_data.strip():
+                logger.debug("Empty settings data - returning default settings")
+                return {
+                    'global_settings': self._get_config_default_settings(),
+                    'node_overrides': {}
+                }
+            
+            # Parse YAML
+            storage_data = yaml.safe_load(yaml_data)
+            
+            if not isinstance(storage_data, dict):
+                logger.warning("Invalid storage data format - returning default settings")
+                return {
+                    'global_settings': self._get_config_default_settings(),
+                    'node_overrides': {}
+                }
+            
+            # Extract global settings (with config defaults for missing values)
+            stored_global_settings = storage_data.get('global_settings', {})
+            complete_global_settings = self._apply_config_defaults(stored_global_settings)
+            
+            # Extract node overrides
+            node_overrides = storage_data.get('node_overrides', {})
+            
+            # Update sync timestamp
+            self._last_sync_timestamp = storage_data.get('timestamp', time.time())
+            
+            logger.info(f"Loaded complete settings: {len(complete_global_settings)} global, {len(node_overrides)} node overrides")
+            
+            return {
+                'global_settings': complete_global_settings,
+                'node_overrides': node_overrides
+            }
+            
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error loading all settings: {e}")
+            return {
+                'global_settings': self._get_config_default_settings(),
+                'node_overrides': {}
+            }
+        except Exception as e:
+            logger.error(f"Error loading all settings: {e}", exc_info=True)
+            return {
+                'global_settings': self._get_config_default_settings(),
+                'node_overrides': {}
+            }
+    
+    def _validate_settings(self, global_settings: Dict[str, Any], 
+                          node_overrides: Dict[str, Dict[str, Any]]) -> Tuple[bool, List[str]]:
+        """Validate complete settings using the schema.
+        
+        Args:
+            global_settings: Dictionary of global settings
+            node_overrides: Dictionary of node-specific overrides
+            
+        Returns:
+            Tuple of (is_valid, list_of_errors)
+        """
+        try:
+            from ..constants import validate_settings
+            
+            errors = []
+            
+            # Validate global settings
+            is_valid, global_errors = validate_settings(global_settings)
+            if not is_valid:
+                errors.extend([f"Global: {error}" for error in global_errors])
+            
+            # Validate each node's overrides
+            for node_name, node_settings in node_overrides.items():
+                is_valid, node_errors = validate_settings(node_settings)
+                if not is_valid:
+                    errors.extend([f"Node {node_name}: {error}" for error in node_errors])
+            
+            return len(errors) == 0, errors
+            
+        except Exception as e:
+            logger.error(f"Error validating settings: {e}", exc_info=True)
+            return False, [f"Validation error: {str(e)}"]
+    
+    def _apply_config_defaults(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply config system defaults for missing settings.
+        
+        Args:
+            settings: Dictionary of settings (may be incomplete)
+            
+        Returns:
+            Complete settings dictionary with config defaults applied
+        """
+        try:
+            from ..constants import SettingsSchema
+            
+            # Get all available parameters from schema
+            complete_settings = settings.copy()
+            
+            # Apply defaults for missing parameters
+            for param_name, schema in SettingsSchema.SCHEMA.items():
+                if param_name not in complete_settings:
+                    config_key = schema.get('config_key')
+                    if config_key:
+                        default_value = config.get(config_key)
+                        if default_value is not None:
+                            complete_settings[param_name] = default_value
+                            logger.debug(f"Applied config default for {param_name}: {default_value}")
+            
+            return complete_settings
+            
+        except Exception as e:
+            logger.error(f"Error applying config defaults: {e}", exc_info=True)
+            return settings
+    
+    def _get_config_default_settings(self) -> Dict[str, Any]:
+        """Get complete default settings from config system.
+        
+        Returns:
+            Dictionary of default settings from config system
+        """
+        try:
+            from ..constants import SettingsSchema
+            
+            default_settings = {}
+            
+            # Get defaults for all parameters with config keys
+            for param_name, schema in SettingsSchema.SCHEMA.items():
+                config_key = schema.get('config_key')
+                if config_key:
+                    default_value = config.get(config_key)
+                    if default_value is not None:
+                        default_settings[param_name] = default_value
+            
+            logger.debug(f"Retrieved {len(default_settings)} default settings from config")
+            return default_settings
+            
+        except Exception as e:
+            logger.error(f"Error getting config default settings: {e}", exc_info=True)
+            return {}
+    
+    def _convert_and_validate(self, param_name: str, value: Any) -> Tuple[Any, bool, str]:
+        """Convert and validate a single setting value using schema.
+        
+        Args:
+            param_name: The parameter name
+            value: The value to convert and validate
+            
+        Returns:
+            Tuple of (converted_value, is_valid, error_message)
+        """
+        try:
+            from ..constants import convert_and_validate_setting
+            return convert_and_validate_setting(param_name, value)
+            
+        except Exception as e:
+            logger.error(f"Error in convert and validate for {param_name}: {e}", exc_info=True)
+            return value, False, f"Conversion error: {str(e)}" 
