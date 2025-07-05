@@ -64,7 +64,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         # Import all the extracted components from their directories
         from .models import TableDataModel, GSVHierarchyModel, SettingsModel
         from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
-        from .constants import Sizes, DefaultValues, GSVDefaults
+        from .constants import Sizes, GSVDefaults, Timing
         from .config import apply_panel_config
         from .repositories import NodeDataProvider, NodeSettingsStorage
         from .controllers import PanelProgressManager
@@ -258,7 +258,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _schedule_initial_data_load(self):
                 """Schedule initial data loading via event queue."""
                 # Use event queue to ensure panel is fully constructed before data loading
-                QtCore.QTimer.singleShot(0, self._on_panel_ready_for_data)
+                # Nuke 15.0 and earlier
+                # Schedule with delay to ensure Nuke's script initialization is complete
+                QtCore.QTimer.singleShot(Timing.PANEL_INITIALIZATION_DELAY, self._on_panel_ready_for_data)
                 logger.debug("Initial data load scheduled via event system")
             
             def _on_panel_ready_for_data(self):
@@ -274,7 +276,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     else:
                         # Reschedule if components aren't ready yet
                         logger.debug("Panel components not ready, rescheduling data load")
-                        QtCore.QTimer.singleShot(50, self._on_panel_ready_for_data)
+                        QtCore.QTimer.singleShot(Timing.PANEL_INITIALIZATION_DELAY, self._on_panel_ready_for_data)
                         
                 except Exception as e:
                     logger.error(f"Error in panel ready for data: {e}", exc_info=True)
