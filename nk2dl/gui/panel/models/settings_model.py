@@ -58,17 +58,51 @@ class SettingsModel(QtCore.QObject):
         self._initialize_defaults()
     
     def _initialize_defaults(self):
-        """Initialize settings with default values."""
-        from ..constants import Settings, DefaultValues
+        """Initialize settings with default values from config system."""
+        from nk2dl.common.config import config
         
-        # Job Settings defaults
-        self._job_settings = DefaultValues.JOB_DEFAULTS.copy()
+        # Job Settings defaults from config system
+        self._job_settings = {
+            'priority': config.get('submission.priority', 50),
+            'chunk_size': config.get('submission.chunk_size', 10),
+            'frames_mode': 'Global',  # UI-specific setting
+            'frames': '1001-2315',    # UI-specific setting
+            'use_node_frame_list': config.get('submission.use_node_frame_list', False),
+            'task_timeout': 0,        # UI-specific setting
+            'enable_auto_timeout': config.get('submission.enable_auto_timeout', False),
+            'render_mode': config.get('submission.render_mode', 'full'),
+            'use_nuke_x': config.get('submission.use_nuke_x', False),
+            'batch_mode': config.get('submission.batch_mode', True),
+            'reload_plugins': config.get('submission.reload_plugins', False),
+            'separate_tasks': config.get('submission.write_nodes_as_tasks', False),
+            'separate_jobs': config.get('submission.write_nodes_as_separate_jobs', False),
+            'views_separate_jobs': False,  # UI-specific setting
+        }
         
-        # Machine Settings defaults  
-        self._machine_settings = DefaultValues.MACHINE_DEFAULTS.copy()
+        # Machine Settings defaults from config system
+        self._machine_settings = {
+            'pool': config.get('submission.pool', 'nuke'),
+            'secondary_pool': '',     # UI-specific setting
+            'group': config.get('submission.group', 'none'),
+            'threads': config.get('submission.threads', 0),
+            'stack_size': config.get('submission.stack_size', 0),
+            'ram_use': config.get('submission.ram_use', 0),
+            'use_gpu': config.get('submission.use_gpu', False),
+            'gpu_override': config.get('submission.gpu_override', ''),
+            'concurrent_tasks': config.get('submission.concurrent_tasks', 1),
+            'limit_worker_tasks': config.get('submission.limit_worker_tasks', False),
+            'machine_limit': 0,       # UI-specific setting
+            'machine_deny_list': False,  # UI-specific setting
+            'machine_list': '',       # UI-specific setting
+            'limit_groups': config.get('submission.limit_groups', ''),
+        }
         
-        # Extra Settings defaults
-        self._extra_settings = DefaultValues.EXTRA_DEFAULTS.copy()
+        # Extra Settings defaults from config system
+        self._extra_settings = {
+            'job_name': config.get('submission.job_name_template', '{batch} / {write} / {file}'),
+            'comment': config.get('submission.comment_template', ''),
+            'department': config.get('submission.department', ''),
+        }
     
     # Job Settings methods
     def get_job_setting(self, key, default=None):
@@ -244,22 +278,27 @@ class SettingsModel(QtCore.QObject):
             errors.append("Threads must be between 1 and 64")
         
         # Validate RAM settings
-        min_ram = self._machine_settings.get('min_ram', 0)
-        max_ram = self._machine_settings.get('max_ram', 0)
+        stack_size = self._machine_settings.get('stack_size', 0)
+        ram_use = self._machine_settings.get('ram_use', 0)
         
-        if not isinstance(min_ram, int) or min_ram < 0 or min_ram > 64:
-            errors.append("Min RAM must be between 0 and 64 GB")
+        if not isinstance(stack_size, int) or stack_size < 0 or stack_size > 64:
+            errors.append("Stack size must be between 0 and 64 GB")
         
-        if not isinstance(max_ram, int) or max_ram < 0 or max_ram > 512:
-            errors.append("Max RAM must be between 0 and 512 GB")
+        if not isinstance(ram_use, int) or ram_use < 0 or ram_use > 512:
+            errors.append("RAM use must be between 0 and 512 GB")
         
-        if min_ram > 0 and max_ram > 0 and min_ram > max_ram:
-            errors.append("Min RAM cannot be greater than Max RAM")
+        if stack_size > 0 and ram_use > 0 and stack_size > ram_use:
+            errors.append("Stack size cannot be greater than RAM use")
         
-        # Validate GPU device
-        gpu_device = self._machine_settings.get('gpu_device', 0)
-        if not isinstance(gpu_device, int) or gpu_device < 0 or gpu_device > 16:
-            errors.append("GPU device must be between 0 and 16")
+        # Validate GPU override
+        gpu_override = self._machine_settings.get('gpu_override', '')
+        if gpu_override:
+            try:
+                gpu_id = int(gpu_override) if isinstance(gpu_override, str) else gpu_override
+                if gpu_id < 0 or gpu_id > 16:
+                    errors.append("GPU override must be between 0 and 16")
+            except (ValueError, TypeError):
+                errors.append("GPU override must be a valid GPU ID")
         
         # Validate concurrent tasks
         concurrent_tasks = self._machine_settings.get('concurrent_tasks', 1)
