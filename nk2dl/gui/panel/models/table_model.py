@@ -895,4 +895,23 @@ class TableDataModel(QtCore.QObject):
             node_column = self._headers.index("Node")
             return self._data[row].get("Node", "")
         except (ValueError, KeyError):
-            return "" 
+            return ""
+    
+    def is_node_selected_for_render(self, row):
+        """Check if a node is selected for rendering.
+        
+        Args:
+            row (int): Row index
+            
+        Returns:
+            bool: True if node is selected for rendering, False otherwise
+        """
+        if row < 0 or row >= len(self._data):
+            return False
+        
+        # Get the render checkbox value from the "Render" column
+        try:
+            render_value = self._data[row].get("Render", True)  # Default to True for new nodes
+            return bool(render_value)
+        except (ValueError, KeyError):
+            return False 
