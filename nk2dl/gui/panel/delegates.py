@@ -102,17 +102,21 @@ class SettingsAwareDelegate(QtWidgets.QStyledItemDelegate):
         elif header == "RenderMode":
             editor.addItems(["Full", "Proxy", "Both", "Script"])
         elif header == "Pool":
-            editor.addItems(["comp", "lighting", "render", "fx", "general"])
+            from .constants import Settings
+            editor.addItems(Settings.get_pool_options())
         elif header == "SecondaryPool":
-            editor.addItems(["", "comp", "lighting", "render", "fx", "general"])
+            from .constants import Settings
+            editor.addItems([""] + Settings.get_pool_options())
         elif header == "Group":
-            editor.addItems(["none", "high_priority", "weekend", "overnight"])
+            from .constants import Settings
+            editor.addItems(Settings.get_group_options())
         else:
             # For other dropdown columns, use default options
-            # This handles any columns defined in TableColumns.DROPDOWN_COLUMNS
+            # This handles any columns defined in TableColumns.get_dropdown_columns()
             from .constants import TableColumns
-            if column in TableColumns.DROPDOWN_COLUMNS:
-                options = TableColumns.DROPDOWN_COLUMNS[column]
+            dropdown_columns = TableColumns.get_dropdown_columns()
+            if column in dropdown_columns:
+                options = dropdown_columns[column]
                 editor.addItems(options)
         
         # Add separator and inheritance option if column has settings mapping

@@ -299,7 +299,7 @@ class SettingsView(QtWidgets.QWidget):
         pool_group_row.addWidget(pool_label)
         
         self.pool_combo = QtWidgets.QComboBox()
-        self.pool_combo.addItems(Settings.POOL_OPTIONS)
+        self.pool_combo.addItems(Settings.get_pool_options())
         self.pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.pool_combo.setToolTip("The pool that your job will be submitted to.")
         pool_group_row.addWidget(self.pool_combo)
@@ -309,7 +309,7 @@ class SettingsView(QtWidgets.QWidget):
         pool_group_row.addWidget(secondary_pool_label)
         
         self.secondary_pool_combo = QtWidgets.QComboBox()
-        self.secondary_pool_combo.addItems([""] + Settings.POOL_OPTIONS)
+        self.secondary_pool_combo.addItems([""] + Settings.get_pool_options())
         self.secondary_pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.secondary_pool_combo.setToolTip("The secondary pool lets you specify a Pool to use if the primary Pool does not have any available Workers.")
         pool_group_row.addWidget(self.secondary_pool_combo)
@@ -319,7 +319,7 @@ class SettingsView(QtWidgets.QWidget):
         pool_group_row.addWidget(group_label)
         
         self.group_combo = QtWidgets.QComboBox()
-        self.group_combo.addItems(Settings.GROUP_OPTIONS)
+        self.group_combo.addItems(Settings.get_group_options())
         self.group_combo.setFixedWidth(120)
         self.group_combo.setToolTip("The group that your job will be submitted to.")
         pool_group_row.addWidget(self.group_combo)
@@ -542,7 +542,7 @@ class SettingsView(QtWidgets.QWidget):
             if index >= 0:
                 self.frames_combo.setCurrentIndex(index)
             
-            self.frame_range_edit.setText(job_settings.get('frames', '1001-2315'))
+            self.frame_range_edit.setText(job_settings.get('frames', ''))
             self.use_node_frame_list_check.setChecked(job_settings.get('use_node_frame_list', False))
             self.task_timeout_spin.setValue(int(job_settings.get('task_timeout', 0)))
             self.enable_auto_timeout_check.setChecked(job_settings.get('enable_auto_timeout', False))
@@ -753,4 +753,61 @@ class SettingsView(QtWidgets.QWidget):
             apply_panel_config(self.limits_edit, "limits")
             
         except Exception as e:
-            logger.error(f"Error applying configuration to SettingsView: {e}") 
+            logger.error(f"Error applying configuration to SettingsView: {e}")
+    
+    def refresh_pool_dropdowns(self):
+        """Refresh pool dropdown contents with updated options from Deadline."""
+        try:
+            # Store current selections
+            current_pool = self.pool_combo.currentText()
+            current_secondary = self.secondary_pool_combo.currentText()
+            
+            # Get updated pool options
+            pool_options = Settings.get_pool_options()
+            
+            # Update primary pool dropdown
+            self.pool_combo.clear()
+            self.pool_combo.addItems(pool_options)
+            
+            # Update secondary pool dropdown (includes empty option)
+            self.secondary_pool_combo.clear()
+            self.secondary_pool_combo.addItems([""] + pool_options)
+            
+            # Restore selections if they still exist
+            if current_pool in pool_options:
+                self.pool_combo.setCurrentText(current_pool)
+            
+            if current_secondary in ([""] + pool_options):
+                self.secondary_pool_combo.setCurrentText(current_secondary)
+            
+            logger.info(f"Pool dropdowns refreshed with {len(pool_options)} options")
+            
+        except Exception as e:
+            logger.error(f"Error refreshing pool dropdowns: {e}", exc_info=True)
+    
+    def refresh_group_dropdown(self):
+        """Refresh group dropdown contents with updated options from Deadline."""
+        try:
+            # Store current selection
+            current_group = self.group_combo.currentText()
+            
+            # Get updated group options
+            group_options = Settings.get_group_options()
+            
+            # Update group dropdown
+            self.group_combo.clear()
+            self.group_combo.addItems(group_options)
+            
+            # Restore selection if it still exists
+            if current_group in group_options:
+                self.group_combo.setCurrentText(current_group)
+            
+            logger.info(f"Group dropdown refreshed with {len(group_options)} options")
+            
+        except Exception as e:
+            logger.error(f"Error refreshing group dropdown: {e}", exc_info=True)
+    
+    def refresh_all_dropdowns(self):
+        """Refresh all pool and group dropdowns with updated options."""
+        self.refresh_pool_dropdowns()
+        self.refresh_group_dropdown() 

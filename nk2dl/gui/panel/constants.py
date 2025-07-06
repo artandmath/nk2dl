@@ -14,13 +14,122 @@ class Settings:
     # Frame options for the frames dropdown
     FRAMES_OPTIONS = ["Global", "Input", "Custom"]
     
-    # Pool options for machine settings
-    # Placeholder for actual pool options, which will be populated from Deadline
-    POOL_OPTIONS = ["comp", "lighting", "fx", "render", "general"]
+    # Dynamic pool/group options (populated from Deadline)
+    _pools_loaded = False
+    _groups_loaded = False
+    _pool_options = ["none"]  # Fallback during loading
+    _group_options = ["none"]  # Fallback during loading
     
-    # Group options for machine settings
-    # Placeholder for actual group options, which will be populated from Deadline
-    GROUP_OPTIONS = ["none", "high_priority", "overnight", "weekend"]
+    # Hard-coded fallback values for when Deadline is unavailable
+    _FALLBACK_POOL_OPTIONS = ["comp", "lighting", "fx", "render", "general"]
+    _FALLBACK_GROUP_OPTIONS = ["none", "high_priority", "overnight", "weekend"]
+    
+    @classmethod
+    def get_pool_options(cls):
+        """Get current pool options.
+        
+        Returns:
+            List of available pool options
+        """
+        return cls._pool_options
+    
+    @classmethod
+    def set_pool_options(cls, pools):
+        """Set pool options from Deadline.
+        
+        Args:
+            pools: List of pool names from Deadline
+        """
+        if pools:
+            # Always include "none" as first option, then add Deadline pools
+            cls._pool_options = ["none"] + [pool for pool in pools if pool != "none"]
+        else:
+            # If no pools from Deadline, use fallback
+            cls._pool_options = ["none"] + cls._FALLBACK_POOL_OPTIONS
+        
+        cls._pools_loaded = True
+        
+        from ...common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.constants')
+        logger.info(f"Pool options updated: {cls._pool_options}")
+    
+    @classmethod
+    def get_group_options(cls):
+        """Get current group options.
+        
+        Returns:
+            List of available group options
+        """
+        return cls._group_options
+    
+    @classmethod
+    def set_group_options(cls, groups):
+        """Set group options from Deadline.
+        
+        Args:
+            groups: List of group names from Deadline
+        """
+        if groups:
+            # Always include "none" as first option, then add Deadline groups
+            cls._group_options = ["none"] + [group for group in groups if group != "none"]
+        else:
+            # If no groups from Deadline, use fallback
+            cls._group_options = ["none"] + cls._FALLBACK_GROUP_OPTIONS
+        
+        cls._groups_loaded = True
+        
+        from ...common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.constants')
+        logger.info(f"Group options updated: {cls._group_options}")
+    
+    @classmethod
+    def are_pools_loaded(cls):
+        """Check if pools have been loaded from Deadline.
+        
+        Returns:
+            True if pools have been loaded, False otherwise
+        """
+        return cls._pools_loaded
+    
+    @classmethod
+    def are_groups_loaded(cls):
+        """Check if groups have been loaded from Deadline.
+        
+        Returns:
+            True if groups have been loaded, False otherwise
+        """
+        return cls._groups_loaded
+    
+    @classmethod
+    def use_fallback_pools(cls):
+        """Use fallback pool options when Deadline is unavailable."""
+        cls._pool_options = ["none"] + cls._FALLBACK_POOL_OPTIONS
+        cls._pools_loaded = True
+        
+        from ...common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.constants')
+        logger.warning("Using fallback pool options - Deadline unavailable")
+    
+    @classmethod
+    def use_fallback_groups(cls):
+        """Use fallback group options when Deadline is unavailable."""
+        cls._group_options = ["none"] + cls._FALLBACK_GROUP_OPTIONS
+        cls._groups_loaded = True
+        
+        from ...common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.constants')
+        logger.warning("Using fallback group options - Deadline unavailable")
+    
+    # Legacy properties for backwards compatibility
+    @property
+    def POOL_OPTIONS(self):
+        """Legacy property for backwards compatibility."""
+        return self.get_pool_options()
+    
+    @property
+    def GROUP_OPTIONS(self):
+        """Legacy property for backwards compatibility."""
+        return self.get_group_options()
 
 
 class Storage:
@@ -191,19 +300,32 @@ class TableColumns:
     }
     
     # Dropdown columns (columns that have dropdown editors) - updated indices for reordered headers
-    DROPDOWN_COLUMNS = {
-        6: ["Yes", "No"],                    # NodesFrames
-        8: ["Yes", "No"],                    # AutoTimeout  
-        9: ["Full", "Proxy", "Both", "Script"],  # RenderMode
-        10: ["Yes", "No"],                   # NukeX
-        11: ["Yes", "No"],                   # BatchMode
-        12: ["Yes", "No"],                   # ReloadPlugin
-        13: Settings.POOL_OPTIONS,           # Pool
-        14: Settings.POOL_OPTIONS,           # SecondaryPool
-        15: Settings.GROUP_OPTIONS,          # Group
-        19: ["Yes", "No"],                   # UseGPU
-        22: ["Yes", "No"]                    # WorkerTaskLimit
-    }
+    @classmethod
+    def get_dropdown_columns(cls):
+        """Get dropdown column definitions with dynamic options.
+        
+        Returns:
+            Dictionary mapping column indices to their dropdown options
+        """
+        return {
+            6: ["Yes", "No"],                    # NodesFrames
+            8: ["Yes", "No"],                    # AutoTimeout  
+            9: ["Full", "Proxy", "Both", "Script"],  # RenderMode
+            10: ["Yes", "No"],                   # NukeX
+            11: ["Yes", "No"],                   # BatchMode
+            12: ["Yes", "No"],                   # ReloadPlugin
+            13: Settings.get_pool_options(),     # Pool
+            14: Settings.get_pool_options(),     # SecondaryPool
+            15: Settings.get_group_options(),    # Group
+            19: ["Yes", "No"],                   # UseGPU
+            22: ["Yes", "No"]                    # WorkerTaskLimit
+        }
+    
+    # Legacy property for backwards compatibility
+    @property
+    def DROPDOWN_COLUMNS(self):
+        """Legacy property for backwards compatibility."""
+        return self.get_dropdown_columns()
     
     # Column width calculation settings (replaces hard-coded COLUMN_WIDTHS)
     COLUMN_WIDTH_SETTINGS = {

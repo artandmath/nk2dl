@@ -785,4 +785,83 @@ class NodeSettingsStorage:
             
         except Exception as e:
             logger.error(f"Error in convert and validate for {param_name}: {e}", exc_info=True)
-            return value, False, f"Conversion error: {str(e)}" 
+            return value, False, f"Conversion error: {str(e)}"
+    
+    def get_stored_pool_default(self) -> Optional[str]:
+        """Get the stored default pool preference.
+        
+        Returns:
+            The stored pool preference, or None if not set
+        """
+        try:
+            # Try to get from global settings in storage
+            all_settings = self.load_all_settings()
+            global_settings = all_settings.get('global_settings', {})
+            
+            # Check for pool preference
+            stored_pool = global_settings.get('pool')
+            
+            if stored_pool and stored_pool != 'none':
+                logger.debug(f"Found stored pool preference: {stored_pool}")
+                return stored_pool
+                
+        except Exception as e:
+            logger.error(f"Error getting stored pool default: {e}", exc_info=True)
+        
+        return None
+    
+    def get_stored_group_default(self) -> Optional[str]:
+        """Get the stored default group preference.
+        
+        Returns:
+            The stored group preference, or None if not set
+        """
+        try:
+            # Try to get from global settings in storage
+            all_settings = self.load_all_settings()
+            global_settings = all_settings.get('global_settings', {})
+            
+            # Check for group preference
+            stored_group = global_settings.get('group')
+            
+            if stored_group and stored_group != 'none':
+                logger.debug(f"Found stored group preference: {stored_group}")
+                return stored_group
+                
+        except Exception as e:
+            logger.error(f"Error getting stored group default: {e}", exc_info=True)
+        
+        return None
+    
+    def save_resource_preferences(self, pool: Optional[str] = None, group: Optional[str] = None) -> bool:
+        """Save user's preferred pool and group defaults.
+        
+        Args:
+            pool: Pool preference to save (optional)
+            group: Group preference to save (optional)
+            
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            # Load current settings
+            all_settings = self.load_all_settings()
+            
+            # Get global settings
+            global_settings = all_settings.get('global_settings', {})
+            
+            # Update preferences
+            if pool is not None:
+                global_settings['pool'] = pool
+                logger.debug(f"Updated pool preference to: {pool}")
+            
+            if group is not None:
+                global_settings['group'] = group
+                logger.debug(f"Updated group preference to: {group}")
+            
+            # Save back to storage
+            return self.save_all_settings(global_settings, all_settings.get('node_overrides', {}))
+            
+        except Exception as e:
+            logger.error(f"Error saving resource preferences: {e}", exc_info=True)
+            return False 

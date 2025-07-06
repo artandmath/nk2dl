@@ -740,8 +740,8 @@ class TableDataModel(QtCore.QObject):
         if column < 0 or column >= len(self._headers):
             return False
         
-        header = self._headers[column]
-        return header in TableColumns.DROPDOWN_COLUMNS
+        dropdown_columns = TableColumns.get_dropdown_columns()
+        return column in dropdown_columns
     
     def is_yes_no_column(self, column):
         """Check if a column is a Yes/No dropdown column.

@@ -6,7 +6,9 @@ managing complex UI state and operations like progress reporting.
 """
 
 from .progress import PanelProgressManager
+from .deadline_resources import DeadlineResourceWorker
 
 __all__ = [
     'PanelProgressManager',
+    'DeadlineResourceWorker',
 ] 

@@ -64,10 +64,10 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         # Import all the extracted components from their directories
         from .models import TableDataModel, GSVHierarchyModel, SettingsModel
         from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
-        from .constants import Sizes, GSVDefaults, Timing, Fonts
+        from .constants import Sizes, GSVDefaults, Timing, Fonts, Settings
         from .config import apply_panel_config
         from .repositories import NodeDataProvider, NodeSettingsStorage
-        from .controllers import PanelProgressManager
+        from .controllers import PanelProgressManager, DeadlineResourceWorker
 
         import logging
         import sys
@@ -399,7 +399,10 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 # This ensures the panel is fully initialized before data loading
                 self._schedule_initial_data_load()
                 
-                logger.info("Scheduled initial node data refresh via events")
+                # Also start loading Deadline resources in background
+                self._schedule_deadline_resource_loading()
+                
+                logger.info("Scheduled initial node data refresh and Deadline resource loading via events")
             
             def _schedule_initial_data_load(self):
                 """Schedule initial data loading via event queue."""
@@ -426,6 +429,187 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         
                 except Exception as e:
                     logger.error(f"Error in panel ready for data: {e}", exc_info=True)
+            
+            def _schedule_deadline_resource_loading(self):
+                """Schedule Deadline resource loading via event queue."""
+                # Use timer to start resource loading after panel is ready
+                QtCore.QTimer.singleShot(Timing.PANEL_INITIALIZATION_DELAY + 50, self._start_deadline_resource_loading)
+                logger.debug("Deadline resource loading scheduled")
+            
+            def _start_deadline_resource_loading(self):
+                """Start background loading of Deadline resources."""
+                try:
+                    # Skip if already loading
+                    if hasattr(self, '_deadline_resource_worker') and self._deadline_resource_worker:
+                        logger.debug("Deadline resource loading already in progress")
+                        return
+                    
+                    # Populate initial values first
+                    self._populate_initial_pool_group_values()
+                    
+                    # Create and configure worker
+                    self._deadline_resource_worker = DeadlineResourceWorker(
+                        fetch_pools=True, 
+                        fetch_groups=True
+                    )
+                    
+                    # Connect signals
+                    self._deadline_resource_worker.signals.pools_loaded.connect(
+                        self._on_pools_loaded, QtCore.Qt.QueuedConnection)
+                    self._deadline_resource_worker.signals.groups_loaded.connect(
+                        self._on_groups_loaded, QtCore.Qt.QueuedConnection)
+                    self._deadline_resource_worker.signals.error_occurred.connect(
+                        self._on_deadline_resource_error, QtCore.Qt.QueuedConnection)
+                    self._deadline_resource_worker.signals.progress_update.connect(
+                        self._on_deadline_resource_progress, QtCore.Qt.QueuedConnection)
+                    self._deadline_resource_worker.signals.finished.connect(
+                        self._on_deadline_resource_finished, QtCore.Qt.QueuedConnection)
+                    
+                    # Start worker in thread pool
+                    QtCore.QThreadPool.globalInstance().start(self._deadline_resource_worker)
+                    logger.info("Started Deadline resource loading in background")
+                    
+                except Exception as e:
+                    logger.error(f"Error starting Deadline resource loading: {e}", exc_info=True)
+                    # Use fallback values on error
+                    self._use_fallback_resources()
+            
+            def _populate_initial_pool_group_values(self):
+                """Populate initial pool/group values before Deadline fetch."""
+                try:
+                    # 1. Try storage first
+                    stored_pool = self.settings_storage.get_stored_pool_default()
+                    stored_group = self.settings_storage.get_stored_group_default()
+                    
+                    if stored_pool or stored_group:
+                        logger.info(f"Using stored preferences - pool: {stored_pool}, group: {stored_group}")
+                        self._set_initial_selections(stored_pool, stored_group)
+                        return
+                    
+                    # 2. Try config defaults
+                    from ...common.config import config
+                    config_pool = config.get('submission.pool', 'nuke')
+                    config_group = config.get('submission.group', 'none')
+                    
+                    logger.info(f"Using config defaults - pool: {config_pool}, group: {config_group}")
+                    self._set_initial_selections(config_pool, config_group)
+                    
+                except Exception as e:
+                    logger.error(f"Error populating initial pool/group values: {e}", exc_info=True)
+                    # Use fallback values
+                    self._set_initial_selections('none', 'none')
+            
+            def _set_initial_selections(self, pool: str, group: str):
+                """Set initial dropdown selections."""
+                try:
+                    # Update settings model if available
+                    if hasattr(self, 'settings_model') and self.settings_model:
+                        if pool and pool != 'none':
+                            self.settings_model.set_machine_setting('pool', pool)
+                        if group and group != 'none':
+                            self.settings_model.set_machine_setting('group', group)
+                    
+                    # Update UI if available
+                    if hasattr(self, 'settings_view') and self.settings_view:
+                        if pool and pool != 'none':
+                            pool_index = self.settings_view.pool_combo.findText(pool)
+                            if pool_index >= 0:
+                                self.settings_view.pool_combo.setCurrentIndex(pool_index)
+                        
+                        if group and group != 'none':
+                            group_index = self.settings_view.group_combo.findText(group)
+                            if group_index >= 0:
+                                self.settings_view.group_combo.setCurrentIndex(group_index)
+                    
+                except Exception as e:
+                    logger.error(f"Error setting initial selections: {e}", exc_info=True)
+            
+            def _on_pools_loaded(self, pools):
+                """Handle pools loaded from Deadline."""
+                try:
+                    logger.info(f"Pools loaded from Deadline: {pools}")
+                    
+                    # Update constants
+                    Settings.set_pool_options(pools)
+                    
+                    # Update UI if ready
+                    if self._is_ui_ready_for_updates():
+                        self._refresh_pool_dropdowns()
+                    
+                except Exception as e:
+                    logger.error(f"Error handling pools loaded: {e}", exc_info=True)
+            
+            def _on_groups_loaded(self, groups):
+                """Handle groups loaded from Deadline."""
+                try:
+                    logger.info(f"Groups loaded from Deadline: {groups}")
+                    
+                    # Update constants
+                    Settings.set_group_options(groups)
+                    
+                    # Update UI if ready
+                    if self._is_ui_ready_for_updates():
+                        self._refresh_group_dropdowns()
+                    
+                except Exception as e:
+                    logger.error(f"Error handling groups loaded: {e}", exc_info=True)
+            
+            def _on_deadline_resource_error(self, error_msg):
+                """Handle Deadline resource loading errors."""
+                logger.warning(f"Deadline resource loading failed: {error_msg}")
+                # Use fallback values
+                self._use_fallback_resources()
+            
+            def _on_deadline_resource_progress(self, message):
+                """Handle Deadline resource loading progress."""
+                logger.debug(f"Deadline resource progress: {message}")
+            
+            def _on_deadline_resource_finished(self):
+                """Handle Deadline resource loading completion."""
+                logger.info("Deadline resource loading finished")
+                # Clean up worker reference
+                if hasattr(self, '_deadline_resource_worker'):
+                    self._deadline_resource_worker = None
+            
+            def _use_fallback_resources(self):
+                """Use fallback pool and group options when Deadline is unavailable."""
+                try:
+                    logger.warning("Using fallback pool and group options")
+                    
+                    # Use fallback values
+                    Settings.use_fallback_pools()
+                    Settings.use_fallback_groups()
+                    
+                    # Update UI if ready
+                    if self._is_ui_ready_for_updates():
+                        self._refresh_pool_dropdowns()
+                        self._refresh_group_dropdowns()
+                    
+                except Exception as e:
+                    logger.error(f"Error using fallback resources: {e}", exc_info=True)
+            
+            def _is_ui_ready_for_updates(self):
+                """Check if UI is ready for updates."""
+                return (hasattr(self, 'settings_view') and 
+                        self.settings_view is not None and
+                        hasattr(self.settings_view, 'pool_combo') and
+                        hasattr(self.settings_view, 'group_combo'))
+            
+            def _refresh_pool_dropdowns(self):
+                """Refresh pool dropdown contents."""
+                try:
+                    if hasattr(self, 'settings_view') and self.settings_view:
+                        self.settings_view.refresh_pool_dropdowns()
+                except Exception as e:
+                    logger.error(f"Error refreshing pool dropdowns: {e}", exc_info=True)
+            
+            def _refresh_group_dropdowns(self):
+                """Refresh group dropdown contents."""
+                try:
+                    if hasattr(self, 'settings_view') and self.settings_view:
+                        self.settings_view.refresh_group_dropdown()
+                except Exception as e:
+                    logger.error(f"Error refreshing group dropdowns: {e}", exc_info=True)
             
             def _is_nuke_15_1_or_later(self):
                 """Check if Nuke version is 15.1 or later."""
