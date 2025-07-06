@@ -876,4 +876,23 @@ class TableDataModel(QtCore.QObject):
         Returns:
             list: List of visible column header names in order
         """
-        return [h for h in self._headers if h in self._visible_columns] 
+        return [h for h in self._headers if h in self._visible_columns]
+    
+    def get_node_name(self, row):
+        """Get the node name for a specific row.
+        
+        Args:
+            row (int): Row index
+            
+        Returns:
+            str: Node name or empty string if not found
+        """
+        if row < 0 or row >= len(self._data):
+            return ""
+        
+        # Find the Node column index
+        try:
+            node_column = self._headers.index("Node")
+            return self._data[row].get("Node", "")
+        except (ValueError, KeyError):
+            return "" 
