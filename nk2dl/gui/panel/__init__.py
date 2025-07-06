@@ -341,10 +341,14 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     # 3. Start progress
                     self.progress_manager.start_operation("Submitting to Deadline")
                     
-                    # 4. Build submission arguments via storage
+                    # 4. Get current UI state from all panels
+                    current_ui_state = self._capture_current_ui_state()
+                    
+                    # 5. Build submission arguments via storage with current UI state
                     submission_args = self.settings_storage.build_submission_args(
                         script_path=script_path,
-                        write_nodes=selected_nodes
+                        write_nodes=selected_nodes,
+                        **current_ui_state  # Pass current UI state as overrides
                     )
                     
                     # 5. Submit to Deadline
@@ -375,6 +379,64 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     nuke.message(error_msg)
                     self.progress_manager.finish_operation(success=False, final_message="Submission failed")
                     logger.error(f"Render button submission failed: {e}", exc_info=True)
+            
+            def _capture_current_ui_state(self):
+                """Capture current state of all UI controls for submission.
+                
+                Returns:
+                    Dict[str, Any]: Current UI state with parameter names matching submission args
+                """
+                ui_state = {}
+                
+                try:
+                    # Get critical checkboxes that affect submission behavior from SettingsView
+                    if hasattr(self.settings_view, 'separate_jobs_check'):
+                        ui_state['write_nodes_as_separate_jobs'] = self.settings_view.separate_jobs_check.isChecked()
+                    
+                    if hasattr(self.settings_view, 'separate_tasks_check'):
+                        ui_state['write_nodes_as_tasks'] = self.settings_view.separate_tasks_check.isChecked()
+                    
+                    if hasattr(self.settings_view, 'views_separate_jobs_check'):
+                        ui_state['views_as_separate_jobs'] = self.settings_view.views_separate_jobs_check.isChecked()
+                    
+                    # Get other important settings from SettingsView
+                    if hasattr(self.settings_view, 'priority_spin'):
+                        ui_state['priority'] = self.settings_view.priority_spin.value()
+                    
+                    if hasattr(self.settings_view, 'chunk_size_spin'):
+                        ui_state['chunk_size'] = self.settings_view.chunk_size_spin.value()
+                    
+                    if hasattr(self.settings_view, 'frames_edit'):
+                        ui_state['frames'] = self.settings_view.frames_edit.text()
+                    
+                    if hasattr(self.settings_view, 'pool_combo'):
+                        ui_state['pool'] = self.settings_view.pool_combo.currentText()
+                    
+                    if hasattr(self.settings_view, 'group_combo'):
+                        ui_state['group'] = self.settings_view.group_combo.currentText()
+                    
+                    if hasattr(self.settings_view, 'threads_spin'):
+                        ui_state['threads'] = self.settings_view.threads_spin.value()
+                    
+                    if hasattr(self.settings_view, 'use_gpu_check'):
+                        ui_state['use_gpu'] = self.settings_view.use_gpu_check.isChecked()
+                    
+                    if hasattr(self.settings_view, 'concurrent_tasks_spin'):
+                        ui_state['concurrent_tasks'] = self.settings_view.concurrent_tasks_spin.value()
+                    
+                    # Get machine settings
+                    if hasattr(self.settings_view, 'limit_tasks_check'):
+                        ui_state['limit_worker_tasks'] = self.settings_view.limit_tasks_check.isChecked()
+                    
+                    if hasattr(self.settings_view, 'machine_limit_spin'):
+                        ui_state['machine_limit'] = self.settings_view.machine_limit_spin.value()
+                    
+                    logger.debug(f"Captured UI state: {ui_state}")
+                    return ui_state
+                    
+                except Exception as e:
+                    logger.error(f"Error capturing UI state: {e}", exc_info=True)
+                    return {}
             
             # Progress and data loading handlers
             def _refresh_node_data(self):

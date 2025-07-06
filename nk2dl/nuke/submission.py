@@ -857,7 +857,8 @@ class NukeSubmission:
             if not self.fr.is_valid_syntax():
                 raise SubmissionError(f"Invalid frame range syntax: {frames}")
         else:
-            # Get frame range from Nuke script
+            # Initialize empty frame range first, then get frame range from Nuke script
+            self.fr = FrameRange("")
             self._get_frame_range_from_nuke()
         
         # For job_name we'll do the replacement later when we have access to more information
