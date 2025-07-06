@@ -319,8 +319,62 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.console_view.log_info("Extra settings updated")
             
             def _on_render_clicked(self):
-                """Handle render button click - show development message."""
-                nuke.message("Nuke to Deadline panel is still under development.\n\nUse the \"Submit Write Nodes to Deadline\" feature from the render menu.")
+                """Handle render button click - submit selected write nodes to Deadline."""
+                try:
+                    # 1. Validate script is saved
+                    script_path = nuke.root().name()
+                    if not script_path or script_path == "Root":
+                        nuke.message("Please save your script before submitting to Deadline.")
+                        return
+                    
+                    # 2. Get selected write nodes
+                    selected_nodes = []
+                    for row in range(self.table_model.get_row_count()):
+                        node_name = self.table_model.get_node_name(row)
+                        if node_name and self.table_model.is_node_selected_for_render(row):
+                            selected_nodes.append(node_name)
+                    
+                    if not selected_nodes:
+                        nuke.message("No write nodes selected for rendering.\n\nPlease select at least one write node in the table.")
+                        return
+                    
+                    # 3. Start progress
+                    self.progress_manager.start_operation("Submitting to Deadline")
+                    
+                    # 4. Build submission arguments via storage
+                    submission_args = self.node_settings_view.storage.build_submission_args(
+                        script_path=script_path,
+                        write_nodes=selected_nodes
+                    )
+                    
+                    # 5. Submit to Deadline
+                    from ...nuke.submission import submit_nuke_script
+                    result = submit_nuke_script(**submission_args)
+                    
+                    # 6. Show success message
+                    job_count = len(selected_nodes)
+                    node_list = ", ".join(selected_nodes)
+                    
+                    # Handle both dict and list return types from submission
+                    if isinstance(result, dict):
+                        job_id = result.get('job_id', 'unknown')
+                    elif isinstance(result, list) and result:
+                        job_id = result[0] if result else 'unknown'
+                    else:
+                        job_id = 'unknown'
+                    
+                    success_msg = f"Successfully submitted {job_count} jobs to Deadline:\n\n"
+                    success_msg += f"Write Nodes: {node_list}\n"
+                    success_msg += f"Job ID: {job_id}"
+                    
+                    nuke.message(success_msg)
+                    self.progress_manager.finish_operation(success=True, final_message="Submission completed successfully")
+                    
+                except Exception as e:
+                    error_msg = f"Submission failed:\n\n{str(e)}"
+                    nuke.message(error_msg)
+                    self.progress_manager.finish_operation(success=False, final_message="Submission failed")
+                    logger.error(f"Render button submission failed: {e}", exc_info=True)
             
             # Progress and data loading handlers
             def _refresh_node_data(self):

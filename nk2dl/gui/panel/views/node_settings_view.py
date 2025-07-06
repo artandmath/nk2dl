@@ -88,9 +88,9 @@ class NodeSettingsView(QtWidgets.QWidget):
         QtCore.QTimer.singleShot(0, self._apply_configuration)
         qt_logger.debug("NodeSettingsView.__init__ completed")
         
-        # Skip initial data load - auto-load will handle it
-        # qt_logger.debug("About to call _load_data_from_model()")
-        # self._load_data_from_model()
+        # Load initial data from model if it exists
+        qt_logger.debug("About to call _load_data_from_model()")
+        self._load_data_from_model()
     
     def _connect_table_events(self):
         """Connect to table events for responsive column width calculation."""
