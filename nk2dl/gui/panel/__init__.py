@@ -396,8 +396,10 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     if hasattr(self.settings_view, 'separate_tasks_check'):
                         ui_state['write_nodes_as_tasks'] = self.settings_view.separate_tasks_check.isChecked()
                     
-                    if hasattr(self.settings_view, 'views_separate_jobs_check'):
-                        ui_state['views_as_separate_jobs'] = self.settings_view.views_separate_jobs_check.isChecked()
+                    # NOTE: views_as_separate_jobs is not yet implemented in NukeSubmission
+                    # Commenting out for now to avoid submission errors
+                    # if hasattr(self.settings_view, 'views_separate_jobs_check'):
+                    #     ui_state['views_as_separate_jobs'] = self.settings_view.views_separate_jobs_check.isChecked()
                     
                     # Get other important settings from SettingsView
                     if hasattr(self.settings_view, 'priority_spin'):
@@ -431,12 +433,89 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     if hasattr(self.settings_view, 'machine_limit_spin'):
                         ui_state['machine_limit'] = self.settings_view.machine_limit_spin.value()
                     
+                    # Filter out unsupported parameters to avoid submission errors
+                    ui_state = self._filter_supported_parameters(ui_state)
+                    
                     logger.debug(f"Captured UI state: {ui_state}")
                     return ui_state
                     
                 except Exception as e:
                     logger.error(f"Error capturing UI state: {e}", exc_info=True)
                     return {}
+            
+            def _filter_supported_parameters(self, ui_state):
+                """Filter UI state to only include parameters supported by NukeSubmission.
+                
+                This prevents submission errors when UI is ahead of backend implementation.
+                
+                Args:
+                    ui_state: Dictionary of UI state parameters
+                    
+                Returns:
+                    Dict[str, Any]: Filtered UI state with only supported parameters
+                """
+                # Define parameters that are currently supported by NukeSubmission
+                # Based on NukeSubmission.__init__ method signature
+                supported_params = {
+                    # nk2dl specific parameters
+                    'script_is_open', 'use_parser_instead_of_nuke', 'submit_writes_alphabetically',
+                    'submit_writes_in_render_order', 'submit_script_as_auxiliary_file', 
+                    'render_settings_from_metadata',
+                    
+                    # Build job parameters
+                    'submission_is_build_job', 'build_job_name', 'build_job_script_path',
+                    'pre_build_job_script', 'post_build_job_script', 'build_job_as_auxiliary_file',
+                    'delete_build_job_script',
+                    
+                    # Script copying parameters
+                    'copy_script', 'copy_script_path', 'submit_copied_script',
+                    
+                    # ScriptJob parameters
+                    'script_job_script_path',
+                    
+                    # Machine list parameters
+                    'machine_list', 'machine_list_is_a_deny_list', 'machine_allow_list',
+                    'machine_deny_list', 'machine_limit',
+                    
+                    # Job Info parameters
+                    'job_name', 'batch_name', 'priority', 'pool', 'group', 'chunk_size',
+                    'department', 'user_name', 'comment', 'concurrent_tasks', 'extra_info',
+                    'frames', 'job_dependencies', 'on_job_complete', 'submit_suspended',
+                    'limit_groups', 'task_timeout', 'enable_auto_timeout', 'limit_worker_tasks',
+                    'pre_job_script', 'post_job_script', 'pre_task_script', 'post_task_script',
+                    
+                    # Plugin Info parameters
+                    'output_file_path', 'parse_output_paths_to_deadline', 'nuke_version',
+                    'use_nuke_x', 'batch_mode', 'threads', 'use_gpu', 'gpu_override',
+                    'ram_use', 'enforce_render_order', 'stack_size', 'continue_on_error',
+                    'reload_plugins', 'performance_profiler', 'performance_profiler_path',
+                    'write_nodes', 'render_mode', 'write_nodes_as_tasks', 'write_nodes_as_separate_jobs',
+                    'render_order_dependencies', 'use_node_frame_list', 'views',
+                    
+                    # Dual render mode parameters
+                    'proxy_args',
+                    
+                    # Graph Scope Variables parameters
+                    'graph_scope_variables',
+                    
+                    # Environment Variables parameters
+                    'use_current_environment', 'environment_keys', 'environment', 'omit_environment_keys'
+                }
+                
+                # Filter UI state to only include supported parameters
+                filtered_state = {}
+                unsupported_params = []
+                
+                for key, value in ui_state.items():
+                    if key in supported_params:
+                        filtered_state[key] = value
+                    else:
+                        unsupported_params.append(key)
+                
+                if unsupported_params:
+                    logger.debug(f"Filtered out unsupported parameters: {unsupported_params}")
+                
+                return filtered_state
             
             # Progress and data loading handlers
             def _refresh_node_data(self):
