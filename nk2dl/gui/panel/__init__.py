@@ -342,7 +342,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     self.progress_manager.start_operation("Submitting to Deadline")
                     
                     # 4. Build submission arguments via storage
-                    submission_args = self.node_settings_view.storage.build_submission_args(
+                    submission_args = self.settings_storage.build_submission_args(
                         script_path=script_path,
                         write_nodes=selected_nodes
                     )
