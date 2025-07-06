@@ -234,6 +234,51 @@ class DeadlineConnection:
             except Exception as e:
                 raise DeadlineError(f"Failed to get groups: {e}")
     
+    def get_pools(self) -> List[str]:
+        """Get list of Deadline pools.
+        
+        Returns:
+            List of pool names
+        """
+        self.ensure_connected()
+        
+        if self.use_web_service:
+            try:
+                return self._web_client.Pools.GetPoolNames()
+            except Exception as e:
+                if config.get('deadline.commandline_on_fail', True):
+                    fallback_msg = f"Failed to get pools via web service: {e}. Falling back to command line."
+                    logger.warning(colored_text(fallback_msg, Colors.RED))
+                    self._setup_command_line()
+                    self.use_web_service = False
+                    self._init_command_line()
+                    return self.get_pools()  # Retry with command line
+                else:
+                    raise DeadlineError(f"Failed to get pools via web service: {e}")
+        else:
+            if "dotnet" in self._command_path:
+                # For dotnet command string, split into command parts
+                command_parts = self._command_path.split()
+                command_parts.append("-Pools")
+                args = command_parts
+            else:
+                args = [self._command_path, "-Pools"]
+            try:
+                proc = subprocess.Popen(
+                    args,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE
+                )
+                output, errors = proc.communicate()
+                
+                if sys.version_info[0] > 2:
+                    output = output.decode()
+                
+                return [p.strip() for p in output.splitlines() if p.strip()]
+            except Exception as e:
+                raise DeadlineError(f"Failed to get pools: {e}")
+    
     def submit_job(self, job_info: Dict[str, Any], plugin_info: Dict[str, Any], auxiliary_files: Optional[List[str]] = None) -> Dict[str, Any]:
         """Submit a job to Deadline.
         
