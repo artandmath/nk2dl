@@ -65,11 +65,12 @@ class PanelProgressManager:
         
         logger.debug("PanelProgressManager initialized")
     
-    def start_operation(self, operation_name: str = "Loading"):
+    def start_operation(self, operation_name: str = "Loading", indeterminate: bool = False):
         """Start a progress operation.
         
         Args:
             operation_name: Name of the operation for display
+            indeterminate: Whether to show indeterminate progress (crawling zebra pattern)
         """
         if self._is_busy:
             logger.warning("Starting new operation while another is already in progress")
@@ -80,15 +81,23 @@ class PanelProgressManager:
         if self.info_label:
             self._original_info_text = self.info_label.text()
         
-        # Reset progress bar
+        # Configure progress bar for indeterminate or determinate progress
         if self.progress_bar:
-            self.progress_bar.setValue(0)
+            if indeterminate:
+                # Set range to (0, 0) for indeterminate "crawling zebra" pattern
+                self.progress_bar.setRange(0, 0)
+                logger.debug("Progress bar set to indeterminate mode")
+            else:
+                # Set normal range for determinate progress
+                self.progress_bar.setRange(0, 100)
+                self.progress_bar.setValue(0)
+                logger.debug("Progress bar set to determinate mode")
         
         # Set initial status message
         if self.info_label:
             self.info_label.setText(f"{operation_name}...")
         
-        logger.debug(f"Started progress operation: {operation_name}")
+        logger.debug(f"Started progress operation: {operation_name} (indeterminate: {indeterminate})")
     
     def update_progress(self, progress_percent: int, status_message: str = ""):
         """Update the progress indication.
@@ -126,6 +135,8 @@ class PanelProgressManager:
         
         # Update progress to completion
         if self.progress_bar:
+            # Reset to determinate mode first
+            self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(100 if success else 0)
         
         # Set final message
@@ -157,6 +168,8 @@ class PanelProgressManager:
         
         # Update UI to show cancellation
         if self.progress_bar:
+            # Reset to determinate mode first
+            self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(0)
         
         if self.info_label:
@@ -171,8 +184,9 @@ class PanelProgressManager:
         """Reset the UI to its original state."""
         self._is_busy = False
         
-        # Reset progress bar to empty but keep it visible
+        # Reset progress bar to determinate mode and empty
         if self.progress_bar:
+            self.progress_bar.setRange(0, 100)
             self.progress_bar.setValue(0)
         
         # Restore original info text

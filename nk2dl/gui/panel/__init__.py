@@ -505,7 +505,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     self.console_view.log_info(f"Selected write nodes: {', '.join(selected_nodes)}")
                     
                     # 4. Start progress and disable render button
-                    self.progress_manager.start_operation("Submitting to Deadline")
+                    self.progress_manager.start_operation("Submitting to Deadline", indeterminate=True)
                     self.render_btn.setEnabled(False)
                     self._submission_in_progress = True
                     
@@ -633,11 +633,13 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         success_msg += f"Write Nodes: {node_list}\n"
                         success_msg += f"Job ID: {job_id}"
                         
-                        nuke.message(success_msg)
+                        # TODO: Make success dialog configurable via panel settings
+                        # nuke.message(success_msg)  # Suppressed for console-only workflow
                         self.progress_manager.finish_operation(success=True, final_message="Submission completed successfully")
                     else:
                         self.console_view.log_error(f"Submission failed: {message}")
-                        nuke.message(f"Submission failed:\n\n{message}")
+                        # TODO: Make failure dialog configurable via panel settings  
+                        # nuke.message(f"Submission failed:\n\n{message}")  # Suppressed for console-only workflow
                         self.progress_manager.finish_operation(success=False, final_message="Submission failed")
                         
                 finally:
