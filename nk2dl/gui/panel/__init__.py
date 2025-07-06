@@ -64,10 +64,156 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         # Import all the extracted components from their directories
         from .models import TableDataModel, GSVHierarchyModel, SettingsModel
         from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
-        from .constants import Sizes, GSVDefaults, Timing
+        from .constants import Sizes, GSVDefaults, Timing, Fonts
         from .config import apply_panel_config
         from .repositories import NodeDataProvider, NodeSettingsStorage
         from .controllers import PanelProgressManager
+
+        import logging
+        import sys
+        import os
+        from pathlib import Path
+        import threading
+        from queue import Queue
+
+        class ConsoleLogHandler(logging.Handler):
+            """Custom logging handler that redirects log messages to the console widget using Qt signals."""
+            
+            def __init__(self, console_view):
+                super().__init__()
+                self.console_view = console_view
+                
+            def emit(self, record):
+                """Emit a log record to the console widget."""
+                try:
+                    msg = self.format(record)
+                    
+                    # Use Qt signals to safely update from any thread
+                    if record.levelno >= logging.ERROR:
+                        self.console_view.log_error_signal.emit(msg)
+                    elif record.levelno >= logging.WARNING:
+                        self.console_view.log_warning_signal.emit(msg)
+                    else:
+                        self.console_view.log_info_signal.emit(msg)
+                        
+                except Exception:
+                    self.handleError(record)
+
+        class ThreadLogHandler(logging.Handler):
+            """Custom logging handler that emits Qt signals for thread-safe GUI updates."""
+            
+            def __init__(self, signals):
+                super().__init__()
+                self.signals = signals
+                # Use a more detailed formatter to match terminal output
+                self.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+                
+            def emit(self, record):
+                """Emit log records as Qt signals."""
+                try:
+                    # Format the complete message with timestamp and logger name
+                    msg = self.format(record)
+                    level = record.levelname.lower()
+                    
+                    # Emit signal to GUI (this should be thread-safe)
+                    self.signals.log_message.emit(msg, level)
+                    
+                except Exception as e:
+                    # Only print to terminal if we can't emit to GUI
+                    print(f"ThreadLogHandler error: {e}")
+
+        class SubmissionWorkerSignals(QtCore.QObject):
+            """Signals for submission worker communication."""
+            log_message = QtCore.Signal(str, str)  # message, level
+            progress_update = QtCore.Signal(str)   # status message
+            finished = QtCore.Signal(bool, str, object)  # success, result_message, result
+            error_occurred = QtCore.Signal(str)    # error message
+
+        class SubmissionWorker(QtCore.QRunnable):
+            """Background worker for nuke script submission using QRunnable."""
+            
+            def __init__(self, script_path, selected_nodes, current_ui_state, settings_storage):
+                super().__init__()
+                self.script_path = script_path
+                self.selected_nodes = selected_nodes
+                self.current_ui_state = current_ui_state
+                self.settings_storage = settings_storage
+                self.signals = SubmissionWorkerSignals()
+                
+            @QtCore.Slot()
+            def run(self):
+                """Execute the submission in the background thread."""
+                try:
+                    self.signals.progress_update.emit("Starting submission...")
+                    
+                    # Set up comprehensive logging redirection to capture all output
+                    log_handler = ThreadLogHandler(self.signals)
+                    log_handler.setLevel(logging.DEBUG)
+                    
+                    # Get all relevant loggers and add handler to each
+                    loggers_to_capture = [
+                        logging.getLogger(),  # Root logger
+                        logging.getLogger('nk2dl'),
+                        logging.getLogger('nk2dl.submission'),
+                        logging.getLogger('nk2dl.deadline'),
+                        logging.getLogger('nk2dl.deadline.connection'),
+                        logging.getLogger('nk2dl.nuke'),
+                        logging.getLogger('nk2dl.nuke.submission'),
+                    ]
+                    
+                    # Add handler to all loggers and set appropriate levels
+                    for logger_obj in loggers_to_capture:
+                        logger_obj.addHandler(log_handler)
+                        logger_obj.setLevel(logging.DEBUG)
+                    
+                    # Store reference to loggers for cleanup
+                    self.loggers_with_handler = loggers_to_capture
+                    
+                    try:
+                        self.signals.progress_update.emit("Building submission arguments...")
+                        
+                        # Build submission arguments
+                        submission_args = self.settings_storage.build_submission_args(
+                            script_path=self.script_path,
+                            write_nodes=self.selected_nodes,
+                            **self.current_ui_state
+                        )
+                        
+                        self.signals.progress_update.emit("Submitting to Deadline...")
+                        
+                        # Submit to Deadline
+                        from ...nuke.submission import submit_nuke_script
+                        result = submit_nuke_script(**submission_args)
+                        
+                        # Parse result - handle different return types
+                        # Result is a list of job dictionaries from successful submissions
+                        if result and isinstance(result, list) and len(result) > 0:
+                            # Check if any jobs were submitted successfully
+                            job_ids = [job_dict.get('job_id') for job_dict in result if job_dict.get('job_id')]
+                            if job_ids:
+                                self.signals.finished.emit(True, f"Submission completed successfully! Job IDs: {', '.join(job_ids)}", result)
+                            else:
+                                self.signals.finished.emit(False, "Submission completed but no job IDs returned", result)
+                        else:
+                            self.signals.finished.emit(False, "Submission completed - check console for details", result)
+                            
+                    finally:
+                        # Clean up logging handlers from all loggers
+                        if hasattr(self, 'loggers_with_handler'):
+                            for logger_obj in self.loggers_with_handler:
+                                try:
+                                    logger_obj.removeHandler(log_handler)
+                                except ValueError:
+                                    pass  # Handler wasn't in this logger
+                            delattr(self, 'loggers_with_handler')
+                        
+                except Exception as e:
+                    error_msg = f"Submission error: {str(e)}"
+                    import traceback
+                    detailed_error = f"{error_msg}\n{traceback.format_exc()}"
+                    self.signals.error_occurred.emit(detailed_error)
+                    self.signals.finished.emit(False, error_msg, None)
+                    
 
 
         class Nk2dlPanel(QtWidgets.QWidget):
@@ -320,14 +466,31 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             
             def _on_render_clicked(self):
                 """Handle render button click - submit selected write nodes to Deadline."""
+                # Check if already submitting
+                if hasattr(self, '_submission_in_progress') and self._submission_in_progress:
+                    self.console_view.log_warning("Submission already in progress, please wait...")
+                    return
+                
                 try:
-                    # 1. Validate script is saved
+                    # 1. Switch to console tab and set up logging
+                    console_tab_index = self.tab_widget.indexOf(self.console_view)
+                    self.tab_widget.setCurrentIndex(console_tab_index)
+                    
+                    # Set up console logging handler
+                    self._setup_console_logging()
+                    
+                    self.console_view.log_info("=== Starting Deadline Submission ===")
+                    
+                    # 2. Validate script is saved
                     script_path = nuke.root().name()
                     if not script_path or script_path == "Root":
+                        self.console_view.log_error("Script not saved - please save your script before submitting")
                         nuke.message("Please save your script before submitting to Deadline.")
                         return
                     
-                    # 2. Get selected write nodes
+                    self.console_view.log_info(f"Script path: {script_path}")
+                    
+                    # 3. Get selected write nodes
                     selected_nodes = []
                     for row in range(self.table_model.get_row_count()):
                         node_name = self.table_model.get_node_name(row)
@@ -335,50 +498,171 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                             selected_nodes.append(node_name)
                     
                     if not selected_nodes:
+                        self.console_view.log_error("No write nodes selected for rendering")
                         nuke.message("No write nodes selected for rendering.\n\nPlease select at least one write node in the table.")
                         return
                     
-                    # 3. Start progress
-                    self.progress_manager.start_operation("Submitting to Deadline")
+                    self.console_view.log_info(f"Selected write nodes: {', '.join(selected_nodes)}")
                     
-                    # 4. Get current UI state from all panels
+                    # 4. Start progress and disable render button
+                    self.progress_manager.start_operation("Submitting to Deadline")
+                    self.render_btn.setEnabled(False)
+                    self._submission_in_progress = True
+                    
+                    # 5. Get current UI state from all panels
+                    self.console_view.log_info("Capturing current UI state...")
                     current_ui_state = self._capture_current_ui_state()
                     
-                    # 5. Build submission arguments via storage with current UI state
-                    submission_args = self.settings_storage.build_submission_args(
-                        script_path=script_path,
-                        write_nodes=selected_nodes,
-                        **current_ui_state  # Pass current UI state as overrides
-                    )
-                    
-                    # 5. Submit to Deadline
-                    from ...nuke.submission import submit_nuke_script
-                    result = submit_nuke_script(**submission_args)
-                    
-                    # 6. Show success message
-                    job_count = len(selected_nodes)
-                    node_list = ", ".join(selected_nodes)
-                    
-                    # Handle both dict and list return types from submission
-                    if isinstance(result, dict):
-                        job_id = result.get('job_id', 'unknown')
-                    elif isinstance(result, list) and result:
-                        job_id = result[0] if result else 'unknown'
-                    else:
-                        job_id = 'unknown'
-                    
-                    success_msg = f"Successfully submitted {job_count} jobs to Deadline:\n\n"
-                    success_msg += f"Write Nodes: {node_list}\n"
-                    success_msg += f"Job ID: {job_id}"
-                    
-                    nuke.message(success_msg)
-                    self.progress_manager.finish_operation(success=True, final_message="Submission completed successfully")
+                    # 6. Create and start submission worker thread
+                    self._start_submission_worker(script_path, selected_nodes, current_ui_state)
                     
                 except Exception as e:
-                    error_msg = f"Submission failed:\n\n{str(e)}"
-                    nuke.message(error_msg)
-                    self.progress_manager.finish_operation(success=False, final_message="Submission failed")
-                    logger.error(f"Render button submission failed: {e}", exc_info=True)
+                    self.console_view.log_error(f"Failed to start submission: {str(e)}")
+                    self._cleanup_submission()
+                    nuke.message(f"Failed to start submission: {str(e)}")
+                    logger.error(f"Render button submission setup failed: {e}", exc_info=True)
+            
+            def _setup_console_logging(self):
+                """Set up console logging handler."""
+                if not hasattr(self, '_console_handler'):
+                    self._console_handler = ConsoleLogHandler(self.console_view)
+                    self._console_handler.setLevel(logging.DEBUG)
+                    
+                    # Add handler to nk2dl logger and root logger to capture all output
+                    nk2dl_logger = logging.getLogger('nk2dl')
+                    nk2dl_logger.addHandler(self._console_handler)
+                    root_logger = logging.getLogger()
+                    root_logger.addHandler(self._console_handler)
+            
+            def _cleanup_console_logging(self):
+                """Clean up console logging handler."""
+                if hasattr(self, '_console_handler'):
+                    try:
+                        nk2dl_logger = logging.getLogger('nk2dl')
+                        nk2dl_logger.removeHandler(self._console_handler)
+                        root_logger = logging.getLogger()
+                        root_logger.removeHandler(self._console_handler)
+                    except Exception as cleanup_error:
+                        logger.error(f"Error cleaning up console handler: {cleanup_error}")
+                    finally:
+                        delattr(self, '_console_handler')
+            
+            def _start_submission_worker(self, script_path, selected_nodes, current_ui_state):
+                """Start the submission worker using QThreadPool."""
+                # Create worker
+                self._submission_worker = SubmissionWorker(
+                    script_path, selected_nodes, current_ui_state, self.settings_storage
+                )
+                
+                # Connect signals to handlers - use QueuedConnection for thread safety
+                self._submission_worker.signals.progress_update.connect(
+                    self._on_submission_progress, QtCore.Qt.QueuedConnection)
+                self._submission_worker.signals.log_message.connect(
+                    self._on_log_message, QtCore.Qt.QueuedConnection)  # Stable queued updates
+                self._submission_worker.signals.error_occurred.connect(
+                    self._on_submission_error, QtCore.Qt.QueuedConnection)
+                self._submission_worker.signals.finished.connect(
+                    self._on_submission_finished, QtCore.Qt.QueuedConnection)
+                
+                # Set up timer to process events during submission - conservative frequency
+                self._submission_timer = QtCore.QTimer()
+                self._submission_timer.timeout.connect(self._process_submission_events)
+                self._submission_timer.start(Timing.CONSOLE_CAPTURE_TIMER_INTERVAL)  # Process events every 100ms for stability
+                
+                # Get global thread pool and start worker
+                thread_pool = QtCore.QThreadPool.globalInstance()
+                thread_pool.start(self._submission_worker)
+                
+                self.console_view.log_info(f"Started submission using {thread_pool.maxThreadCount()} available threads")
+                
+            def _process_submission_events(self):
+                """Process Qt events during submission to ensure GUI updates."""
+                # Process all pending Qt events to update GUI
+                QtWidgets.QApplication.processEvents(QtCore.QEventLoop.AllEvents)
+                
+                # Also process deferred delete events
+                QtWidgets.QApplication.sendPostedEvents()
+                
+                # Check if submission is still running
+                if not hasattr(self, '_submission_worker') or not hasattr(self, '_submission_timer'):
+                    return
+            
+            def _on_submission_progress(self, message):
+                """Handle submission progress updates."""
+                self.console_view.log_info(message)
+            
+            def _on_log_message(self, message, level):
+                """Handle log messages from worker thread."""
+                if level == 'error':
+                    self.console_view.log_error(message)
+                elif level == 'warning':
+                    self.console_view.log_warning(message)
+                else:
+                    self.console_view.log_info(message)
+                
+                # Ensure the latest message is visible
+                scrollbar = self.console_view.console_output.verticalScrollBar()
+                scrollbar.setValue(scrollbar.maximum())
+            
+            def _on_submission_error(self, error_msg):
+                """Handle submission errors."""
+                self.console_view.log_error(error_msg)
+            
+            def _on_submission_finished(self, success, message, result):
+                """Handle submission completion."""
+                try:
+                    if success:
+                        self.console_view.log_success("Submission completed successfully!")
+                        
+                        # Extract job information
+                        job_count = len(self._submission_worker.selected_nodes)
+                        node_list = ", ".join(self._submission_worker.selected_nodes)
+                        
+                        # Handle both dict and list return types from submission
+                        if isinstance(result, dict):
+                            job_id = result.get('job_id', 'unknown')
+                        elif isinstance(result, list) and result:
+                            job_id = result[0] if result else 'unknown'
+                        else:
+                            job_id = 'unknown'
+                        
+                        self.console_view.log_success(f"Job ID: {job_id}")
+                        
+                        # Show success message
+                        success_msg = f"Successfully submitted {job_count} jobs to Deadline:\n\n"
+                        success_msg += f"Write Nodes: {node_list}\n"
+                        success_msg += f"Job ID: {job_id}"
+                        
+                        nuke.message(success_msg)
+                        self.progress_manager.finish_operation(success=True, final_message="Submission completed successfully")
+                    else:
+                        self.console_view.log_error(f"Submission failed: {message}")
+                        nuke.message(f"Submission failed:\n\n{message}")
+                        self.progress_manager.finish_operation(success=False, final_message="Submission failed")
+                        
+                finally:
+                    self._cleanup_submission()
+            
+            def _cleanup_submission(self):
+                """Clean up after submission."""
+                try:
+                    # Stop the submission timer
+                    if hasattr(self, '_submission_timer') and self._submission_timer.isActive():
+                        self._submission_timer.stop()
+                        delattr(self, '_submission_timer')
+                    
+                    # Re-enable render button
+                    self.render_btn.setEnabled(True)
+                    self._submission_in_progress = False
+                    
+                    # Clean up logging
+                    self._cleanup_console_logging()
+                    
+                    # Log completion
+                    self.console_view.log_info("=== Submission Process Complete ===")
+                    
+                except Exception as cleanup_error:
+                    logger.error(f"Error during submission cleanup: {cleanup_error}")
             
             def _capture_current_ui_state(self):
                 """Capture current state of all UI controls for submission.

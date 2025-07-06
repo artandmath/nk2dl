@@ -101,12 +101,29 @@ class Colors:
     PINNED_MACHINE_BORDER = MACHINE_SETTINGS_COLOR       # Same as machine settings border
 
 
+class Fonts:
+    """Font constants for UI styling."""
+    
+    # Console font settings
+    CONSOLE_FONT_FAMILY = "'Courier New', monospace"
+    CONSOLE_FONT_SIZE = 6  # Smaller font size for better readability
+    CONSOLE_FONT_SIZE_PT = f"{CONSOLE_FONT_SIZE}pt"
+    
+    # Other font sizes
+    UI_FONT_SIZE = 9
+    SMALL_FONT_SIZE = 8
+    VERSION_FONT_SIZE = 10
+
+
 class Timing:
     """Timing constants for UI operations."""
     
     # Progress bar timing (in milliseconds)
     PROGRESS_SUCCESS_DELAY = 500   # Delay before resetting progress bar after successful operation (reduced from 3000ms)
     PROGRESS_CANCEL_DELAY = 500    # Delay before resetting progress bar after cancelled operation (reduced from 2000ms)
+    
+    # Console capture timing (in milliseconds)
+    CONSOLE_CAPTURE_TIMER_INTERVAL = 100  # Timer interval for processing Qt events during console capture (stable frequency)
     
     # UI update timing
     UI_REFRESH_DELAY = 0           # Immediate UI updates via event queue
@@ -997,14 +1014,14 @@ class StyleSheets:
     """CSS style sheets for UI components."""
     
     # Console styling
-    CONSOLE_STYLE = """
-        QTextEdit {
-            background-color: #2b2b2b;
-            color: #ffffff;
-            font-family: 'Courier New', monospace;
-            font-size: 10pt;
+    CONSOLE_STYLE = f"""
+        QTextEdit {{
+            background-color: {Colors.CONSOLE_BACKGROUND};
+            color: {Colors.CONSOLE_TEXT};
+            font-family: {Fonts.CONSOLE_FONT_FAMILY};
+            font-size: {Fonts.CONSOLE_FONT_SIZE_PT};
             border: 1px solid #555555;
-        }
+        }}
     """
     
     # Render button styling
@@ -1026,11 +1043,11 @@ class StyleSheets:
     """
     
     # Version label styling
-    VERSION_LABEL_STYLE = """
-        QLabel {
+    VERSION_LABEL_STYLE = f"""
+        QLabel {{
             color: #888888;
-            font-size: 10px;
-        }
+            font-size: {Fonts.VERSION_FONT_SIZE}px;
+        }}
     """
     
     # Tree widget checkbox styling

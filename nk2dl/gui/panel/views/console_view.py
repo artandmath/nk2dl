@@ -32,6 +32,8 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
+from ..constants import Colors, Fonts
+
 
 class ConsoleView(QtWidgets.QWidget):
     """View for console output and logging.
@@ -40,11 +42,23 @@ class ConsoleView(QtWidgets.QWidget):
     and submission status information.
     """
     
+    # Qt signals for thread-safe logging
+    log_info_signal = QtCore.Signal(str)
+    log_warning_signal = QtCore.Signal(str)
+    log_error_signal = QtCore.Signal(str)
+    log_success_signal = QtCore.Signal(str)
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         
         # Create the main layout and UI components
         self._create_ui()
+        
+        # Connect signals to slots for thread-safe updates
+        self.log_info_signal.connect(self._log_info_slot)
+        self.log_warning_signal.connect(self._log_warning_slot)
+        self.log_error_signal.connect(self._log_error_slot)
+        self.log_success_signal.connect(self._log_success_slot)
     
     def _create_ui(self):
         """Create the console UI components."""
@@ -55,10 +69,10 @@ class ConsoleView(QtWidgets.QWidget):
         self.console_output = QtWidgets.QTextEdit()
         self.console_output.setReadOnly(True)
         self.console_output.setStyleSheet(
-            "background-color: #2b2b2b; "
-            "color: #ffffff; "
-            "font-family: 'Courier New', monospace; "
-            "font-size: 10pt;"
+            f"background-color: {Colors.CONSOLE_BACKGROUND}; "
+            f"color: {Colors.CONSOLE_TEXT}; "
+            f"font-family: {Fonts.CONSOLE_FONT_FAMILY}; "
+            f"font-size: {Fonts.CONSOLE_FONT_SIZE_PT};"
         )
         
         # Set initial content
@@ -94,15 +108,15 @@ Waiting for user input..."""
         import datetime
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
         
-        # Color coding based on message type
+        # Color coding based on message type - using constants
         color_map = {
-            "info": "#ffffff",      # White
-            "warning": "#ffaa00",   # Orange
-            "error": "#ff4444",     # Red
-            "success": "#44ff44"    # Green
+            "info": Colors.CONSOLE_INFO,
+            "warning": Colors.CONSOLE_WARNING,
+            "error": Colors.CONSOLE_ERROR,
+            "success": Colors.CONSOLE_SUCCESS
         }
         
-        color = color_map.get(message_type, "#ffffff")
+        color = color_map.get(message_type, Colors.CONSOLE_INFO)
         
         # Format the message with timestamp and color
         formatted_message = f'<span style="color: #888888;">[{timestamp}]</span> <span style="color: {color};">{message}</span>'
@@ -110,7 +124,14 @@ Waiting for user input..."""
         # Append to console
         self.console_output.append(formatted_message)
         
-        # Auto-scroll to bottom
+        # Auto-scroll to bottom and process events to ensure immediate display
+        self._auto_scroll_to_bottom()
+        
+        # Force immediate widget update for real-time display
+        QtWidgets.QApplication.processEvents()
+    
+    def _auto_scroll_to_bottom(self):
+        """Ensure console auto-scrolls to show the latest messages."""
         scrollbar = self.console_output.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
     
@@ -165,4 +186,21 @@ Waiting for user input..."""
         Args:
             text (str): Text to set
         """
-        self.console_output.setPlainText(text) 
+        self.console_output.setPlainText(text)
+    
+    # Thread-safe slot methods for Qt signals
+    def _log_info_slot(self, message):
+        """Thread-safe slot for info messages."""
+        self.log_info(message)
+    
+    def _log_warning_slot(self, message):
+        """Thread-safe slot for warning messages."""
+        self.log_warning(message)
+    
+    def _log_error_slot(self, message):
+        """Thread-safe slot for error messages."""
+        self.log_error(message)
+    
+    def _log_success_slot(self, message):
+        """Thread-safe slot for success messages."""
+        self.log_success(message) 
