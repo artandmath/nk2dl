@@ -76,9 +76,15 @@ class NodeSettingsStorage:
                 'node_overrides': node_overrides
             }
             
-            # Serialize to YAML
-            yaml_data = yaml.dump(storage_data, default_flow_style=False, 
-                                sort_keys=True, indent=2)
+            # Serialize to YAML with proper list indentation
+            # Use a custom Dumper to ensure lists are properly indented
+            class CustomDumper(yaml.SafeDumper):
+                def increase_indent(self, flow=False, indentless=False):
+                    return super(CustomDumper, self).increase_indent(flow, False)
+            
+            yaml_data = yaml.dump(storage_data, Dumper=CustomDumper, default_flow_style=False, 
+                                sort_keys=True, indent=2, width=float('inf'),
+                                allow_unicode=True)
             
             # Save to root node knob
             nuke = nuke_module()

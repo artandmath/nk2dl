@@ -51,45 +51,32 @@ class NodeSettingsView(QtWidgets.QWidget):
     """
     
     def __init__(self, table_model, settings_model=None, parent=None):
-        """Initialize the NodeSettingsView.
-        
-        Args:
-            table_model: The TableDataModel instance
-            settings_model: The SettingsModel instance for inheritance
-            parent: Parent widget
-        """
-        from ....common.logging import qt_logger
-        qt_logger.debug("NodeSettingsView.__init__ called")
+        """Initialize the NodeSettingsView widget."""
         super().__init__(parent)
+        
         self.table_model = table_model
         self.settings_model = settings_model
-        self.render_table = None
-        self.column_dropdown = None
-        self.current_filter = ""
         
-        # Track refresh state to prevent multiple concurrent updates
+        # Initialize filter text
+        self.filter_text = ""
+        
+        # Track refresh state to prevent unwanted updates during refresh
         self._is_refreshing = False
         
-        # Store column widths to preserve them during updates
-        self._stored_column_widths = {}
+        # Track column widths to preserve them during updates  
+        self._stored_column_widths = None
         
-        # Connect settings model to table model for inheritance
-        if self.settings_model:
-            self.table_model.set_settings_model(self.settings_model)
+        # Skip next data loaded recalculation flag
+        self._skip_next_data_loaded_recalculation = False
         
-        # Create the main layout and UI components
-        qt_logger.debug("About to call _create_ui()")
+        # Add recursion guard for signal handling
+        self._handling_checkbox_change = False
+        
         self._create_ui()
-        qt_logger.debug("About to call _connect_signals()")
         self._connect_signals()
-        qt_logger.debug("About to call _connect_table_events()")
         self._connect_table_events()
-        qt_logger.debug("About to call _apply_configuration()")
-        QtCore.QTimer.singleShot(0, self._apply_configuration)
-        qt_logger.debug("NodeSettingsView.__init__ completed")
         
-        # Load initial data from model if it exists
-        qt_logger.debug("About to call _load_data_from_model()")
+        # Load initial data
         self._load_data_from_model()
     
     def _connect_table_events(self):
@@ -361,7 +348,18 @@ class NodeSettingsView(QtWidgets.QWidget):
             logger.debug("Frozen table setup completed")
         
         # Connect table signals
+        from ....common.logging import qt_logger
+        qt_logger.debug("🔗 Connecting table signals...")
+        
+        # Use only itemChanged signal to handle all checkbox and cell changes
+        # This prevents recursive loops from multiple overlapping signal handlers
         self.render_table.itemChanged.connect(self._on_table_item_changed)
+        qt_logger.debug("🔗 Connected itemChanged signal")
+        
+        # Connect signals to frozen table if it exists (for frozen checkbox column)
+        if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+            qt_logger.debug("🔗 Connecting signals to frozen table")
+            self.render_table.frozen_table.itemChanged.connect(self._on_table_item_changed)
         
         # Column widths will be calculated when data is loaded or via timer
         # This prevents multiple calculations during initialization
@@ -415,6 +413,8 @@ class NodeSettingsView(QtWidgets.QWidget):
         
         # Block signals during loading to prevent unwanted updates
         self.render_table.blockSignals(True)
+        if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+            self.render_table.frozen_table.blockSignals(True)
         
         try:
             # Get data from model
@@ -449,6 +449,10 @@ class NodeSettingsView(QtWidgets.QWidget):
                         item.setCheckState(checkbox_state)
                         # Don't set text for checkbox column
                         item.setText("")
+                        
+                        # Debug: Log checkbox creation
+                        node_name = self.table_model.get_node_name(row)
+                        qt_logger.debug(f"☑️ Created checkbox for row {row}, node '{node_name}', value={render_value}, state={checkbox_state}")
                     else:
                         # Set display text to effective value (for inheritance display)
                         effective_value = self.table_model.get_effective_cell_value(row, col)
@@ -459,8 +463,8 @@ class NodeSettingsView(QtWidgets.QWidget):
                     
                     self.render_table.setItem(row, col, item)
                     
-                    # Sync to frozen table if this is a frozen column
-                    self._sync_frozen_item(row, col, item)
+                    # Sync to frozen table if this is a frozen column (use safe method to prevent signals)
+                    self._sync_frozen_item_safe(row, col, item)
             
             # Setup column resize modes (particularly important for checkbox column)
             if hasattr(self.render_table, '_setup_column_resize_modes'):
@@ -494,6 +498,8 @@ class NodeSettingsView(QtWidgets.QWidget):
         finally:
             # Re-enable signals after loading is complete
             self.render_table.blockSignals(False)
+            if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+                self.render_table.frozen_table.blockSignals(False)
             
             # Keep sorting DISABLED - we use custom multi-level sorting instead of Qt's built-in sorting
             # Note: Qt's sorting is permanently disabled in _connect_signals()
@@ -546,69 +552,163 @@ class NodeSettingsView(QtWidgets.QWidget):
             col < self.render_table.frozen_column_count):
             
             try:
+                # Validate the item hasn't been deleted by Qt before accessing its properties
+                try:
+                    item_text = item.text()
+                    item_data = item.data(QtCore.Qt.UserRole)
+                    item_font = item.font()
+                    item_foreground = item.foreground()
+                    item_background = item.background()
+                    if col == 0:  # Render column
+                        item_checkstate = item.checkState()
+                except RuntimeError:
+                    # Item has been deleted, skip sync
+                    logger.debug(f"Skipping sync for deleted item: row={row}, col={col}")
+                    return
+                
                 # Ensure the frozen table has the correct row count
                 if self.render_table.frozen_table.rowCount() <= row:
                     self.render_table.frozen_table.setRowCount(row + 1)
                 
-                # Create a copy of the item for the frozen table
-                frozen_item = QtWidgets.QTableWidgetItem(item.text())
-                frozen_item.setData(QtCore.Qt.UserRole, item.data(QtCore.Qt.UserRole))
-                frozen_item.setFont(item.font())
-                frozen_item.setForeground(item.foreground())
-                frozen_item.setBackground(item.background())
+                # Create a copy of the item for the frozen table using cached values
+                frozen_item = QtWidgets.QTableWidgetItem(item_text)
+                frozen_item.setData(QtCore.Qt.UserRole, item_data)
+                frozen_item.setFont(item_font)
+                frozen_item.setForeground(item_foreground)
+                frozen_item.setBackground(item_background)
                 
                 # Copy checkbox state for render column
                 if col == 0:  # Render column
                     frozen_item.setFlags(frozen_item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                    frozen_item.setCheckState(item.checkState())
+                    frozen_item.setCheckState(item_checkstate)
                 
                 # Set the item in the frozen table
                 self.render_table.frozen_table.setItem(row, col, frozen_item)
                 
-                logger.debug(f"Synced item to frozen table: row={row}, col={col}, text='{item.text()}'")
+                logger.debug(f"Synced item to frozen table: row={row}, col={col}, text='{item_text}'")
                 
             except Exception as e:
                 logger.warning(f"Failed to sync item to frozen table: row={row}, col={col}, error={e}")
+                
+    def _sync_frozen_item_safe(self, row, col, item):
+        """Sync item to frozen table with signal blocking to prevent recursion."""
+        # Check if this table has frozen columns and if column is frozen
+        if (hasattr(self.render_table, 'frozen_table') and 
+            hasattr(self.render_table, 'frozen_column_count') and
+            col < self.render_table.frozen_column_count):
+            
+            # Validate the item hasn't been deleted by Qt
+            try:
+                # Try to access item properties to check if it's still valid
+                _ = item.row()
+                _ = item.column()
+                _ = item.text()
+            except RuntimeError:
+                # Item has been deleted by Qt, skip sync
+                from ....common.logging import qt_logger
+                qt_logger.debug(f"🗑️ Skipping sync for deleted item: row={row}, col={col}")
+                return
+            
+            # Block signals on both main and frozen tables during sync
+            frozen_table = self.render_table.frozen_table
+            main_table = self.render_table
+            
+            # Block signals on both tables
+            frozen_table.blockSignals(True)
+            main_table.blockSignals(True)
+            
+            try:
+                self._sync_frozen_item(row, col, item)
+            finally:
+                # Re-enable signals on both tables
+                frozen_table.blockSignals(False)
+                main_table.blockSignals(False)
     
     def _on_table_item_changed(self, item):
         """Handle table item changes and update the model."""
+        from ....common.logging import qt_logger
+        
+        # Recursion guard: prevent infinite loops
+        if self._handling_checkbox_change:
+            qt_logger.debug("🔧 Recursion guard: already handling checkbox change, skipping")
+            return
+            
         if not item:
+            qt_logger.debug("🔧 Item is None, returning")
             return
         
-        # Block signals to prevent recursive calls
-        self.render_table.blockSignals(True)
-        
+        # Validate the item hasn't been deleted by Qt
         try:
             row = item.row()
             col = item.column()
-            
+            text = item.text()
+        except RuntimeError:
+            qt_logger.debug("🗑️ Item has been deleted by Qt, skipping")
+            return
+        
+        qt_logger.debug(f"🔧 _on_table_item_changed: row={row}, col={col}, text='{text}'")
+        
+        # Set recursion guard and block all table signals during processing
+        self._handling_checkbox_change = True
+        
+        # Block signals on both main and frozen tables to prevent cascading changes
+        self.render_table.blockSignals(True)
+        if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+            self.render_table.frozen_table.blockSignals(True)
+        
+        try:
             # Handle checkbox column specially
             if col == 0:  # Render column
                 # Get checkbox state and convert to boolean
                 checkbox_state = item.checkState()
                 model_value = checkbox_state == QtCore.Qt.Checked
                 
-                # Update the model with boolean value
+                qt_logger.debug(f"☑️ Checkbox changed: row={row}, new_value={model_value}")
+                
+                # For checkboxes, always save to storage (this is an intentional user action)
                 self.table_model.set_cell_value(row, col, model_value, emit_signal=False)
                 
                 # Update the item's user data
                 item.setData(QtCore.Qt.UserRole, model_value)
                 
-                # Sync to frozen table if this is a frozen column
-                self._sync_frozen_item(row, col, item)
+                # Sync to frozen table if this is a frozen column (with signal blocking)
+                self._sync_frozen_item_safe(row, col, item)
                 return
             
+            # Handle text columns - only save if user intentionally changed the value
             text_value = item.text()
             
-            # Determine the value to store in the model
+            # Get the current stored value from the model
+            current_stored_value = self.table_model.get_cell_value(row, col)
+            current_effective_value = self.table_model.get_effective_cell_value(row, col)
+            
+            # Check if this is a cascading signal from checkbox change vs intentional edit
+            if str(current_effective_value) == text_value:
+                # This appears to be a cascading signal - the text hasn't actually changed
+                # Just update the display but don't save to storage
+                qt_logger.debug(f"📄 Cascading signal detected for row={row}, col={col}, keeping inherited value")
+                
+                # Update the item's user data to keep the current stored value (may be None for inheritance)
+                item.setData(QtCore.Qt.UserRole, current_stored_value)
+                
+                # Refresh styling for this cell only
+                self._apply_cell_styling(item, row, col)
+                
+                # Sync to frozen table if this is a frozen column (with signal blocking)
+                self._sync_frozen_item_safe(row, col, item)
+                return
+            
+            # This appears to be an intentional edit - determine the value to store
             if text_value.strip() == "":
                 # Empty string means user wants to inherit from settings
                 model_value = None
+                qt_logger.debug(f"📝 User cleared cell row={row}, col={col} - setting to inherit")
             else:
                 # Non-empty string is an explicit value
                 model_value = text_value
+                qt_logger.debug(f"📝 User edited cell row={row}, col={col} - setting explicit value: {model_value}")
             
-            # Update the model with the appropriate value (suppress signal to prevent full reload)
+            # Save to storage only for intentional edits
             self.table_model.set_cell_value(row, col, model_value, emit_signal=False)
             
             # Update the item's user data to reflect the stored value
@@ -621,12 +721,32 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Refresh styling for this cell only
             self._apply_cell_styling(item, row, col)
             
-            # Sync to frozen table if this is a frozen column
-            self._sync_frozen_item(row, col, item)
+            # Sync to frozen table if this is a frozen column (with signal blocking)
+            self._sync_frozen_item_safe(row, col, item)
             
         finally:
-            # Re-enable signals
+            # Re-enable signals on both tables
             self.render_table.blockSignals(False)
+            if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+                self.render_table.frozen_table.blockSignals(False)
+            
+            # Clear recursion guard
+            self._handling_checkbox_change = False
+    
+    def test_checkbox_signal(self):
+        """Debug method to test checkbox signal handling manually."""
+        from ....common.logging import qt_logger
+        qt_logger.debug("🔧 Manual checkbox test - triggering checkbox change for row 0")
+        
+        if self.render_table.rowCount() > 0:
+            item = self.render_table.item(0, 0)
+            if item:
+                # Toggle the checkbox state - this should trigger our signal handler
+                current_state = item.checkState()
+                new_state = QtCore.Qt.Unchecked if current_state == QtCore.Qt.Checked else QtCore.Qt.Checked
+                item.setCheckState(new_state)
+                qt_logger.debug(f"🔧 Manually changed checkbox from {current_state} to {new_state}")
+                qt_logger.debug("🔧 Manual test completed")
     
     def _on_model_data_changed(self):
         """Handle model data changes."""
@@ -742,6 +862,11 @@ class NodeSettingsView(QtWidgets.QWidget):
         try:
             for row in range(self.render_table.rowCount()):
                 for col in range(self.render_table.columnCount()):
+                    # Skip columns that don't have settings inheritance (like Render checkbox column)
+                    setting_type, setting_key = self.table_model.get_setting_for_column(col)
+                    if not setting_type or not setting_key:
+                        continue  # Skip columns without settings mapping
+                    
                     # Check if this cell is inherited (not overridden)
                     if not self.table_model.is_cell_overridden(row, col):
                         item = self.render_table.item(row, col)
@@ -763,7 +888,7 @@ class NodeSettingsView(QtWidgets.QWidget):
         """Handle filter text changes."""
         # TODO: Implement filtering logic
         # For now, just store the filter text
-        self.current_filter = text.lower()
+        self.filter_text = text.lower()
     
     def _on_inside_groups_changed(self, state):
         """Handle inside groups checkbox changes."""
@@ -804,29 +929,139 @@ class NodeSettingsView(QtWidgets.QWidget):
             else:
                 print("Update functionality will be implemented in the final integration phase.")
         qt_logger.debug("🔵 UPDATE BUTTON OPERATION COMPLETED")
+        
+        # DEBUG: Test checkbox signal handling after data is loaded
+        QtCore.QTimer.singleShot(1000, self.test_checkbox_signal)
     
     def _on_all_clicked(self):
-        """Handle all button click."""
-        if NUKE_AVAILABLE:
-            nuke.message('All functionality will be implemented in the final integration phase.')
-        else:
-            print("All functionality will be implemented in the final integration phase.")
+        """Handle all button click - check all render checkboxes."""
+        from ....common.logging import qt_logger
+        qt_logger.debug("🟢 ALL BUTTON CLICKED - Checking all render checkboxes")
+        
+        # Block signals to prevent multiple updates
+        self.render_table.blockSignals(True)
+        
+        try:
+            for row in range(self.render_table.rowCount()):
+                # Set checkbox to checked in model
+                self.table_model.set_cell_value(row, 0, True, emit_signal=False)  # Column 0 is Render
+                
+                # Update the table item
+                item = self.render_table.item(row, 0)
+                if item:
+                    item.setCheckState(QtCore.Qt.Checked)
+                    
+                    # Sync to frozen table if this is a frozen column
+                    self._sync_frozen_item(row, 0, item)
+            
+            # Emit single change signal at the end
+            self.table_model.dataChanged.emit()
+        finally:
+            # Re-enable signals
+            self.render_table.blockSignals(False)
+            
+        # Save render selections to storage
+        if hasattr(self.table_model, '_save_render_selections_to_storage'):
+            self.table_model._save_render_selections_to_storage()
+            
+        qt_logger.debug("🟢 ALL BUTTON OPERATION COMPLETED")
     
     def _on_clear_clicked(self):
-        """Handle clear button click."""
+        """Handle clear button click - uncheck all render checkboxes."""
         from ....common.logging import qt_logger
-        qt_logger.debug("🔴 CLEAR BUTTON CLICKED - Starting operation")
+        qt_logger.debug("🔴 CLEAR BUTTON CLICKED - Unchecking all render checkboxes")
         
-        # Clear all data
-        self.table_model.set_data([])
+        # Block signals to prevent multiple updates
+        self.render_table.blockSignals(True)
+        
+        try:
+            for row in range(self.render_table.rowCount()):
+                # Set checkbox to unchecked in model
+                self.table_model.set_cell_value(row, 0, False, emit_signal=False)  # Column 0 is Render
+                
+                # Update the table item
+                item = self.render_table.item(row, 0)
+                if item:
+                    item.setCheckState(QtCore.Qt.Unchecked)
+                    
+                    # Sync to frozen table if this is a frozen column
+                    self._sync_frozen_item(row, 0, item)
+            
+            # Emit single change signal at the end
+            self.table_model.dataChanged.emit()
+        finally:
+            # Re-enable signals
+            self.render_table.blockSignals(False)
+            
+        # Save render selections to storage
+        if hasattr(self.table_model, '_save_render_selections_to_storage'):
+            self.table_model._save_render_selections_to_storage()
+            
         qt_logger.debug("🔴 CLEAR BUTTON OPERATION COMPLETED")
     
     def _on_selection_clicked(self):
-        """Handle selection button click."""
+        """Handle selection button click - check render checkboxes for selected nodes only."""
+        from ....common.logging import qt_logger
+        qt_logger.debug("🟡 SELECTION BUTTON CLICKED - Checking checkboxes for selected nodes")
+        
+        # Get selected node names from Nuke
+        selected_node_names = set()
         if NUKE_AVAILABLE:
-            nuke.message('Selection functionality will be implemented in the final integration phase.')
+            try:
+                import nuke
+                selected_nodes = nuke.selectedNodes()
+                selected_node_names = {node.name() for node in selected_nodes}
+                qt_logger.debug(f"Found {len(selected_node_names)} selected nodes: {list(selected_node_names)}")
+            except Exception as e:
+                qt_logger.error(f"Error getting selected nodes: {e}")
+                if NUKE_AVAILABLE:
+                    nuke.message('Error getting selected nodes from Nuke.')
+                return
         else:
-            print("Selection functionality will be implemented in the final integration phase.")
+            # For testing without Nuke, select first 2 nodes if they exist
+            if self.render_table.rowCount() >= 2:
+                first_node = self.render_table.item(0, 2)  # Column 2 is Node name
+                second_node = self.render_table.item(1, 2)
+                if first_node and second_node:
+                    selected_node_names = {first_node.text(), second_node.text()}
+                    qt_logger.debug(f"Testing mode: selecting first 2 nodes: {list(selected_node_names)}")
+        
+        # Block signals to prevent multiple updates
+        self.render_table.blockSignals(True)
+        
+        try:
+            for row in range(self.render_table.rowCount()):
+                # Get node name for this row
+                node_item = self.render_table.item(row, 2)  # Column 2 is Node name
+                if not node_item:
+                    continue
+                    
+                node_name = node_item.text()
+                is_selected = node_name in selected_node_names
+                
+                # Set checkbox state based on selection
+                self.table_model.set_cell_value(row, 0, is_selected, emit_signal=False)  # Column 0 is Render
+                
+                # Update the table item
+                item = self.render_table.item(row, 0)
+                if item:
+                    checkbox_state = QtCore.Qt.Checked if is_selected else QtCore.Qt.Unchecked
+                    item.setCheckState(checkbox_state)
+                    
+                    # Sync to frozen table if this is a frozen column
+                    self._sync_frozen_item(row, 0, item)
+            
+            # Emit single change signal at the end
+            self.table_model.dataChanged.emit()
+        finally:
+            # Re-enable signals
+            self.render_table.blockSignals(False)
+            
+        # Save render selections to storage
+        if hasattr(self.table_model, '_save_render_selections_to_storage'):
+            self.table_model._save_render_selections_to_storage()
+            
+        qt_logger.debug("🟡 SELECTION BUTTON OPERATION COMPLETED")
     
     def _on_column_visibility_changed(self):
         """Handle column visibility changes."""

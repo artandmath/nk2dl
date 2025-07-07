@@ -358,6 +358,12 @@ class TableDataModel(QtCore.QObject):
             node_names = [node_data.get('Node', '') for node_data in node_data_list]
             node_overrides = self._settings_storage.sync_with_current_nodes(node_names)
         
+        # Load render selections from storage (special key in node overrides)
+        render_selections = self._load_render_selections_from_storage()
+        
+        from ....common.logging import qt_logger
+        qt_logger.debug(f"📖 Loaded render selections from storage: {render_selections}")
+        
         # Merge data
         merged_data = []
         for i, node_data in enumerate(node_data_list):
@@ -365,6 +371,14 @@ class TableDataModel(QtCore.QObject):
             
             # Start with fresh node data
             merged_row = node_data.copy()
+            
+            # CRITICAL: Initialize Render column from storage or default to True for new nodes
+            if node_name in render_selections:
+                # Use stored render selection
+                merged_row['Render'] = render_selections[node_name]
+            else:
+                # New node - default to checked (True)
+                merged_row['Render'] = True
             
             # Apply any stored overrides
             if node_name in node_overrides:
@@ -389,7 +403,16 @@ class TableDataModel(QtCore.QObject):
         from ....common.logging import qt_logger
         qt_logger.debug(f"📊 TableDataModel.set_data() called with {len(data) if data else 0} rows")
         
-        self._data = data.copy() if data else []
+        # Ensure all rows have explicit Render column values
+        processed_data = []
+        for row_data in (data or []):
+            row_copy = row_data.copy()
+            # Ensure Render column is explicitly set - default to True if missing
+            if 'Render' not in row_copy:
+                row_copy['Render'] = True
+            processed_data.append(row_copy)
+        
+        self._data = processed_data
         
         qt_logger.debug(f"📊 Emitting dataChanged signal")
         self.dataChanged.emit()
@@ -444,8 +467,8 @@ class TableDataModel(QtCore.QObject):
         
         # Handle checkbox column specially
         if header == "Render":
-            # Return boolean value, default to True for new nodes
-            return self._data[row].get(header, True)
+            # Return boolean value, should always be explicit now
+            return self._data[row].get(header, False)  # False as fallback (should not happen)
         
         value = self._data[row].get(header, None)  # Default to None for inheritance
         
@@ -614,13 +637,24 @@ class TableDataModel(QtCore.QObject):
             bool_value = bool(value) if value is not None else True
             old_value = self._data[row].get(header, True)
             
+            from ....common.logging import qt_logger
+            node_name = self._data[row].get("Node", "")
+            qt_logger.debug(f"💾 TableModel.set_cell_value() Render column: row={row}, node={node_name}, old={old_value}, new={bool_value}")
+            
             if old_value != bool_value:
                 self._data[row][header] = bool_value
                 
-                # No settings storage for checkbox column
+                # CRITICAL: Save render selection to storage
+                if self._settings_storage:
+                    qt_logger.debug(f"💾 Saving render selections to storage for node: {node_name}")
+                    self._save_render_selections_to_storage()
+                else:
+                    qt_logger.warning("💾 No settings storage available - cannot save render selections!")
                 
                 if emit_signal:
                     self.dataChanged.emit()
+            else:
+                qt_logger.debug(f"💾 No change needed: old_value {old_value} == new_value {bool_value}")
             return
         
         # Keep None as None for inheritance, convert other types to string
@@ -911,7 +945,76 @@ class TableDataModel(QtCore.QObject):
         
         # Get the render checkbox value from the "Render" column
         try:
-            render_value = self._data[row].get("Render", True)  # Default to True for new nodes
+            render_value = self._data[row].get("Render", False)  # Should always be explicit now
             return bool(render_value)
         except (ValueError, KeyError):
             return False 
+    
+    def _load_render_selections_from_storage(self):
+        """Load render selections from storage using special key.
+        
+        Returns:
+            dict: Node name -> render selection boolean
+        """
+        if not self._settings_storage:
+            return {}
+        
+        try:
+            # Load node overrides directly (don't use sync_with_current_nodes for _render list)
+            node_overrides = self._settings_storage.load_node_overrides()
+            
+            # Check if we have stored render selections (stored as a list)
+            render_list = node_overrides.get('_render', [])
+            
+            if isinstance(render_list, list):
+                # Convert list of selected nodes back to dict format
+                # All nodes in the list are selected (True), others default to False
+                render_selections = {}
+                for row_data in self._data:
+                    node_name = row_data.get('Node', '')
+                    if node_name:
+                        render_selections[node_name] = node_name in render_list
+                return render_selections
+            else:
+                # No stored render selections or wrong format, return empty dict (will default to True)
+                return {}
+                
+        except Exception as e:
+            # If there's any error loading, return empty dict (all default to True)
+            from ....common.logging import qt_logger
+            qt_logger.debug(f"Could not load render selections from storage: {e}")
+            return {}
+    
+    def _save_render_selections_to_storage(self):
+        """Save current render selections to storage using special key."""
+        if not self._settings_storage:
+            return
+        
+        try:
+            # Collect only the nodes that are selected for rendering
+            selected_nodes = []
+            for row_data in self._data:
+                node_name = row_data.get('Node', '')
+                is_selected = row_data.get('Render', True)
+                if node_name and is_selected:
+                    selected_nodes.append(node_name)
+            
+            from ....common.logging import qt_logger
+            qt_logger.debug(f"💾 Saving selected render nodes to storage: {selected_nodes}")
+            
+            # Load current overrides and add/update the _render list directly
+            node_overrides = self._settings_storage.load_node_overrides()
+            node_overrides['_render'] = selected_nodes
+            
+            # Save the updated overrides
+            success = self._settings_storage.save_node_overrides(node_overrides)
+            
+            if success:
+                qt_logger.debug("💾 Render selections saved successfully to storage")
+            else:
+                qt_logger.warning("💾 Failed to save render selections to storage")
+            
+        except Exception as e:
+            # Log error but don't fail - render selections are not critical for app function
+            from ....common.logging import qt_logger
+            qt_logger.warning(f"Failed to save render selections to storage: {e}") 
