@@ -238,16 +238,16 @@ class TableDataModel(QtCore.QObject):
         """Set the node data provider for real data integration.
         
         Args:
-            node_data_provider: The NodeDataProvider instance
+            node_data_provider: The NodeDataWorker instance
         """
         self._node_data_provider = node_data_provider
         
         # Connect signals
         if self._node_data_provider:
-            self._node_data_provider.dataReady.connect(self._on_data_ready)
-            self._node_data_provider.progressUpdate.connect(self._on_progress_update)
-            self._node_data_provider.errorOccurred.connect(self._on_error_occurred)
-            self._node_data_provider.debugInfo.connect(self._on_debug_info)
+            self._node_data_provider.signals.data_ready.connect(self._on_data_ready)
+            self._node_data_provider.signals.progress_update.connect(self._on_progress_update)
+            self._node_data_provider.signals.error_occurred.connect(self._on_error_occurred)
+            self._node_data_provider.signals.debug_info.connect(self._on_debug_info)
     
     def set_settings_storage(self, settings_storage):
         """Set the settings storage for persistence.

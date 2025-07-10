@@ -66,8 +66,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         from .views import SettingsView, NodeSettingsView, GSVView, ExtraSettingsView, ConsoleView
         from .constants import Sizes, GSVDefaults, Timing, Fonts, Settings
         from .config import apply_panel_config
-        from .repositories import NodeDataProvider, NodeSettingsStorage
-        from .controllers import PanelProgressManager, DeadlineResourceWorker
+        from .repositories import NodeSettingsStorage
+        from .controllers import PanelProgressManager, DeadlineResourceWorker, NodeDataWorker, SubmissionWorker, ThreadLogHandler
 
         import logging
         import sys
@@ -99,120 +99,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 except Exception:
                     self.handleError(record)
 
-        class ThreadLogHandler(logging.Handler):
-            """Custom logging handler that emits Qt signals for thread-safe GUI updates."""
-            
-            def __init__(self, signals):
-                super().__init__()
-                self.signals = signals
-                # Use a more detailed formatter to match terminal output
-                self.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
-                
-            def emit(self, record):
-                """Emit log records as Qt signals."""
-                try:
-                    # Format the complete message with timestamp and logger name
-                    msg = self.format(record)
-                    level = record.levelname.lower()
-                    
-                    # Emit signal to GUI (this should be thread-safe)
-                    self.signals.log_message.emit(msg, level)
-                    
-                except Exception as e:
-                    # Only print to terminal if we can't emit to GUI
-                    print(f"ThreadLogHandler error: {e}")
 
-        class SubmissionWorkerSignals(QtCore.QObject):
-            """Signals for submission worker communication."""
-            log_message = QtCore.Signal(str, str)  # message, level
-            progress_update = QtCore.Signal(str)   # status message
-            finished = QtCore.Signal(bool, str, object)  # success, result_message, result
-            error_occurred = QtCore.Signal(str)    # error message
 
-        class SubmissionWorker(QtCore.QRunnable):
-            """Background worker for nuke script submission using QRunnable."""
-            
-            def __init__(self, script_path, selected_nodes, current_ui_state, settings_storage):
-                super().__init__()
-                self.script_path = script_path
-                self.selected_nodes = selected_nodes
-                self.current_ui_state = current_ui_state
-                self.settings_storage = settings_storage
-                self.signals = SubmissionWorkerSignals()
-                
-            @QtCore.Slot()
-            def run(self):
-                """Execute the submission in the background thread."""
-                try:
-                    self.signals.progress_update.emit("Starting submission...")
-                    
-                    # Set up comprehensive logging redirection to capture all output
-                    log_handler = ThreadLogHandler(self.signals)
-                    log_handler.setLevel(logging.DEBUG)
-                    
-                    # Get all relevant loggers and add handler to each
-                    loggers_to_capture = [
-                        logging.getLogger(),  # Root logger
-                        logging.getLogger('nk2dl'),
-                        logging.getLogger('nk2dl.submission'),
-                        logging.getLogger('nk2dl.deadline'),
-                        logging.getLogger('nk2dl.deadline.connection'),
-                        logging.getLogger('nk2dl.nuke'),
-                        logging.getLogger('nk2dl.nuke.submission'),
-                    ]
-                    
-                    # Add handler to all loggers and set appropriate levels
-                    for logger_obj in loggers_to_capture:
-                        logger_obj.addHandler(log_handler)
-                        logger_obj.setLevel(logging.DEBUG)
-                    
-                    # Store reference to loggers for cleanup
-                    self.loggers_with_handler = loggers_to_capture
-                    
-                    try:
-                        self.signals.progress_update.emit("Building submission arguments...")
-                        
-                        # Build submission arguments
-                        submission_args = self.settings_storage.build_submission_args(
-                            script_path=self.script_path,
-                            write_nodes=self.selected_nodes,
-                            **self.current_ui_state
-                        )
-                        
-                        self.signals.progress_update.emit("Submitting to Deadline...")
-                        
-                        # Submit to Deadline
-                        from ...nuke.submission import submit_nuke_script
-                        result = submit_nuke_script(**submission_args)
-                        
-                        # Parse result - handle different return types
-                        # Result is a list of job dictionaries from successful submissions
-                        if result and isinstance(result, list) and len(result) > 0:
-                            # Check if any jobs were submitted successfully
-                            job_ids = [job_dict.get('job_id') for job_dict in result if job_dict.get('job_id')]
-                            if job_ids:
-                                self.signals.finished.emit(True, f"Submission completed successfully! Job IDs: {', '.join(job_ids)}", result)
-                            else:
-                                self.signals.finished.emit(False, "Submission completed but no job IDs returned", result)
-                        else:
-                            self.signals.finished.emit(False, "Submission completed - check console for details", result)
-                            
-                    finally:
-                        # Clean up logging handlers from all loggers
-                        if hasattr(self, 'loggers_with_handler'):
-                            for logger_obj in self.loggers_with_handler:
-                                try:
-                                    logger_obj.removeHandler(log_handler)
-                                except ValueError:
-                                    pass  # Handler wasn't in this logger
-                            delattr(self, 'loggers_with_handler')
-                        
-                except Exception as e:
-                    error_msg = f"Submission error: {str(e)}"
-                    import traceback
-                    detailed_error = f"{error_msg}\n{traceback.format_exc()}"
-                    self.signals.error_occurred.emit(detailed_error)
-                    self.signals.finished.emit(False, error_msg, None)
+
                     
 
 
@@ -269,14 +158,14 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.gsv_model = GSVHierarchyModel(self)
                 
                 # Create repositories
-                self.node_data_provider = NodeDataProvider(self)
+                self.node_data_worker = NodeDataWorker(self)
                 self.settings_storage = NodeSettingsStorage()
                 
                 # Connect repositories to table model
-                self.table_model.set_node_data_provider(self.node_data_provider)
+                self.table_model.set_node_data_provider(self.node_data_worker)
                 self.table_model.set_settings_storage(self.settings_storage)
                 
-                logger.info("Models and repositories created: TableDataModel, GSVHierarchyModel, SettingsModel, NodeDataProvider, NodeSettingsStorage")
+                logger.info("Models and repositories created: TableDataModel, GSVHierarchyModel, SettingsModel, NodeDataWorker, NodeSettingsStorage")
             
             def _setup_layout(self):
                 """Set up the main panel layout."""

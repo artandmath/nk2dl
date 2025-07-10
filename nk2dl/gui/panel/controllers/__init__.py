@@ -6,9 +6,30 @@ managing complex UI state and operations like progress reporting.
 """
 
 from .progress import PanelProgressManager
-from .deadline_resources import DeadlineResourceWorker
+from .workers import (
+    BaseWorker, BaseWorkerSignals, start_worker,
+    DeadlineResourceWorker, DeadlineResourceWorkerSignals, 
+    create_deadline_resource_worker,
+    SubmissionWorker, SubmissionWorkerSignals,
+    NodeDataWorker, NodeDataWorkerSignals,
+    ThreadLogHandler
+)
 
 __all__ = [
     'PanelProgressManager',
+    
+    # Base worker pattern
+    'BaseWorker',
+    'BaseWorkerSignals', 
+    'start_worker',
+    
+    # Specific workers
     'DeadlineResourceWorker',
+    'DeadlineResourceWorkerSignals',
+    'create_deadline_resource_worker',
+    'SubmissionWorker',
+    'SubmissionWorkerSignals',
+    'NodeDataWorker',
+    'NodeDataWorkerSignals',
+    'ThreadLogHandler',
 ] 
