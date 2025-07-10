@@ -79,38 +79,40 @@ logging:
   # Log format
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   
-  # Numeric level for Qt debug messages (default: 7)
-  # Set to 10 or higher to disable Qt debugging
-  qt_debug_level: 7
+  # Level for Qt debug messages (default: DEBUG)
+  # Set to WARNING or higher to disable Qt debugging
+  qt_level: DEBUG
   
-  # Numeric level for caller information in debug messages (default: 5) 
-  # Set to 1 for maximum detail, 10+ to disable
-  caller_info_level: 5
+  # Level for caller information in debug messages (default: DEBUG) 
+  # Only shows caller info when main logging level is at or below this level
+  call_level: DEBUG
 ```
 
 #### Advanced Logging Levels
 
-The logging system supports granular control with numeric levels:
+The logging system uses standard Python logging levels:
 
-- **Level 10 (DEBUG)**: Standard debug messages
-- **Level 7**: Qt debugging messages (UI operations, widget events)
-- **Level 5**: Debug messages with caller information (file, line, function)
-- **Level 1 (NOTSET)**: Maximum verbosity
+- **CRITICAL (50)**: Critical errors only
+- **ERROR (40)**: Error messages and above
+- **WARNING (30)**: Warning messages and above
+- **INFO (20)**: Informational messages and above  
+- **DEBUG (10)**: All debug messages
+- **NOTSET (0)**: All messages
 
-To enable Qt debugging without caller info:
+To enable Qt debugging with caller info:
 ```yaml
 logging:
-  level: DEBUG          # Enable debug messages  
-  qt_debug_level: 7     # Enable Qt debugging
-  caller_info_level: 1  # Only show caller info at level 1
+  level: DEBUG          # Enable all debug messages  
+  qt_level: DEBUG       # Enable Qt debugging
+  call_level: DEBUG     # Show caller info for debug messages
 ```
 
 To disable Qt debugging but keep other debug messages:
 ```yaml
 logging:
   level: DEBUG          # Enable debug messages
-  qt_debug_level: 15    # Disable Qt debugging (above DEBUG level)
-  caller_info_level: 5  # Normal caller info threshold
+  qt_level: WARNING     # Only show Qt warnings/errors
+  call_level: DEBUG     # Normal caller info threshold
 ```
 
 ### Job Submission

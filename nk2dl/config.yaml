@@ -14,6 +14,8 @@ deadline:
 
 logging:
   level: INFO
+  qt_level: INFO   # QT messages are output at DEBUG level or lower
+  call_level: INFO # caller messages are output at DEBUG level or lower
   file: null
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 

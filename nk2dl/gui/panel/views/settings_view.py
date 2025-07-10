@@ -35,6 +35,10 @@ except ImportError:
 from ..widgets import ColoredGroupBox
 from ..constants import Settings, Sizes
 from ..config import apply_panel_config
+from ....common.logging import setup_logging
+
+# Set up logger for this module
+logger = setup_logging(__name__)
 
 
 class SettingsView(QtWidgets.QWidget):
@@ -680,10 +684,6 @@ class SettingsView(QtWidgets.QWidget):
     
     def _apply_configuration(self):
         """Apply panel configuration to job and machine settings controls."""
-        # Add debug logging - move outside try block for error handling
-        from nk2dl.common.logging import setup_logging
-        logger = setup_logging('nk2dl.gui.panel.views.settings_view')
-        
         try:
             logger.debug("Starting _apply_configuration for SettingsView")
             
