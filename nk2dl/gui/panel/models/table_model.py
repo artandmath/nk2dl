@@ -644,11 +644,12 @@ class TableDataModel(QtCore.QObject):
             if old_value != bool_value:
                 self._data[row][header] = bool_value
                 
-                # CRITICAL: Save render selection to storage
-                if self._settings_storage:
+                # PERFORMANCE: Only save to storage if emit_signal is True (indicating individual user action)
+                # When emit_signal=False, it's a batch operation and storage will be saved externally
+                if emit_signal and self._settings_storage:
                     qt_logger.debug(f"💾 Saving render selections to storage for node: {node_name}")
                     self._save_render_selections_to_storage()
-                else:
+                elif not self._settings_storage:
                     qt_logger.warning("💾 No settings storage available - cannot save render selections!")
                 
                 if emit_signal:

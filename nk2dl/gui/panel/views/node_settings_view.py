@@ -733,6 +733,48 @@ class NodeSettingsView(QtWidgets.QWidget):
             # Clear recursion guard
             self._handling_checkbox_change = False
     
+    def _batch_sync_frozen_checkboxes(self, check_state):
+        """Efficiently sync all frozen table checkboxes to the same state.
+        
+        Args:
+            check_state: QtCore.Qt.Checked or QtCore.Qt.Unchecked
+        """
+        if not (hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table):
+            return
+        
+        try:
+            frozen_table = self.render_table.frozen_table
+            
+            # Update all frozen checkbox items at once
+            for row in range(frozen_table.rowCount()):
+                frozen_item = frozen_table.item(row, 0)  # Column 0 is Render
+                if frozen_item:
+                    frozen_item.setCheckState(check_state)
+                    
+        except Exception as e:
+            from ....common.logging import qt_logger
+            qt_logger.warning(f"Error in batch frozen checkbox sync: {e}")
+    
+    def _batch_sync_frozen_checkboxes_from_main(self):
+        """Efficiently sync all frozen table checkboxes from main table states."""
+        if not (hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table):
+            return
+        
+        try:
+            frozen_table = self.render_table.frozen_table
+            
+            # Copy checkbox states from main table to frozen table
+            for row in range(min(self.render_table.rowCount(), frozen_table.rowCount())):
+                main_item = self.render_table.item(row, 0)  # Column 0 is Render
+                frozen_item = frozen_table.item(row, 0)
+                
+                if main_item and frozen_item:
+                    frozen_item.setCheckState(main_item.checkState())
+                    
+        except Exception as e:
+            from ....common.logging import qt_logger
+            qt_logger.warning(f"Error in batch frozen checkbox sync from main: {e}")
+    
     def test_checkbox_signal(self):
         """Debug method to test checkbox signal handling manually."""
         from ....common.logging import qt_logger
@@ -940,8 +982,11 @@ class NodeSettingsView(QtWidgets.QWidget):
         
         # Block signals to prevent multiple updates
         self.render_table.blockSignals(True)
+        if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+            self.render_table.frozen_table.blockSignals(True)
         
         try:
+            # PERFORMANCE: Batch update all checkboxes without individual sync operations
             for row in range(self.render_table.rowCount()):
                 # Set checkbox to checked in model
                 self.table_model.set_cell_value(row, 0, True, emit_signal=False)  # Column 0 is Render
@@ -950,17 +995,19 @@ class NodeSettingsView(QtWidgets.QWidget):
                 item = self.render_table.item(row, 0)
                 if item:
                     item.setCheckState(QtCore.Qt.Checked)
-                    
-                    # Sync to frozen table if this is a frozen column
-                    self._sync_frozen_item(row, 0, item)
+            
+            # PERFORMANCE: Batch sync all frozen checkboxes at once
+            self._batch_sync_frozen_checkboxes(QtCore.Qt.Checked)
             
             # Emit single change signal at the end
             self.table_model.dataChanged.emit()
         finally:
             # Re-enable signals
             self.render_table.blockSignals(False)
+            if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+                self.render_table.frozen_table.blockSignals(False)
             
-        # Save render selections to storage
+        # PERFORMANCE: Save to storage only once at the end
         if hasattr(self.table_model, '_save_render_selections_to_storage'):
             self.table_model._save_render_selections_to_storage()
             
@@ -973,8 +1020,11 @@ class NodeSettingsView(QtWidgets.QWidget):
         
         # Block signals to prevent multiple updates
         self.render_table.blockSignals(True)
+        if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+            self.render_table.frozen_table.blockSignals(True)
         
         try:
+            # PERFORMANCE: Batch update all checkboxes without individual sync operations
             for row in range(self.render_table.rowCount()):
                 # Set checkbox to unchecked in model
                 self.table_model.set_cell_value(row, 0, False, emit_signal=False)  # Column 0 is Render
@@ -983,17 +1033,19 @@ class NodeSettingsView(QtWidgets.QWidget):
                 item = self.render_table.item(row, 0)
                 if item:
                     item.setCheckState(QtCore.Qt.Unchecked)
-                    
-                    # Sync to frozen table if this is a frozen column
-                    self._sync_frozen_item(row, 0, item)
+            
+            # PERFORMANCE: Batch sync all frozen checkboxes at once
+            self._batch_sync_frozen_checkboxes(QtCore.Qt.Unchecked)
             
             # Emit single change signal at the end
             self.table_model.dataChanged.emit()
         finally:
             # Re-enable signals
             self.render_table.blockSignals(False)
+            if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+                self.render_table.frozen_table.blockSignals(False)
             
-        # Save render selections to storage
+        # PERFORMANCE: Save to storage only once at the end
         if hasattr(self.table_model, '_save_render_selections_to_storage'):
             self.table_model._save_render_selections_to_storage()
             
@@ -1028,8 +1080,11 @@ class NodeSettingsView(QtWidgets.QWidget):
         
         # Block signals to prevent multiple updates
         self.render_table.blockSignals(True)
+        if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+            self.render_table.frozen_table.blockSignals(True)
         
         try:
+            # PERFORMANCE: Batch update all checkboxes without individual sync operations
             for row in range(self.render_table.rowCount()):
                 # Get node name for this row
                 node_item = self.render_table.item(row, 2)  # Column 2 is Node name
@@ -1047,17 +1102,19 @@ class NodeSettingsView(QtWidgets.QWidget):
                 if item:
                     checkbox_state = QtCore.Qt.Checked if is_selected else QtCore.Qt.Unchecked
                     item.setCheckState(checkbox_state)
-                    
-                    # Sync to frozen table if this is a frozen column
-                    self._sync_frozen_item(row, 0, item)
+            
+            # PERFORMANCE: Batch sync all frozen checkboxes at once
+            self._batch_sync_frozen_checkboxes_from_main()
             
             # Emit single change signal at the end
             self.table_model.dataChanged.emit()
         finally:
             # Re-enable signals
             self.render_table.blockSignals(False)
+            if hasattr(self.render_table, 'frozen_table') and self.render_table.frozen_table:
+                self.render_table.frozen_table.blockSignals(False)
             
-        # Save render selections to storage
+        # PERFORMANCE: Save to storage only once at the end
         if hasattr(self.table_model, '_save_render_selections_to_storage'):
             self.table_model._save_render_selections_to_storage()
             
