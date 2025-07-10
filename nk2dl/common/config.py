@@ -91,7 +91,9 @@ class Config:
         'logging': {
             'level': 'INFO',
             'file': None,
-            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+            'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            'qt_debug_level': 7,      # Numeric level for Qt debug messages
+            'caller_info_level': 5    # Numeric level for caller information
         },
         'submission': {
             'priority': 50,

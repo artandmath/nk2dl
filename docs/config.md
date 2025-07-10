@@ -78,6 +78,39 @@ logging:
   
   # Log format
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  
+  # Numeric level for Qt debug messages (default: 7)
+  # Set to 10 or higher to disable Qt debugging
+  qt_debug_level: 7
+  
+  # Numeric level for caller information in debug messages (default: 5) 
+  # Set to 1 for maximum detail, 10+ to disable
+  caller_info_level: 5
+```
+
+#### Advanced Logging Levels
+
+The logging system supports granular control with numeric levels:
+
+- **Level 10 (DEBUG)**: Standard debug messages
+- **Level 7**: Qt debugging messages (UI operations, widget events)
+- **Level 5**: Debug messages with caller information (file, line, function)
+- **Level 1 (NOTSET)**: Maximum verbosity
+
+To enable Qt debugging without caller info:
+```yaml
+logging:
+  level: DEBUG          # Enable debug messages  
+  qt_debug_level: 7     # Enable Qt debugging
+  caller_info_level: 1  # Only show caller info at level 1
+```
+
+To disable Qt debugging but keep other debug messages:
+```yaml
+logging:
+  level: DEBUG          # Enable debug messages
+  qt_debug_level: 15    # Disable Qt debugging (above DEBUG level)
+  caller_info_level: 5  # Normal caller info threshold
 ```
 
 ### Job Submission

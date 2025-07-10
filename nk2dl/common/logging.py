@@ -36,10 +36,17 @@ class Nk2dlLogger(logging.Logger):
     """Custom logger that automatically adds caller information to DEBUG messages."""
     
     def debug(self, message, *args, **kwargs):
-        """Override debug to automatically add caller information when level <= 9."""
-        # Only add caller info if effective level is 9 or below (very detailed debugging)
-        # and caller info is not temporarily disabled
-        if self.getEffectiveLevel() <= 9 and not _disable_caller_info:
+        """Override debug to automatically add caller information when level is at or below configured threshold."""
+        # Get configured caller info level (default to 5 if not available)
+        caller_info_level = 5  # Default value
+        try:
+            if config and hasattr(config, 'get'):
+                caller_info_level = config.get('logging.caller_info_level', 5)
+        except:
+            pass
+        
+        # Only add caller info if effective level is at/below configured threshold and not temporarily disabled
+        if self.getEffectiveLevel() <= caller_info_level and not _disable_caller_info:
             caller_info = self._get_caller_info()
             
             # Add caller info if we found it
@@ -226,11 +233,13 @@ def fix_existing_loggers() -> None:
                 handler.setFormatter(formatter)
 
 
-def configure_logging(level: str = None) -> None:
+def configure_logging(level: str = None, qt_debug_level: int = None, caller_info_level: int = None) -> None:
     """Configure logging level dynamically.
     
     Args:
         level: Logging level to set (INFO, DEBUG, NOTSET)
+        qt_debug_level: Numeric level for Qt debug messages (None to keep current)
+        caller_info_level: Numeric level for caller information (None to keep current)
     """
     if level:
         # Get the numeric level for easier comparison
@@ -263,6 +272,31 @@ def configure_logging(level: str = None) -> None:
         
         # Log the level change
         logger.debug(f"Logging level set to {level} for all nk2dl loggers")
+    
+    # Update Qt debug level if specified
+    if qt_debug_level is not None and config:
+        try:
+            # Update config in memory
+            if 'logging' not in config._config:
+                config._config['logging'] = {}
+            config._config['logging']['qt_debug_level'] = qt_debug_level
+            
+            # Sync Qt logger levels
+            sync_qt_logger_levels()
+            logger.debug(f"Qt debug level set to {qt_debug_level}")
+        except Exception as e:
+            logger.warning(f"Failed to set Qt debug level: {e}")
+    
+    # Update caller info level if specified  
+    if caller_info_level is not None and config:
+        try:
+            # Update config in memory
+            if 'logging' not in config._config:
+                config._config['logging'] = {}
+            config._config['logging']['caller_info_level'] = caller_info_level
+            logger.debug(f"Caller info level set to {caller_info_level}")
+        except Exception as e:
+            logger.warning(f"Failed to set caller info level: {e}")
 
 
 # Create default logger with custom class
@@ -286,9 +320,15 @@ class QtDebugLogger:
         self.last_reset_time = time.time()
         self.max_messages_per_second = 50  # Throttle to 50 messages/second during UI ops
         
-        # SIMPLIFIED: Just force DEBUG level for Qt debugging
-        # This ensures Qt debug messages always show when debugging is needed
-        self.logger.setLevel(logging.DEBUG)
+        # Set Qt debug level from configuration (default to 7 if not available)
+        qt_debug_level = 7  # Default value  
+        try:
+            if config and hasattr(config, 'get'):
+                qt_debug_level = config.get('logging.qt_debug_level', 7)
+        except:
+            pass
+        
+        self.logger.setLevel(qt_debug_level)
         
         # Initialize async logging if enabled
         if self.async_logging:
@@ -493,6 +533,17 @@ class QtDebugLogger:
         
         self.message_count += 1
         return True
+    
+    def _sync_logging_level(self):
+        """Sync Qt logger level with current configuration."""
+        qt_debug_level = 7  # Default value
+        try:
+            if config and hasattr(config, 'get'):
+                qt_debug_level = config.get('logging.qt_debug_level', 7)
+        except:
+            pass
+        
+        self.logger.setLevel(qt_debug_level)
 
 # Global Qt debug logger instance (created lazily)
 _qt_logger_instance = None

@@ -978,6 +978,9 @@ class NodeSettingsView(QtWidgets.QWidget):
     def _on_all_clicked(self):
         """Handle all button click - check all render checkboxes."""
         from ....common.logging import qt_logger
+        
+        # PERFORMANCE: Enable UI operation mode to throttle debug logging during batch operation
+        qt_logger.set_ui_operation_mode(True)
         qt_logger.debug("🟢 ALL BUTTON CLICKED - Checking all render checkboxes")
         
         # Block signals to prevent multiple updates
