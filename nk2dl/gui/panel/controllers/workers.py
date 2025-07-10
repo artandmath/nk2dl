@@ -654,7 +654,7 @@ class NodeDataWorker(QtCore.QObject):
             return f"Error: {str(e)}"
     
     def _get_render_order(self, node) -> str:
-        """Get or create render order for a write node.
+        """Get the render order for a write node.
         
         Args:
             node: Nuke write node
@@ -663,72 +663,30 @@ class NodeDataWorker(QtCore.QObject):
             Render order as string
         """
         try:
-            # Check if the node already has an nk2dl_render_order knob
+            # Check if the node has the standard render_order knob
             render_order_knob = None
             try:
-                render_order_knob = node['nk2dl_render_order']
-            except NameError:
-                # Knob doesn't exist, we'll create it
+                render_order_knob = node['render_order']
+            except (NameError, KeyError):
+                # Knob doesn't exist
                 pass
             
             if render_order_knob is not None:
                 # Knob exists, get its value
                 render_order = render_order_knob.value()
-                if render_order and str(render_order).strip():
-                    logger.debug(f"Node {node.name()}: existing render order = {render_order}")
-                    return str(render_order)
+                logger.debug(f"Node {node.name()}: render order = {render_order}")
+                return str(int(render_order))
             
-            # Knob doesn't exist or is empty, create it with a default value
-            # Use a simple incrementing number starting from 1
-            default_order = self._get_next_render_order()
-            
-            # Create the knob if it doesn't exist
-            if render_order_knob is None:
-                # Create a string knob for render order
-                render_order_knob = nuke.String_Knob('nk2dl_render_order', 'Render Order')
-                render_order_knob.setValue(str(default_order))
-                node.addKnob(render_order_knob)
-                logger.debug(f"Node {node.name()}: created render order knob with value {default_order}")
-            else:
-                # Knob exists but is empty, set the default value
-                render_order_knob.setValue(str(default_order))
-                logger.debug(f"Node {node.name()}: set render order to {default_order}")
-            
-            return str(default_order)
+            # No render_order knob found, use default of 0
+            # This matches the behavior in the submission code
+            logger.debug(f"Node {node.name()}: no render_order knob found, using default 0")
+            return "0"
             
         except Exception as e:
-            logger.debug(f"Error getting/setting render order for node {node.name()}: {e}")
-            return "1"  # Fallback to order 1
+            logger.debug(f"Error getting render order for node {node.name()}: {e}")
+            return "0"  # Fallback to order 0
     
-    def _get_next_render_order(self) -> int:
-        """Get the next available render order number.
-        
-        Returns:
-            Next render order number
-        """
-        # Simple implementation: count existing write nodes and add 1
-        # This could be made more sophisticated if needed
-        try:
-            write_node_types = self._get_write_node_types()
-            existing_orders = []
-            
-            for node in nuke.allNodes():
-                if node.Class() in write_node_types:
-                    try:
-                        order_knob = node['nk2dl_render_order']
-                        if order_knob and order_knob.value():
-                            existing_orders.append(int(order_knob.value()))
-                    except (NameError, ValueError):
-                        pass
-            
-            if existing_orders:
-                return max(existing_orders) + 1
-            else:
-                return 1
-                
-        except Exception as e:
-            logger.debug(f"Error calculating next render order: {e}")
-            return 1
+
     
     def _get_write_node_types(self) -> List[str]:
         """Get write node types from configuration.
