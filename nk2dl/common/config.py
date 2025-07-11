@@ -92,8 +92,8 @@ class Config:
             'level': 'INFO',
             'file': None,
             'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            'qt_level': 'DEBUG',     # Level for Qt debug messages (DEBUG, INFO, WARNING, ERROR, CRITICAL)
-            'call_level': 'DEBUG'    # Level for caller information (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            'qt_level': 'INFO',     # Level for Qt debug messages (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            'call_level': 'INFO'    # Level for caller information (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         },
         'submission': {
             'priority': 50,
