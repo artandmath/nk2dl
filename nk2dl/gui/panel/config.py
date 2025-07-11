@@ -55,7 +55,7 @@ CONTROL_GROUPS = {
         'priority', 'chunk_size', 'frames', 'frame_range', 'use_node_frame_list',
         'task_timeout', 'enable_auto_timeout', 'render_mode', 'render_nukex',
         'use_batch_mode', 'reload_plugin', 'separate_tasks', 'separate_jobs',
-        'views_separate_jobs'
+        'render_order_dependencies', 'views_separate_jobs'
     },
     'machine_settings': {
         'pool', 'secondary_pool', 'group', 'threads', 'min_ram', 'max_ram',

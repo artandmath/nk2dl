@@ -235,6 +235,7 @@ class SettingsView(QtWidgets.QWidget):
         job_main_layout.addWidget(divider)
         
         # Job organization checkboxes
+        # Row 1: Write nodes as separate jobs + Views as separate jobs
         job_org_row1 = QtWidgets.QHBoxLayout()
         job_org_row1.setSpacing(10)
         
@@ -242,13 +243,21 @@ class SettingsView(QtWidgets.QWidget):
         empty_label3.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_org_row1.addWidget(empty_label3)
         
-        self.separate_tasks_check = QtWidgets.QCheckBox("Write node as separate tasks for the same job")
-        self.separate_tasks_check.setToolTip("Enable to submit a job to Deadline where each task for the job represents a different write node, and all frames for that write node are rendered by its corresponding task.")
-        job_org_row1.addWidget(self.separate_tasks_check)
+        self.separate_jobs_check = QtWidgets.QCheckBox("Write nodes as separate jobs")
+        self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
+        job_org_row1.addWidget(self.separate_jobs_check)
+        
+        # Add some spacing between the two checkboxes
+        job_org_row1.addSpacing(20)
+        
+        self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
+        self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
+        job_org_row1.addWidget(self.views_separate_jobs_check)
         job_org_row1.addStretch()
         
         job_main_layout.addLayout(job_org_row1)
         
+        # Row 2: Render order dependencies
         job_org_row2 = QtWidgets.QHBoxLayout()
         job_org_row2.setSpacing(10)
         
@@ -256,13 +265,14 @@ class SettingsView(QtWidgets.QWidget):
         empty_label4.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_org_row2.addWidget(empty_label4)
         
-        self.separate_jobs_check = QtWidgets.QCheckBox("Write nodes as separate jobs")
-        self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
-        job_org_row2.addWidget(self.separate_jobs_check)
+        self.render_order_dependencies_check = QtWidgets.QCheckBox("Render order dependencies")
+        self.render_order_dependencies_check.setToolTip("Enable job dependencies based on render order. This automatically enables 'Write nodes as separate jobs'.")
+        job_org_row2.addWidget(self.render_order_dependencies_check)
         job_org_row2.addStretch()
         
         job_main_layout.addLayout(job_org_row2)
         
+        # Row 3: Write nodes as separate tasks for the same job
         job_org_row3 = QtWidgets.QHBoxLayout()
         job_org_row3.setSpacing(10)
         
@@ -270,9 +280,9 @@ class SettingsView(QtWidgets.QWidget):
         empty_label5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_org_row3.addWidget(empty_label5)
         
-        self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
-        self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
-        job_org_row3.addWidget(self.views_separate_jobs_check)
+        self.separate_tasks_check = QtWidgets.QCheckBox("Write nodes as separate tasks for the same job")
+        self.separate_tasks_check.setToolTip("Enable to submit a job to Deadline where each task for the job represents a different write node, and all frames for that write node are rendered by its corresponding task.")
+        job_org_row3.addWidget(self.separate_tasks_check)
         job_org_row3.addStretch()
         
         job_main_layout.addLayout(job_org_row3)
@@ -509,6 +519,7 @@ class SettingsView(QtWidgets.QWidget):
         self.separate_tasks_check.toggled.connect(lambda c: self.settings_model.set_job_setting('separate_tasks', c))
         self.separate_jobs_check.toggled.connect(lambda c: self.settings_model.set_job_setting('separate_jobs', c))
         self.views_separate_jobs_check.toggled.connect(lambda c: self.settings_model.set_job_setting('views_separate_jobs', c))
+        self.render_order_dependencies_check.toggled.connect(lambda c: self.settings_model.set_job_setting('render_order_dependencies', c))
         
         # Machine Settings signals
         self.pool_combo.currentTextChanged.connect(lambda t: self.settings_model.set_machine_setting('pool', t))
@@ -562,6 +573,7 @@ class SettingsView(QtWidgets.QWidget):
             self.separate_tasks_check.setChecked(job_settings.get('separate_tasks', False))
             self.separate_jobs_check.setChecked(job_settings.get('separate_jobs', False))
             self.views_separate_jobs_check.setChecked(job_settings.get('views_separate_jobs', False))
+            self.render_order_dependencies_check.setChecked(job_settings.get('render_order_dependencies', False))
             
             # Load machine settings
             machine_settings = self.settings_model.get_all_machine_settings()
@@ -621,6 +633,7 @@ class SettingsView(QtWidgets.QWidget):
         self.separate_tasks_check.blockSignals(block)
         self.separate_jobs_check.blockSignals(block)
         self.views_separate_jobs_check.blockSignals(block)
+        self.render_order_dependencies_check.blockSignals(block)
         
         # Machine settings controls
         self.pool_combo.blockSignals(block)
@@ -703,6 +716,7 @@ class SettingsView(QtWidgets.QWidget):
             self.separate_tasks_check.setObjectName("separate_tasks")
             self.separate_jobs_check.setObjectName("separate_jobs")
             self.views_separate_jobs_check.setObjectName("views_separate_jobs")
+            self.render_order_dependencies_check.setObjectName("render_order_dependencies")
             
             # Machine settings controls
             self.pool_combo.setObjectName("pool")
@@ -735,6 +749,7 @@ class SettingsView(QtWidgets.QWidget):
             apply_panel_config(self.separate_tasks_check, "separate_tasks")
             apply_panel_config(self.separate_jobs_check, "separate_jobs")
             apply_panel_config(self.views_separate_jobs_check, "views_separate_jobs")
+            apply_panel_config(self.render_order_dependencies_check, "render_order_dependencies")
             
             # Apply configuration to machine settings controls
             apply_panel_config(self.pool_combo, "pool")

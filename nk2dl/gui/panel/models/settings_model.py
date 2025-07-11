@@ -76,6 +76,7 @@ class SettingsModel(QtCore.QObject):
             'reload_plugins': config.get('submission.reload_plugins', False),
             'separate_tasks': config.get('submission.write_nodes_as_tasks', False),
             'separate_jobs': config.get('submission.write_nodes_as_separate_jobs', False),
+            'render_order_dependencies': config.get('submission.render_order_dependencies', False),
             'views_separate_jobs': False,  # UI-specific setting
         }
         

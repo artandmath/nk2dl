@@ -1090,6 +1090,7 @@ class DefaultValues:
         "reload_plugins": False,
         "separate_tasks": False,
         "separate_jobs": False,
+        "render_order_dependencies": False,
         "views_separate_jobs": False,
         # Machine settings defaults for node table
         "pool": "none",
