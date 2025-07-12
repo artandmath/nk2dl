@@ -66,7 +66,7 @@ class SettingsModel(QtCore.QObject):
             'priority': config.get('submission.priority', 50),
             'chunk_size': config.get('submission.chunk_size', 10),
             'frames_mode': 'Global',  # UI-specific setting
-            'frames': '1001-2315',    # UI-specific setting
+            'frames': self._get_initial_frame_range(),  # Dynamic based on mode
             'use_node_frame_list': config.get('submission.use_node_frame_list', False),
             'task_timeout': 0,        # UI-specific setting
             'enable_auto_timeout': config.get('submission.enable_auto_timeout', False),
@@ -234,6 +234,74 @@ class SettingsModel(QtCore.QObject):
             self._extra_settings = settings.copy()
             self.extraSettingsChanged.emit()
     
+    # Frame range handling methods
+    def _get_initial_frame_range(self):
+        """Get the initial frame range based on the default frames mode.
+        
+        Returns:
+            str: Frame range string
+        """
+        return self._get_frame_range_for_mode('Global')
+    
+    def _get_frame_range_for_mode(self, mode):
+        """Get frame range string for a specific mode.
+        
+        Args:
+            mode (str): Frame mode ('Global', 'Input', 'First Middle Last', 'Hero Frames', 'Custom')
+            
+        Returns:
+            str: Frame range string
+        """
+        if mode == 'Global':
+            return self._get_nuke_root_frame_range()
+        elif mode == 'Input':
+            return 'input'
+        elif mode == 'First Middle Last':
+            return 'f,m,l'
+        elif mode == 'Hero Frames':
+            return 'hero'
+        elif mode == 'Custom':
+            # Return the current custom value or default to global range
+            return self._job_settings.get('frames', self._get_nuke_root_frame_range())
+        else:
+            return self._get_nuke_root_frame_range()
+    
+    def _get_nuke_root_frame_range(self):
+        """Get frame range from Nuke root node.
+        
+        Returns:
+            str: Frame range in format "first-last"
+        """
+        try:
+            # Try to import nuke and get frame range
+            import nuke
+            first_frame = int(nuke.root().firstFrame())
+            last_frame = int(nuke.root().lastFrame())
+            return f"{first_frame}-{last_frame}"
+        except (ImportError, AttributeError, Exception):
+            # Fallback if nuke is not available or there's an error
+            return "1001-1100"
+    
+    def update_frame_range_for_mode(self, mode):
+        """Update the frame range based on the selected mode.
+        
+        Args:
+            mode (str): Frame mode selected
+        """
+        new_frame_range = self._get_frame_range_for_mode(mode)
+        self.set_job_setting('frames', new_frame_range)
+    
+    def is_frame_range_editable(self, mode):
+        """Check if frame range should be editable for given mode.
+        
+        Args:
+            mode (str): Frame mode
+            
+        Returns:
+            bool: True if editable
+        """
+        return mode == 'Custom'
+
     # Validation methods
     def validate_job_settings(self):
         """Validate all job settings.

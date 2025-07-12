@@ -223,17 +223,12 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.layout().setStretchFactor(self.tab_widget, 1)     # Table area stretches
             
             def _create_bottom_controls(self):
-                """Create the bottom controls with version text, info label, progress bar and render button."""
+                """Create the bottom controls with info label, progress bar and render button."""
                 bottom_layout = QtWidgets.QHBoxLayout()
                 
-                # Version label on the left
-                version_label = QtWidgets.QLabel("NK2DL Submitter v0.1-alpha")
-                version_label.setStyleSheet("color: #888888; font-size: 10px;")
-                bottom_layout.addWidget(version_label)
-                
-                # Info label for status messages
+                # Info label for status messages (larger font)
                 self.info_label = QtWidgets.QLabel("Ready")
-                self.info_label.setStyleSheet("color: #cccccc; font-size: 10px;")
+                self.info_label.setStyleSheet("color: #cccccc; font-size: 12px;")
                 bottom_layout.addWidget(self.info_label)
                 
                 # Add stretch to push controls to the right

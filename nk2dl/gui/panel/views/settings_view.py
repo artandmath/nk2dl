@@ -235,7 +235,7 @@ class SettingsView(QtWidgets.QWidget):
         job_main_layout.addWidget(divider)
         
         # Job organization checkboxes
-        # Row 1: Write nodes as separate jobs + Views as separate jobs
+        # Row 1: Write nodes as separate jobs
         job_org_row1 = QtWidgets.QHBoxLayout()
         job_org_row1.setSpacing(10)
         
@@ -246,16 +246,24 @@ class SettingsView(QtWidgets.QWidget):
         self.separate_jobs_check = QtWidgets.QCheckBox("Write nodes as separate jobs")
         self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
         job_org_row1.addWidget(self.separate_jobs_check)
-        
-        # Add some spacing between the two checkboxes
-        job_org_row1.addSpacing(20)
-        
-        self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
-        self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
-        job_org_row1.addWidget(self.views_separate_jobs_check)
         job_org_row1.addStretch()
         
         job_main_layout.addLayout(job_org_row1)
+        
+        # Row 1.5: Views as separate jobs (aligned with other checkboxes)
+        job_org_row1_5 = QtWidgets.QHBoxLayout()
+        job_org_row1_5.setSpacing(10)
+        
+        empty_label3_5 = QtWidgets.QLabel("")
+        empty_label3_5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_org_row1_5.addWidget(empty_label3_5)
+        
+        self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
+        self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
+        job_org_row1_5.addWidget(self.views_separate_jobs_check)
+        job_org_row1_5.addStretch()
+        
+        job_main_layout.addLayout(job_org_row1_5)
         
         # Row 2: Render order dependencies
         job_org_row2 = QtWidgets.QHBoxLayout()
@@ -507,7 +515,7 @@ class SettingsView(QtWidgets.QWidget):
         # Job Settings signals
         self.priority_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('priority', v))
         self.chunk_size_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('chunk_size', v))
-        self.frames_combo.currentTextChanged.connect(lambda t: self.settings_model.set_job_setting('frames_mode', t))
+        self.frames_combo.currentTextChanged.connect(self._on_frames_mode_changed)
         self.frame_range_edit.textChanged.connect(lambda t: self.settings_model.set_job_setting('frames', t))
         self.use_node_frame_list_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_node_frame_list', c))
         self.task_timeout_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('task_timeout', v))
@@ -516,8 +524,8 @@ class SettingsView(QtWidgets.QWidget):
         self.render_nukex_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_nuke_x', c))
         self.use_batch_mode_check.toggled.connect(lambda c: self.settings_model.set_job_setting('batch_mode', c))
         self.reload_plugin_check.toggled.connect(lambda c: self.settings_model.set_job_setting('reload_plugins', c))
-        self.separate_tasks_check.toggled.connect(lambda c: self.settings_model.set_job_setting('separate_tasks', c))
-        self.separate_jobs_check.toggled.connect(lambda c: self.settings_model.set_job_setting('separate_jobs', c))
+        self.separate_tasks_check.toggled.connect(self._on_separate_tasks_toggled)
+        self.separate_jobs_check.toggled.connect(self._on_separate_jobs_toggled)
         self.views_separate_jobs_check.toggled.connect(lambda c: self.settings_model.set_job_setting('views_separate_jobs', c))
         self.render_order_dependencies_check.toggled.connect(lambda c: self.settings_model.set_job_setting('render_order_dependencies', c))
         
@@ -558,6 +566,10 @@ class SettingsView(QtWidgets.QWidget):
                 self.frames_combo.setCurrentIndex(index)
             
             self.frame_range_edit.setText(job_settings.get('frames', ''))
+            
+            # Update frame range UI based on the selected mode
+            self._update_frame_range_ui(frames_mode)
+            
             self.use_node_frame_list_check.setChecked(job_settings.get('use_node_frame_list', False))
             self.task_timeout_spin.setValue(int(job_settings.get('task_timeout', 0)))
             self.enable_auto_timeout_check.setChecked(job_settings.get('enable_auto_timeout', False))
@@ -574,6 +586,9 @@ class SettingsView(QtWidgets.QWidget):
             self.separate_jobs_check.setChecked(job_settings.get('separate_jobs', False))
             self.views_separate_jobs_check.setChecked(job_settings.get('views_separate_jobs', False))
             self.render_order_dependencies_check.setChecked(job_settings.get('render_order_dependencies', False))
+            
+            # Apply checkbox dependencies after loading all checkbox states
+            self._update_checkbox_dependencies()
             
             # Load machine settings
             machine_settings = self.settings_model.get_all_machine_settings()
@@ -676,6 +691,121 @@ class SettingsView(QtWidgets.QWidget):
             if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
                 self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)  # Less spacing when side by side
+    
+    def _on_frames_mode_changed(self, mode):
+        """Handle frames mode dropdown change."""
+        # Update the frames mode in the model
+        self.settings_model.set_job_setting('frames_mode', mode)
+        
+        # Update the frame range based on the new mode
+        self.settings_model.update_frame_range_for_mode(mode)
+        
+        # Update the frame range text box and its enablement
+        self._update_frame_range_ui(mode)
+    
+    def _update_frame_range_ui(self, mode):
+        """Update the frame range UI based on the selected mode."""
+        # Get the new frame range from the model
+        frame_range = self.settings_model.get_job_setting('frames', '')
+        
+        # Block signals to prevent feedback loops
+        self.frame_range_edit.blockSignals(True)
+        try:
+            # Update the text
+            self.frame_range_edit.setText(frame_range)
+            
+            # Enable/disable the text box based on the mode
+            is_editable = self.settings_model.is_frame_range_editable(mode)
+            self.frame_range_edit.setEnabled(is_editable)
+            
+            # Apply visual styling for non-editable state
+            if not is_editable:
+                self.frame_range_edit.setStyleSheet("QLineEdit { background-color: #f0f0f0; color: #666666; }")
+            else:
+                self.frame_range_edit.setStyleSheet("")  # Reset to default
+                
+        finally:
+            self.frame_range_edit.blockSignals(False)
+    
+    def _on_separate_tasks_toggled(self, checked):
+        """Handle separate tasks checkbox toggle."""
+        # Update the model
+        self.settings_model.set_job_setting('separate_tasks', checked)
+        
+        # Apply checkbox dependencies
+        self._update_checkbox_dependencies()
+    
+    def _on_separate_jobs_toggled(self, checked):
+        """Handle separate jobs checkbox toggle."""
+        # Update the model
+        self.settings_model.set_job_setting('separate_jobs', checked)
+        
+        # Apply checkbox dependencies
+        self._update_checkbox_dependencies()
+    
+    def _update_checkbox_dependencies(self):
+        """Update checkbox enable/disable states based on mutual exclusivity rules."""
+        # Block signals to prevent feedback loops
+        self._block_checkbox_signals(True)
+        
+        try:
+            separate_tasks = self.separate_tasks_check.isChecked()
+            separate_jobs = self.separate_jobs_check.isChecked()
+            
+            if separate_tasks:
+                # When "separate tasks" is enabled, disable and uncheck the other three
+                self._set_checkbox_state(self.separate_jobs_check, False, False)
+                self._set_checkbox_state(self.views_separate_jobs_check, False, False)
+                self._set_checkbox_state(self.render_order_dependencies_check, False, False)
+                
+            elif separate_jobs:
+                # When "separate jobs" is enabled, enable views and render order, disable separate tasks
+                self._set_checkbox_state(self.separate_tasks_check, False, False)
+                self._set_checkbox_state(self.views_separate_jobs_check, True, None)  # Keep current state
+                self._set_checkbox_state(self.render_order_dependencies_check, True, None)  # Keep current state
+                
+            else:
+                # When "separate jobs" is not enabled, disable views and render order, enable separate tasks
+                self._set_checkbox_state(self.separate_tasks_check, True, None)  # Keep current state
+                self._set_checkbox_state(self.views_separate_jobs_check, False, False)
+                self._set_checkbox_state(self.render_order_dependencies_check, False, False)
+                
+        finally:
+            self._block_checkbox_signals(False)
+    
+    def _set_checkbox_state(self, checkbox, enabled, checked=None):
+        """Set checkbox enabled state and optionally checked state with visual styling.
+        
+        Args:
+            checkbox: The checkbox widget
+            enabled (bool): Whether the checkbox should be enabled
+            checked (bool or None): Whether to check the checkbox (None = don't change)
+        """
+        checkbox.setEnabled(enabled)
+        
+        if checked is not None:
+            checkbox.setChecked(checked)
+        
+        # Apply visual styling for disabled state
+        if not enabled:
+            checkbox.setStyleSheet("""
+                QCheckBox {
+                    color: #666666;
+                    text-decoration: line-through;
+                }
+                QCheckBox::indicator:disabled {
+                    background-color: #f0f0f0;
+                }
+            """)
+        else:
+            checkbox.setStyleSheet("")  # Reset to default
+    
+    def _block_checkbox_signals(self, block):
+        """Block or unblock signals for checkbox controls only."""
+        self.separate_tasks_check.blockSignals(block)
+        self.separate_jobs_check.blockSignals(block)
+        self.views_separate_jobs_check.blockSignals(block)
+        self.render_order_dependencies_check.blockSignals(block)
     
     def _on_job_settings_changed(self):
         """Handle job settings changes from the model."""

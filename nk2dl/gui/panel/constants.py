@@ -12,7 +12,7 @@ class Settings:
     """Settings-related constants."""
     
     # Frame options for the frames dropdown
-    FRAMES_OPTIONS = ["Global", "Input", "Custom"]
+    FRAMES_OPTIONS = ["Global", "Input", "First Middle Last", "Hero Frames", "Custom"]
     
     # Dynamic pool/group options (populated from Deadline)
     _pools_loaded = False
