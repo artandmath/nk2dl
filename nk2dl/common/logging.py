@@ -56,16 +56,16 @@ class Nk2dlLogger(logging.Logger):
         # Get configured caller info level (default to DEBUG if not available)
         call_level = 'DEBUG'  # Default value
         try:
-            if config and hasattr(config, 'get'):
-                call_level = config.get('logging.call_level', 'DEBUG')
+            if config and hasattr(config, 'config'):
+                call_level = config.config.get('logging.call_level', 'DEBUG')
         except:
             pass
         
         # Convert to numeric level
         call_level_numeric = _get_numeric_level(call_level)
         
-        # Only add caller info if effective level is at/below configured threshold and not temporarily disabled
-        if self.getEffectiveLevel() <= call_level_numeric and not _disable_caller_info:
+        # Only add caller info if the DEBUG level is at/below the configured call_level threshold and not temporarily disabled
+        if logging.DEBUG >= call_level_numeric and not _disable_caller_info:
             caller_info = self._get_caller_info()
             
             # Add caller info if we found it
@@ -184,11 +184,11 @@ def setup_logging(name: str) -> Nk2dlLogger:
         except ImportError:
             pass
     
-    if config and hasattr(config, 'get'):
+    if config and hasattr(config, 'config'):
         # Get configured values
-        log_format = config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        level = config.get('logging.level', 'INFO')
-        log_file = config.get('logging.file', None)
+        log_format = config.config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        level = config.config.get('logging.level', 'INFO')
+        log_file = config.config.get('logging.file', None)
     else:
         # Fallback configuration
         log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -229,9 +229,9 @@ def fix_existing_loggers() -> None:
     logging.setLoggerClass(Nk2dlLogger)
     
     # Get configured format
-    if config and hasattr(config, 'get'):
-        log_format = config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        level = config.get('logging.level', 'INFO')
+    if config and hasattr(config, 'config'):
+        log_format = config.config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        level = config.config.get('logging.level', 'INFO')
     else:
         log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         level = 'INFO'
@@ -296,9 +296,9 @@ def configure_logging(level: str = None, qt_level = None, call_level = None) -> 
     if qt_level is not None and config:
         try:
             # Update config in memory
-            if 'logging' not in config._config:
-                config._config['logging'] = {}
-            config._config['logging']['qt_level'] = qt_level
+            if 'logging' not in config.config._config:
+                config.config._config['logging'] = {}
+            config.config._config['logging']['qt_level'] = qt_level
             
             # Sync Qt logger levels
             sync_qt_logger_levels()
@@ -310,9 +310,9 @@ def configure_logging(level: str = None, qt_level = None, call_level = None) -> 
     if call_level is not None and config:
         try:
             # Update config in memory
-            if 'logging' not in config._config:
-                config._config['logging'] = {}
-            config._config['logging']['call_level'] = call_level
+            if 'logging' not in config.config._config:
+                config.config._config['logging'] = {}
+            config.config._config['logging']['call_level'] = call_level
             logger.debug(f"Call level set to {call_level}")
         except Exception as e:
             logger.warning(f"Failed to set call level: {e}")
@@ -342,14 +342,17 @@ class QtDebugLogger:
         # Set Qt debug level from configuration (default to DEBUG if not available)
         qt_level = 'DEBUG'  # Default value  
         try:
-            if config and hasattr(config, 'get'):
-                qt_level = config.get('logging.qt_level', 'DEBUG')
+            if config and hasattr(config, 'config'):
+                qt_level = config.config.get('logging.qt_level', 'DEBUG')
         except:
             pass
         
         # Convert to numeric level and set
         qt_level_numeric = _get_numeric_level(qt_level)
         self.logger.setLevel(qt_level_numeric)
+        
+        # Store qt_level for use in logging methods
+        self.qt_level_numeric = qt_level_numeric
         
         # Initialize async logging if enabled
         if self.async_logging:
@@ -461,7 +464,8 @@ class QtDebugLogger:
         Args:
             message: Debug message to log
         """
-        if self.logger.isEnabledFor(logging.DEBUG) and self._should_log_message(logging.DEBUG):
+        # Only log Qt debug messages if the DEBUG level is at/below the configured qt_level threshold
+        if logging.DEBUG >= self.qt_level_numeric and self.logger.isEnabledFor(logging.DEBUG) and self._should_log_message(logging.DEBUG):
             qt_message = f"[QT] {message}"
             
             # Try async logging first, fallback to sync if needed
@@ -559,14 +563,17 @@ class QtDebugLogger:
         """Sync Qt logger level with current configuration."""
         qt_level = 'DEBUG'  # Default value
         try:
-            if config and hasattr(config, 'get'):
-                qt_level = config.get('logging.qt_level', 'DEBUG')
+            if config and hasattr(config, 'config'):
+                qt_level = config.config.get('logging.qt_level', 'DEBUG')
         except:
             pass
         
         # Convert to numeric level and set
         qt_level_numeric = _get_numeric_level(qt_level)
         self.logger.setLevel(qt_level_numeric)
+        
+        # Store qt_level for use in logging methods
+        self.qt_level_numeric = qt_level_numeric
 
 # Global Qt debug logger instance (created lazily)
 _qt_logger_instance = None
@@ -599,8 +606,8 @@ def sync_qt_logger_levels():
     try:
         # Get qt_level from configuration
         qt_level = 'DEBUG'  # Default value
-        if config and hasattr(config, 'get'):
-            qt_level = config.get('logging.qt_level', 'DEBUG')
+        if config and hasattr(config, 'config'):
+            qt_level = config.config.get('logging.qt_level', 'DEBUG')
         
         # Convert to numeric level
         qt_level_numeric = _get_numeric_level(qt_level)
@@ -684,8 +691,8 @@ def qt_message_handler(mode, context, message):
     # Set Qt system logger level based on qt_level configuration
     try:
         qt_level = 'DEBUG'  # Default value
-        if config and hasattr(config, 'get'):
-            qt_level = config.get('logging.qt_level', 'DEBUG')
+        if config and hasattr(config, 'config'):
+            qt_level = config.config.get('logging.qt_level', 'DEBUG')
         
         # Convert to numeric level and set
         qt_level_numeric = _get_numeric_level(qt_level)
