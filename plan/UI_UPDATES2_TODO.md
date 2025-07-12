@@ -20,16 +20,18 @@ Ready to add new UI update items as they are described.
   - [ ] **Visual Indication System**:
     - [ ] Implement yellow box/outline rendering for settings loaded from storage
     - [ ] **Widget-specific visual feedback**:
-      - [ ] **Checkbox**: Yellow outline around checkbox only (not label)
-      - [ ] **Spin widget**: Yellow outline around spin control only (not label)  
-      - [ ] **Menu/ComboBox**: Yellow outline around dropdown only (not label)
-      - [ ] **Text fields**: Yellow outline around text input only (not label)
+      - [ ] **Checkbox**: Light blue fill for the checkbox. The cross is rendered on top of the blue.
+      - [ ] **Spin widget**: Light blue fill for the spinbox background.
+      - [ ] **Menu/ComboBox**: Either a light blue outline around the widgit or render the widgit in light blue. Create both so we can determine which works best in practice. 
+      - [ ] **Text fields**: Light blue fill for the field background.
     - [ ] **Technical Implementation**:
-      - [ ] Research alternatives to stylesheets for widget outlining
+      - [ ] Value of the light blue is #547699. It should be store in the constants.py
+      - [ ] Value should not be hard coded into the widget, when creating a widget allow it's highlight colour to be set. We may use different highlight colours at different parts of the UI.
       - [ ] Investigate custom painting approaches (paintEvent override)
       - [ ] Consider QFrame/border-based solutions
       - [ ] Test widget-specific decoration methods
       - [ ] Implement visual state tracking (stored vs default values)
+      - [ ] Create custom widget Classes. Eg HighlightableCheckbox, HighlightableSpinbox, HighlightableDropdown, BorderedDropdown (the capitalization maynot be correct, use what is the QT standard)
   - [ ] **Integration Points**:
     - [ ] Hook into existing storage system to detect "loaded from storage" state
     - [ ] Add visual state management for each widget
