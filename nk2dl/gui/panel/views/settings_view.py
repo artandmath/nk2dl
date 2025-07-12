@@ -235,7 +235,7 @@ class SettingsView(QtWidgets.QWidget):
         job_main_layout.addWidget(divider)
         
         # Job organization checkboxes
-        # Row 1: Write nodes as separate jobs
+        # Row 1: Write nodes as separate jobs + Views as separate jobs
         job_org_row1 = QtWidgets.QHBoxLayout()
         job_org_row1.setSpacing(10)
         
@@ -246,24 +246,16 @@ class SettingsView(QtWidgets.QWidget):
         self.separate_jobs_check = QtWidgets.QCheckBox("Write nodes as separate jobs")
         self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
         job_org_row1.addWidget(self.separate_jobs_check)
-        job_org_row1.addStretch()
         
-        job_main_layout.addLayout(job_org_row1)
-        
-        # Row 1.5: Views as separate jobs (aligned with other checkboxes)
-        job_org_row1_5 = QtWidgets.QHBoxLayout()
-        job_org_row1_5.setSpacing(10)
-        
-        empty_label3_5 = QtWidgets.QLabel("")
-        empty_label3_5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_org_row1_5.addWidget(empty_label3_5)
+        # Add some spacing between the two checkboxes
+        job_org_row1.addSpacing(20)
         
         self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
         self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
-        job_org_row1_5.addWidget(self.views_separate_jobs_check)
-        job_org_row1_5.addStretch()
+        job_org_row1.addWidget(self.views_separate_jobs_check)
+        job_org_row1.addStretch()
         
-        job_main_layout.addLayout(job_org_row1_5)
+        job_main_layout.addLayout(job_org_row1)
         
         # Row 2: Render order dependencies
         job_org_row2 = QtWidgets.QHBoxLayout()
@@ -717,12 +709,6 @@ class SettingsView(QtWidgets.QWidget):
             # Enable/disable the text box based on the mode
             is_editable = self.settings_model.is_frame_range_editable(mode)
             self.frame_range_edit.setEnabled(is_editable)
-            
-            # Apply visual styling for non-editable state
-            if not is_editable:
-                self.frame_range_edit.setStyleSheet("QLineEdit { background-color: #f0f0f0; color: #666666; }")
-            else:
-                self.frame_range_edit.setStyleSheet("")  # Reset to default
                 
         finally:
             self.frame_range_edit.blockSignals(False)
@@ -765,16 +751,17 @@ class SettingsView(QtWidgets.QWidget):
                 self._set_checkbox_state(self.render_order_dependencies_check, True, None)  # Keep current state
                 
             else:
-                # When "separate jobs" is not enabled, disable views and render order, enable separate tasks
+                # When neither is enabled, enable all checkboxes
                 self._set_checkbox_state(self.separate_tasks_check, True, None)  # Keep current state
-                self._set_checkbox_state(self.views_separate_jobs_check, False, False)
-                self._set_checkbox_state(self.render_order_dependencies_check, False, False)
+                self._set_checkbox_state(self.separate_jobs_check, True, None)  # Keep current state
+                self._set_checkbox_state(self.views_separate_jobs_check, False, False)  # Disable views (depends on separate_jobs)
+                self._set_checkbox_state(self.render_order_dependencies_check, False, False)  # Disable render order (depends on separate_jobs)
                 
         finally:
             self._block_checkbox_signals(False)
     
     def _set_checkbox_state(self, checkbox, enabled, checked=None):
-        """Set checkbox enabled state and optionally checked state with visual styling.
+        """Set checkbox enabled state and optionally checked state.
         
         Args:
             checkbox: The checkbox widget
@@ -785,20 +772,6 @@ class SettingsView(QtWidgets.QWidget):
         
         if checked is not None:
             checkbox.setChecked(checked)
-        
-        # Apply visual styling for disabled state
-        if not enabled:
-            checkbox.setStyleSheet("""
-                QCheckBox {
-                    color: #666666;
-                    text-decoration: line-through;
-                }
-                QCheckBox::indicator:disabled {
-                    background-color: #f0f0f0;
-                }
-            """)
-        else:
-            checkbox.setStyleSheet("")  # Reset to default
     
     def _block_checkbox_signals(self, block):
         """Block or unblock signals for checkbox controls only."""
