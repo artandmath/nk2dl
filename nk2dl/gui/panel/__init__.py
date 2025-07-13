@@ -985,6 +985,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     if hasattr(self.settings_view, 'separate_tasks_check'):
                         ui_state['write_nodes_as_tasks'] = self.settings_view.separate_tasks_check.isChecked()
                     
+                    if hasattr(self.settings_view, 'render_order_dependencies_check'):
+                        ui_state['render_order_dependencies'] = self.settings_view.render_order_dependencies_check.isChecked()
+                    
                     # NOTE: views_as_separate_jobs is not yet implemented in NukeSubmission
                     # Commenting out for now to avoid submission errors
                     # if hasattr(self.settings_view, 'views_separate_jobs_check'):
