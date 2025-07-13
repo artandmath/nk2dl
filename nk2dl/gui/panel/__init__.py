@@ -362,7 +362,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         return
                     
                     # Start progress indication
-                    self.progress_manager.start_operation("Loading Deadline resources", indeterminate=True)
+                    self.progress_manager.start_operation("Fetching Deadline Pools and Groups", indeterminate=True)
                     
                     # Populate initial values first
                     self._populate_initial_pool_group_values()
@@ -557,16 +557,17 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_deadline_resource_progress(self, message):
                 """Handle Deadline resource loading progress."""
                 logger.debug(f"Deadline resource progress: {message}")
-                # Update progress bar status message
+                # Update progress bar status message without changing progress value
+                # to maintain indeterminate mode (crawling zebra pattern)
                 if hasattr(self, 'progress_manager') and self.progress_manager.is_busy():
-                    self.progress_manager.update_progress(0, message)
+                    self.progress_manager.update_status_message(message)
             
             def _on_deadline_resource_finished(self):
                 """Handle Deadline resource loading completion."""
                 logger.info("Deadline resource loading finished")
-                # Finish progress indication
+                # Finish progress indication with auto-reset to "Ready"
                 if hasattr(self, 'progress_manager'):
-                    self.progress_manager.finish_operation(success=True, final_message="Deadline resources loaded")
+                    self.progress_manager.finish_operation(success=True, final_message="Deadline resources loaded", auto_reset_delay=500)
                 # Clean up worker reference
                 if hasattr(self, '_deadline_resource_worker'):
                     self._deadline_resource_worker = None

@@ -120,6 +120,25 @@ class PanelProgressManager:
         
         logger.debug(f"Progress updated: {progress_percent}% - {status_message}")
     
+    def update_status_message(self, status_message: str):
+        """Update only the status message without affecting progress bar.
+        
+        This is useful for indeterminate operations where you want to update
+        the status message but keep the crawling zebra pattern.
+        
+        Args:
+            status_message: Status message to display
+        """
+        if not self._is_busy:
+            logger.warning("Updating status message when no operation is active")
+            return
+        
+        # Update only the status message
+        if self.info_label and status_message:
+            self.info_label.setText(status_message)
+        
+        logger.debug(f"Status message updated: {status_message}")
+    
     def finish_operation(self, success: bool = True, final_message: str = "", 
                         auto_reset_delay: int = Timing.PROGRESS_SUCCESS_DELAY):
         """Finish the progress operation.
