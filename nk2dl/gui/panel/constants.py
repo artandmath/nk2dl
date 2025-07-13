@@ -531,7 +531,7 @@ class ValidationRules:
     MAX_TASK_TIMEOUT = 999
     
     # Machine settings validation
-    MIN_THREADS = 1
+    MIN_THREADS = 0  # 0 means use as many threads as allowed by Nuke
     MAX_THREADS = 64
     MIN_RAM = 0
     MAX_RAM_MIN = 64
@@ -1099,7 +1099,7 @@ class DefaultValues:
         "pool": "none",
         "secondary_pool": "none",
         "group": "none",
-        "threads": 4,
+        "threads": 0,
         "stack_size": 0,
         "ram_use": 0,
         "use_gpu": False,
@@ -1115,7 +1115,7 @@ class DefaultValues:
         "pool": "comp",
         "secondary_pool": "",
         "group": "none",
-        "threads": 4,
+        "threads": 0,
         "stack_size": 0,
         "ram_use": 0,
         "gpu_override": 0,
