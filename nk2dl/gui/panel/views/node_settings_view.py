@@ -666,7 +666,7 @@ class NodeSettingsView(QtWidgets.QWidget):
                 qt_logger.debug(f"☑️ Checkbox changed: row={row}, new_value={model_value}")
                 
                 # For checkboxes, always save to storage (this is an intentional user action)
-                self.table_model.set_cell_value(row, col, model_value, emit_signal=False)
+                self.table_model.set_cell_value(row, col, model_value, emit_signal=True)
                 
                 # Update the item's user data
                 item.setData(QtCore.Qt.UserRole, model_value)

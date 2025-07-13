@@ -968,14 +968,24 @@ class TableDataModel(QtCore.QObject):
             render_list = node_overrides.get('_render', [])
             
             if isinstance(render_list, list):
-                # Convert list of selected nodes back to dict format
-                # All nodes in the list are selected (True), others default to False
-                render_selections = {}
-                for row_data in self._data:
-                    node_name = row_data.get('Node', '')
-                    if node_name:
-                        render_selections[node_name] = node_name in render_list
-                return render_selections
+                if len(render_list) == 0:
+                    # Empty _render list means "render all nodes" (optimization)
+                    from ....common.logging import qt_logger
+                    qt_logger.debug("💾 Empty _render list found - all nodes should be selected")
+                    render_selections = {}
+                    for row_data in self._data:
+                        node_name = row_data.get('Node', '')
+                        if node_name:
+                            render_selections[node_name] = True  # All nodes selected
+                    return render_selections
+                else:
+                    # Non-empty list - only listed nodes are selected
+                    render_selections = {}
+                    for row_data in self._data:
+                        node_name = row_data.get('Node', '')
+                        if node_name:
+                            render_selections[node_name] = node_name in render_list
+                    return render_selections
             else:
                 # No stored render selections or wrong format, return empty dict (will default to True)
                 return {}
@@ -994,18 +1004,32 @@ class TableDataModel(QtCore.QObject):
         try:
             # Collect only the nodes that are selected for rendering
             selected_nodes = []
+            total_nodes = 0
             for row_data in self._data:
                 node_name = row_data.get('Node', '')
                 is_selected = row_data.get('Render', True)
-                if node_name and is_selected:
-                    selected_nodes.append(node_name)
+                if node_name:
+                    total_nodes += 1
+                    if is_selected:
+                        selected_nodes.append(node_name)
             
             from ....common.logging import qt_logger
-            qt_logger.debug(f"💾 Saving selected render nodes to storage: {selected_nodes}")
             
-            # Load current overrides and add/update the _render list directly
-            node_overrides = self._settings_storage.load_node_overrides()
-            node_overrides['_render'] = selected_nodes
+            # Optimization: If all nodes are selected, don't store the _render list
+            # An empty _render list means "render all nodes"
+            if len(selected_nodes) == total_nodes and total_nodes > 0:
+                # All nodes are selected - remove _render entry to indicate "render all"
+                node_overrides = self._settings_storage.load_node_overrides()
+                if '_render' in node_overrides:
+                    del node_overrides['_render']
+                    qt_logger.debug("💾 All nodes selected - removing _render entry (render all)")
+                else:
+                    qt_logger.debug("💾 All nodes selected - no _render entry needed (render all)")
+            else:
+                # Some nodes are not selected - store the list of selected nodes
+                qt_logger.debug(f"💾 Saving selected render nodes to storage: {selected_nodes}")
+                node_overrides = self._settings_storage.load_node_overrides()
+                node_overrides['_render'] = selected_nodes
             
             # Save the updated overrides
             success = self._settings_storage.save_node_overrides(node_overrides)
