@@ -361,6 +361,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         logger.debug("Deadline resource loading already in progress")
                         return
                     
+                    # Start progress indication
+                    self.progress_manager.start_operation("Loading Deadline resources", indeterminate=True)
+                    
                     # Populate initial values first
                     self._populate_initial_pool_group_values()
                     
@@ -388,6 +391,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     
                 except Exception as e:
                     logger.error(f"Error starting Deadline resource loading: {e}", exc_info=True)
+                    # Finish progress on error
+                    self.progress_manager.finish_operation(success=False, final_message="Failed to start Deadline resource loading")
                     # Use fallback values on error
                     self._use_fallback_resources()
             
@@ -543,16 +548,25 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_deadline_resource_error(self, error_msg):
                 """Handle Deadline resource loading errors."""
                 logger.warning(f"Deadline resource loading failed: {error_msg}")
+                # Finish progress indication with error
+                if hasattr(self, 'progress_manager'):
+                    self.progress_manager.finish_operation(success=False, final_message=f"Deadline connection failed: {error_msg}")
                 # Use fallback values
                 self._use_fallback_resources()
             
             def _on_deadline_resource_progress(self, message):
                 """Handle Deadline resource loading progress."""
                 logger.debug(f"Deadline resource progress: {message}")
+                # Update progress bar status message
+                if hasattr(self, 'progress_manager') and self.progress_manager.is_busy():
+                    self.progress_manager.update_progress(0, message)
             
             def _on_deadline_resource_finished(self):
                 """Handle Deadline resource loading completion."""
                 logger.info("Deadline resource loading finished")
+                # Finish progress indication
+                if hasattr(self, 'progress_manager'):
+                    self.progress_manager.finish_operation(success=True, final_message="Deadline resources loaded")
                 # Clean up worker reference
                 if hasattr(self, '_deadline_resource_worker'):
                     self._deadline_resource_worker = None
