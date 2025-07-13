@@ -362,7 +362,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         threads_row.addWidget(threads_label)
         
         self.threads_spin = HighlightableSpinBox()
-        self.threads_spin.setMinimum(1)
+        self.threads_spin.setMinimum(0)
         self.threads_spin.setMaximum(64)
         self.threads_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.threads_spin.setToolTip("The number of threads to use for rendering. Set to 0 to have Nuke automatically determine the optimal thread count.")
@@ -949,22 +949,34 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             # Get updated pool options
             pool_options = Settings.get_pool_options()
             
-            # Update primary pool dropdown
-            self.pool_combo.clear()
-            self.pool_combo.addItems(pool_options)
+            # Block signals and disable change tracking during refresh
+            self.pool_combo.blockSignals(True)
+            self.secondary_pool_combo.blockSignals(True)
+            self.settings_model.disable_user_change_tracking()
             
-            # Update secondary pool dropdown (includes empty option)
-            self.secondary_pool_combo.clear()
-            self.secondary_pool_combo.addItems([""] + pool_options)
-            
-            # Restore selections if they still exist
-            if current_pool in pool_options:
-                self.pool_combo.setCurrentText(current_pool)
-            
-            if current_secondary in ([""] + pool_options):
-                self.secondary_pool_combo.setCurrentText(current_secondary)
-            
-            logger.info(f"Pool dropdowns refreshed with {len(pool_options)} options")
+            try:
+                # Update primary pool dropdown
+                self.pool_combo.clear()
+                self.pool_combo.addItems(pool_options)
+                
+                # Update secondary pool dropdown (includes empty option)
+                self.secondary_pool_combo.clear()
+                self.secondary_pool_combo.addItems([""] + pool_options)
+                
+                # Restore selections if they still exist
+                if current_pool in pool_options:
+                    self.pool_combo.setCurrentText(current_pool)
+                
+                if current_secondary in ([""] + pool_options):
+                    self.secondary_pool_combo.setCurrentText(current_secondary)
+                
+                logger.info(f"Pool dropdowns refreshed with {len(pool_options)} options")
+                
+            finally:
+                # Re-enable signals and change tracking
+                self.pool_combo.blockSignals(False)
+                self.secondary_pool_combo.blockSignals(False)
+                self.settings_model.enable_user_change_tracking()
             
         except Exception as e:
             logger.error(f"Error refreshing pool dropdowns: {e}", exc_info=True)
@@ -978,15 +990,25 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             # Get updated group options
             group_options = Settings.get_group_options()
             
-            # Update group dropdown
-            self.group_combo.clear()
-            self.group_combo.addItems(group_options)
+            # Block signals and disable change tracking during refresh
+            self.group_combo.blockSignals(True)
+            self.settings_model.disable_user_change_tracking()
             
-            # Restore selection if it still exists
-            if current_group in group_options:
-                self.group_combo.setCurrentText(current_group)
-            
-            logger.info(f"Group dropdown refreshed with {len(group_options)} options")
+            try:
+                # Update group dropdown
+                self.group_combo.clear()
+                self.group_combo.addItems(group_options)
+                
+                # Restore selection if it still exists
+                if current_group in group_options:
+                    self.group_combo.setCurrentText(current_group)
+                
+                logger.info(f"Group dropdown refreshed with {len(group_options)} options")
+                
+            finally:
+                # Re-enable signals and change tracking
+                self.group_combo.blockSignals(False)
+                self.settings_model.enable_user_change_tracking()
             
         except Exception as e:
             logger.error(f"Error refreshing group dropdown: {e}", exc_info=True)

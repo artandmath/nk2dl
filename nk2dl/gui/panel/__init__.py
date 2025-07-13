@@ -418,24 +418,42 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _set_initial_selections(self, pool: str, group: str):
                 """Set initial dropdown selections."""
                 try:
-                    # Update settings model if available
-                    if hasattr(self, 'settings_model') and self.settings_model:
-                        if pool and pool != 'none':
-                            self.settings_model.set_machine_setting('pool', pool)
-                        if group and group != 'none':
-                            self.settings_model.set_machine_setting('group', group)
-                    
-                    # Update UI if available
+                    # Block signals and disable change tracking during initial selection
                     if hasattr(self, 'settings_view') and self.settings_view:
-                        if pool and pool != 'none':
-                            pool_index = self.settings_view.pool_combo.findText(pool)
-                            if pool_index >= 0:
-                                self.settings_view.pool_combo.setCurrentIndex(pool_index)
+                        self.settings_view.pool_combo.blockSignals(True)
+                        self.settings_view.group_combo.blockSignals(True)
                         
-                        if group and group != 'none':
-                            group_index = self.settings_view.group_combo.findText(group)
-                            if group_index >= 0:
-                                self.settings_view.group_combo.setCurrentIndex(group_index)
+                    if hasattr(self, 'settings_model') and self.settings_model:
+                        self.settings_model.disable_user_change_tracking()
+                    
+                    try:
+                        # Update settings model if available
+                        if hasattr(self, 'settings_model') and self.settings_model:
+                            if pool and pool != 'none':
+                                self.settings_model.set_machine_setting('pool', pool)
+                            if group and group != 'none':
+                                self.settings_model.set_machine_setting('group', group)
+                        
+                        # Update UI if available
+                        if hasattr(self, 'settings_view') and self.settings_view:
+                            if pool and pool != 'none':
+                                pool_index = self.settings_view.pool_combo.findText(pool)
+                                if pool_index >= 0:
+                                    self.settings_view.pool_combo.setCurrentIndex(pool_index)
+                            
+                            if group and group != 'none':
+                                group_index = self.settings_view.group_combo.findText(group)
+                                if group_index >= 0:
+                                    self.settings_view.group_combo.setCurrentIndex(group_index)
+                    
+                    finally:
+                        # Re-enable signals and change tracking
+                        if hasattr(self, 'settings_view') and self.settings_view:
+                            self.settings_view.pool_combo.blockSignals(False)
+                            self.settings_view.group_combo.blockSignals(False)
+                            
+                        if hasattr(self, 'settings_model') and self.settings_model:
+                            self.settings_model.enable_user_change_tracking()
                     
                 except Exception as e:
                     logger.error(f"Error setting initial selections: {e}", exc_info=True)
