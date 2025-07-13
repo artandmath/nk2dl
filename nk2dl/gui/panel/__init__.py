@@ -75,6 +75,7 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
         from pathlib import Path
         import threading
         from queue import Queue
+        from typing import Optional, Dict, Any
 
         class ConsoleLogHandler(logging.Handler):
             """Custom logging handler that redirects log messages to the console widget using Qt signals."""
@@ -393,13 +394,21 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _populate_initial_pool_group_values(self):
                 """Populate initial pool/group values before Deadline fetch."""
                 try:
-                    # 1. Try storage first
-                    stored_pool = self.settings_storage.get_stored_pool_default()
-                    stored_group = self.settings_storage.get_stored_group_default()
+                    # 1. Try storage first - load all settings once to avoid multiple calls
+                    all_settings = self.settings_storage.load_all_settings()
+                    global_settings = all_settings.get('global_settings', {})
                     
+                    stored_pool = global_settings.get('pool')
+                    stored_group = global_settings.get('group')
+                    
+                    # Check if we have any stored preferences
                     if stored_pool or stored_group:
-                        logger.info(f"Using stored preferences - pool: {stored_pool}, group: {stored_group}")
-                        self._set_initial_selections(stored_pool, stored_group)
+                        # Use stored values if available, otherwise use 'none'
+                        pool_value = stored_pool if stored_pool and stored_pool != 'none' else 'none'
+                        group_value = stored_group if stored_group and stored_group != 'none' else 'none'
+                        
+                        logger.info(f"Using stored preferences - pool: {pool_value}, group: {group_value}")
+                        self._set_initial_selections(pool_value, group_value, global_settings)
                         return
                     
                     # 2. Try config defaults
@@ -408,19 +417,20 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     config_group = config.get('submission.group', 'none')
                     
                     logger.info(f"Using config defaults - pool: {config_pool}, group: {config_group}")
-                    self._set_initial_selections(config_pool, config_group)
+                    self._set_initial_selections(config_pool, config_group, None)
                     
                 except Exception as e:
                     logger.error(f"Error populating initial pool/group values: {e}", exc_info=True)
                     # Use fallback values
-                    self._set_initial_selections('none', 'none')
+                    self._set_initial_selections('none', 'none', None)
             
-            def _set_initial_selections(self, pool: str, group: str):
+            def _set_initial_selections(self, pool: str, group: str, global_settings: Optional[Dict[str, Any]] = None):
                 """Set initial dropdown selections."""
                 try:
                     # Block signals and disable change tracking during initial selection
                     if hasattr(self, 'settings_view') and self.settings_view:
                         self.settings_view.pool_combo.blockSignals(True)
+                        self.settings_view.secondary_pool_combo.blockSignals(True)
                         self.settings_view.group_combo.blockSignals(True)
                         
                     if hasattr(self, 'settings_model') and self.settings_model:
@@ -436,20 +446,62 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         
                         # Update UI if available
                         if hasattr(self, 'settings_view') and self.settings_view:
+                            # Handle pool selection
                             if pool and pool != 'none':
                                 pool_index = self.settings_view.pool_combo.findText(pool)
+                                if pool_index < 0:
+                                    # Pool value not found in dropdown, temporarily add it
+                                    logger.info(f"Adding stored pool '{pool}' to dropdown temporarily")
+                                    self.settings_view.pool_combo.addItem(pool)
+                                    pool_index = self.settings_view.pool_combo.findText(pool)
+                                
                                 if pool_index >= 0:
                                     self.settings_view.pool_combo.setCurrentIndex(pool_index)
+                                    logger.info(f"Set pool dropdown to stored value: {pool}")
                             
+                            # Handle group selection  
                             if group and group != 'none':
                                 group_index = self.settings_view.group_combo.findText(group)
+                                if group_index < 0:
+                                    # Group value not found in dropdown, temporarily add it
+                                    logger.info(f"Adding stored group '{group}' to dropdown temporarily")
+                                    self.settings_view.group_combo.addItem(group)
+                                    group_index = self.settings_view.group_combo.findText(group)
+                                
                                 if group_index >= 0:
                                     self.settings_view.group_combo.setCurrentIndex(group_index)
+                                    logger.info(f"Set group dropdown to stored value: {group}")
+                            
+                            # For secondary pool, we need to handle the stored value if it exists
+                            # Get secondary pool from provided global_settings if available
+                            try:
+                                stored_secondary_pool = None
+                                if global_settings:
+                                    stored_secondary_pool = global_settings.get('secondary_pool')
+                                
+                                if stored_secondary_pool and stored_secondary_pool != '':
+                                    secondary_pool_index = self.settings_view.secondary_pool_combo.findText(stored_secondary_pool)
+                                    if secondary_pool_index < 0:
+                                        # Secondary pool value not found, temporarily add it
+                                        logger.info(f"Adding stored secondary pool '{stored_secondary_pool}' to dropdown temporarily")
+                                        self.settings_view.secondary_pool_combo.addItem(stored_secondary_pool)
+                                        secondary_pool_index = self.settings_view.secondary_pool_combo.findText(stored_secondary_pool)
+                                    
+                                    if secondary_pool_index >= 0:
+                                        self.settings_view.secondary_pool_combo.setCurrentIndex(secondary_pool_index)
+                                        logger.info(f"Set secondary pool dropdown to stored value: {stored_secondary_pool}")
+                                        
+                                        # Also update the settings model
+                                        if hasattr(self, 'settings_model') and self.settings_model:
+                                            self.settings_model.set_machine_setting('secondary_pool', stored_secondary_pool)
+                            except Exception as e:
+                                logger.debug(f"No stored secondary pool found or error loading: {e}")
                     
                     finally:
                         # Re-enable signals and change tracking
                         if hasattr(self, 'settings_view') and self.settings_view:
                             self.settings_view.pool_combo.blockSignals(False)
+                            self.settings_view.secondary_pool_combo.blockSignals(False)
                             self.settings_view.group_combo.blockSignals(False)
                             
                         if hasattr(self, 'settings_model') and self.settings_model:

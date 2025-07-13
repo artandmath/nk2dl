@@ -963,12 +963,25 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
                 self.secondary_pool_combo.clear()
                 self.secondary_pool_combo.addItems([""] + pool_options)
                 
-                # Restore selections if they still exist
-                if current_pool in pool_options:
-                    self.pool_combo.setCurrentText(current_pool)
+                # Restore selections, adding them temporarily if they don't exist in pool_options
+                if current_pool:
+                    if current_pool in pool_options:
+                        self.pool_combo.setCurrentText(current_pool)
+                    else:
+                        # Current pool not in new options, add it temporarily
+                        logger.info(f"Adding missing pool '{current_pool}' to dropdown temporarily")
+                        self.pool_combo.addItem(current_pool)
+                        self.pool_combo.setCurrentText(current_pool)
                 
-                if current_secondary in ([""] + pool_options):
-                    self.secondary_pool_combo.setCurrentText(current_secondary)
+                if current_secondary:
+                    secondary_options = [""] + pool_options
+                    if current_secondary in secondary_options:
+                        self.secondary_pool_combo.setCurrentText(current_secondary)
+                    else:
+                        # Current secondary pool not in new options, add it temporarily
+                        logger.info(f"Adding missing secondary pool '{current_secondary}' to dropdown temporarily")
+                        self.secondary_pool_combo.addItem(current_secondary)
+                        self.secondary_pool_combo.setCurrentText(current_secondary)
                 
                 logger.info(f"Pool dropdowns refreshed with {len(pool_options)} options")
                 
@@ -999,9 +1012,15 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
                 self.group_combo.clear()
                 self.group_combo.addItems(group_options)
                 
-                # Restore selection if it still exists
-                if current_group in group_options:
-                    self.group_combo.setCurrentText(current_group)
+                # Restore selection, adding it temporarily if it doesn't exist in group_options
+                if current_group:
+                    if current_group in group_options:
+                        self.group_combo.setCurrentText(current_group)
+                    else:
+                        # Current group not in new options, add it temporarily
+                        logger.info(f"Adding missing group '{current_group}' to dropdown temporarily")
+                        self.group_combo.addItem(current_group)
+                        self.group_combo.setCurrentText(current_group)
                 
                 logger.info(f"Group dropdown refreshed with {len(group_options)} options")
                 
