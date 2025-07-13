@@ -404,6 +404,9 @@ def _reset_control_to_default(control_name: str) -> None:
         widget.setStyleSheet(defaults['style'])
         _set_widget_value(widget, defaults['value'])
         
+        # INTEGRATION: Remove from user-changed tracking and update storage
+        _remove_from_user_changed_tracking(control_name)
+        
         # Log final state
         logger.debug(f"  After reset - visible: {widget.isVisible()}, enabled: {widget.isEnabled()}")
         
@@ -413,6 +416,97 @@ def _reset_control_to_default(control_name: str) -> None:
         logger.error(f"Error resetting control {control_name}: {e}")
         import traceback
         logger.debug(f"Reset error traceback: {traceback.format_exc()}")
+
+
+def _remove_from_user_changed_tracking(control_name: str) -> None:
+    """Remove a control from user-changed tracking and update storage.
+    
+    Args:
+        control_name: The control name to remove from tracking
+    """
+    try:
+        # Find the panel instance to access the settings model
+        panel = _get_panel_instance()
+        if not panel:
+            logger.warning("Could not find panel instance for user-changed tracking")
+            return
+        
+        # Map control name to parameter name (they're usually the same but let's be explicit)
+        param_name = _get_parameter_name_from_control_name(control_name)
+        
+        # Remove from settings model user-changed tracking
+        if hasattr(panel, 'settings_model') and panel.settings_model:
+            panel.settings_model.mark_as_reset_to_default(param_name)
+            logger.debug(f"Removed {param_name} from settings model user-changed tracking")
+        
+        # Trigger save to storage to update YAML
+        if hasattr(panel, '_on_settings_changed_save_to_storage'):
+            panel._on_settings_changed_save_to_storage()
+            logger.debug(f"Triggered storage save after resetting {control_name}")
+        
+        # Refresh visual indications after a short delay to ensure storage save completes
+        def refresh_visual_indications():
+            try:
+                if hasattr(panel, '_refresh_all_visual_indications'):
+                    panel._refresh_all_visual_indications()
+                    logger.debug(f"Refreshed visual indications after resetting {control_name}")
+            except Exception as e:
+                logger.error(f"Error refreshing visual indications: {e}")
+        
+        # Use QTimer to delay the refresh
+        QtCore.QTimer.singleShot(100, refresh_visual_indications)
+        
+    except Exception as e:
+        logger.error(f"Error removing {control_name} from user-changed tracking: {e}")
+
+
+def _get_parameter_name_from_control_name(control_name: str) -> str:
+    """Map control name to parameter name for user-changed tracking.
+    
+    Args:
+        control_name: The control name used in the config system
+        
+    Returns:
+        The parameter name used in the settings model
+    """
+    # Mapping from control names to parameter names
+    control_to_param = {
+        'priority': 'priority',
+        'chunk_size': 'chunk_size',
+        'frames': 'frames_mode',  # Special case - frames control maps to frames_mode param
+        'frame_range': 'frames',  # Special case - frame_range control maps to frames param
+        'use_node_frame_list': 'use_node_frame_list',
+        'task_timeout': 'task_timeout',
+        'enable_auto_timeout': 'enable_auto_timeout',
+        'render_mode': 'render_mode',
+        'render_nukex': 'use_nuke_x',
+        'use_batch_mode': 'batch_mode',
+        'reload_plugin': 'reload_plugins',
+        'separate_tasks': 'separate_tasks',
+        'separate_jobs': 'separate_jobs',
+        'render_order_dependencies': 'render_order_dependencies',
+        'views_separate_jobs': 'views_separate_jobs',
+        'pool': 'pool',
+        'secondary_pool': 'secondary_pool',
+        'group': 'group',
+        'threads': 'threads',
+        'min_ram': 'stack_size',
+        'max_ram': 'ram_use',
+        'gpu_override': 'gpu_override',
+        'use_gpu': 'use_gpu',
+        'concurrent_tasks': 'concurrent_tasks',
+        'limit_tasks': 'limit_worker_tasks',
+        'machine_limit': 'machine_limit',
+        'machine_deny_list': 'machine_deny_list',
+        'machine_list': 'machine_list',
+        'limits': 'limit_groups',
+        'job_name': 'job_name',
+        'comment': 'comment',
+        'department': 'department'
+    }
+    
+    # Return mapped parameter name or fall back to control name if no mapping exists
+    return control_to_param.get(control_name, control_name)
 
 
 def _reset_group_to_default(group_name: str) -> None:
