@@ -605,12 +605,36 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         logger.info(f"Loaded {len(user_changed_settings)} user-changed settings from storage")
                     else:
                         logger.debug("No user-changed settings found in storage, using config defaults")
+                    
+                    # Refresh views after loading settings
+                    self._refresh_views_after_storage_load()
                 
                 except Exception as e:
                     logger.error(f"Error loading user-changed settings from storage: {e}", exc_info=True)
                 finally:
                     # Always clear the flag
                     self._loading_from_storage = False
+            
+            def _refresh_views_after_storage_load(self):
+                """Refresh views after loading settings from storage."""
+                try:
+                    # Refresh settings view to show loaded values
+                    if hasattr(self.settings_view, '_load_settings_from_model'):
+                        self.settings_view._load_settings_from_model()
+                        logger.debug("Refreshed SettingsView after storage load")
+                    
+                    # Refresh extra settings view to show loaded values
+                    if hasattr(self.extra_settings_view, '_load_settings_from_model'):
+                        self.extra_settings_view._load_settings_from_model()
+                        logger.debug("Refreshed ExtraSettingsView after storage load")
+                    
+                    # Refresh visual indications to highlight user-changed settings
+                    self._refresh_all_visual_indications()
+                    
+                    logger.debug("Views refreshed after storage load")
+                    
+                except Exception as e:
+                    logger.error(f"Error refreshing views after storage load: {e}", exc_info=True)
             
             def _setup_storage_visual_indications(self):
                 """Set up storage visual indication for views that support it."""

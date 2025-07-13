@@ -120,6 +120,39 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
         logger.debug(f"User changed extra setting: {param_name} = {value}")
     
+    def _update_model_setting(self, param_name: str, value, setting_type: str) -> None:
+        """Update the settings model with a new value.
+        
+        This method is called by the WidgetChangeTrackingMixin.
+        
+        Args:
+            param_name: The parameter name
+            value: The new value
+            setting_type: 'job', 'machine', or 'extra' (always 'extra' for this view)
+        """
+        self.settings_model.set_extra_setting(param_name, value)
+    
+    def _handle_reset_value_update(self, param_name: str, value) -> None:
+        """Handle reset value update by updating the model.
+        
+        Args:
+            param_name: The parameter name
+            value: The reset value
+        """
+        # All parameters in ExtraSettingsView are extra settings
+        setting_type = 'extra'
+        
+        # Update model with reset value (not user-changed)
+        self.settings_model.disable_user_change_tracking()
+        try:
+            self._update_model_setting(param_name, value, setting_type)
+        finally:
+            self.settings_model.enable_user_change_tracking()
+        
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.debug(f"Reset {param_name} to default value: {value}")
+    
     def _load_settings_from_model(self):
         """Load current settings from the model into the UI."""
         # Block signals to prevent feedback loops
