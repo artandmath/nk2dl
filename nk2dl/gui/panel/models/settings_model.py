@@ -490,11 +490,15 @@ class SettingsModel(QtCore.QObject):
     def mark_as_reset_to_default(self, param_name: str) -> None:
         """Mark a parameter as reset to default (no longer user-changed).
         
+        This completely removes the parameter from user-changed tracking.
+        
         Args:
             param_name: The parameter name to mark as reset
         """
-        self._user_changed_settings[param_name] = False
-        logger.debug(f"Marked parameter {param_name} as reset to default")
+        # Remove the parameter completely from user-changed tracking
+        if param_name in self._user_changed_settings:
+            del self._user_changed_settings[param_name]
+        logger.debug(f"Removed parameter {param_name} from user-changed tracking (reset to default)")
     
     def is_user_changed(self, param_name: str) -> bool:
         """Check if a parameter has been changed by the user.

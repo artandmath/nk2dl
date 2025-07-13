@@ -453,10 +453,7 @@ class NodeSettingsStorage:
                     Storage.SETTINGS_KNOB_DISPLAY_NAME,
                     ""
                 )
-                # Make the knob not visible in the UI (it's for storage only)
-                settings_knob.setFlag(nuke.INVISIBLE)
-                # Make the knob visible in the UI for debugging purposes
-                settings_knob.setFlag(nuke.VISIBLE)
+                # Do not run the settings_knob.setFlag(nuke.INVISIBLE). It will make the knob invisible in the UI and is not reversible programmatically.
                 root_node.addKnob(settings_knob)
                 logger.debug(f"Created settings knob '{Storage.SETTINGS_KNOB_NAME}' on root node")
             

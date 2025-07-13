@@ -590,50 +590,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         elif setting_type == 'extra':
             self.settings_model.set_extra_setting(param_name, value)
     
-    def _handle_reset_value_update(self, param_name: str, value) -> None:
-        """Handle reset value update by determining the setting type and updating the model.
-        
-        Args:
-            param_name: The parameter name
-            value: The reset value
-        """
-        # Determine setting type based on parameter name
-        job_settings = ['priority', 'chunk_size', 'frames_mode', 'frames', 'use_node_frame_list',
-                       'task_timeout', 'enable_auto_timeout', 'render_mode', 'use_nuke_x',
-                       'batch_mode', 'reload_plugins', 'separate_tasks', 'separate_jobs',
-                       'render_order_dependencies', 'views_separate_jobs']
-        
-        machine_settings = ['pool', 'secondary_pool', 'group', 'threads', 'stack_size',
-                           'ram_use', 'use_gpu', 'gpu_override', 'concurrent_tasks',
-                           'limit_worker_tasks', 'machine_limit', 'machine_deny_list',
-                           'machine_list', 'limit_groups']
-        
-        extra_settings = ['job_name', 'comment', 'department']
-        
-        if param_name in job_settings:
-            setting_type = 'job'
-        elif param_name in machine_settings:
-            setting_type = 'machine'
-        elif param_name in extra_settings:
-            setting_type = 'extra'
-        else:
-            logger.warning(f"Unknown parameter type for reset: {param_name}")
-            return
-        
-        # Update model with reset value (not user-changed)
-        self.settings_model.disable_user_change_tracking()
-        try:
-            self._update_model_setting(param_name, value, setting_type)
-        finally:
-            self.settings_model.enable_user_change_tracking()
-        
-        # Handle special cases that need UI updates
-        if param_name == 'frames_mode':
-            self._update_frame_range_ui(value)
-        elif param_name == 'frames':
-            self.frame_range_edit.setText(str(value))
-        
-        logger.debug(f"Reset {param_name} to default value: {value}")
+
     
     def _load_settings_from_model(self):
         """Load current settings from the model into the UI."""

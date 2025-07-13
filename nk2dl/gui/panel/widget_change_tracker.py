@@ -108,11 +108,15 @@ class WidgetChangeTracker:
     def mark_as_reset_to_default(self, param_name: str) -> None:
         """Mark a parameter as reset to default (no longer user-changed).
         
+        This completely removes the parameter from user-changed tracking.
+        
         Args:
             param_name: The parameter name to mark as reset
         """
-        self._user_changed_settings[param_name] = False
-        logger.debug(f"Marked parameter {param_name} as reset to default")
+        # Remove the parameter completely from user-changed tracking
+        if param_name in self._user_changed_settings:
+            del self._user_changed_settings[param_name]
+        logger.debug(f"Removed parameter {param_name} from user-changed tracking (reset to default)")
     
     def mark_widget_as_reset_to_default(self, widget) -> None:
         """Mark a widget's parameter as reset to default.
@@ -413,14 +417,19 @@ class WidgetChangeTrackingMixin:
                 logger.warning(f"No default value found for parameter: {param_name}")
                 return
             
-            # Mark as reset in tracker
+            # Mark as reset in tracker (removes from user-changed tracking)
             self.widget_change_tracker.mark_as_reset_to_default(param_name)
             
             # Update the widget value
             self._set_widget_value(widget, default_value)
             
-            # Update the settings model
+            # Update the settings model (this will trigger save to storage)
             self._update_model_with_reset_value(param_name, default_value)
+            
+            # Refresh visual indication to remove highlighting with slight delay
+            # to ensure storage save completes first
+            if hasattr(self, 'refresh_widget_visual_indication'):
+                QtCore.QTimer.singleShot(50, lambda: self.refresh_widget_visual_indication(widget))
             
             logger.info(f"Reset {param_name} to default value: {default_value}")
             
@@ -461,17 +470,37 @@ class WidgetChangeTrackingMixin:
             value: The reset value
         """
         try:
-            # This method should be implemented by the concrete view class
-            # since it knows how to map parameters to model methods
+            # Remove from settings model user-changed tracking
             if hasattr(self, 'settings_model'):
                 self.settings_model.mark_as_reset_to_default(param_name)
             
-            # The concrete view should override this method to handle model updates
-            if hasattr(self, '_handle_reset_value_update'):
-                self._handle_reset_value_update(param_name, value)
+            # Don't update the model value - it already has the correct default
+            # Just trigger a manual save to update the storage YAML
+            self._trigger_manual_save_to_storage()
                 
         except Exception as e:
             logger.error(f"Error updating model with reset value: {e}")
+    
+    def _trigger_manual_save_to_storage(self) -> None:
+        """Manually trigger a save to storage to update YAML after reset.
+        
+        This bypasses the normal signal system to avoid re-marking parameters as user-changed.
+        """
+        try:
+            # Try to access the panel's storage save method directly
+            # Walk up the parent hierarchy to find the main panel
+            parent = self.parent()
+            while parent is not None:
+                if hasattr(parent, '_on_settings_changed_save_to_storage'):
+                    parent._on_settings_changed_save_to_storage()
+                    logger.debug("Triggered manual save to storage after reset")
+                    return
+                parent = parent.parent()
+            
+            logger.warning("Could not find panel to trigger manual save to storage")
+            
+        except Exception as e:
+            logger.error(f"Error triggering manual save to storage: {e}")
     
     def _on_user_changed_setting(self, param_name: str, value, setting_type: str = None) -> None:
         """Handle user changes to settings with tracking.
