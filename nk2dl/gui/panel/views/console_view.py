@@ -68,17 +68,39 @@ class ConsoleView(QtWidgets.QWidget):
         # Console output area
         self.console_output = QtWidgets.QTextEdit()
         self.console_output.setReadOnly(True)
+        
+        # Get Qt UI scale factor and apply it to font size
+        scale_factor = self._get_ui_scale_factor()
+        scaled_font_size = max(1, int(Fonts.CONSOLE_FONT_SIZE / scale_factor))
+        
         self.console_output.setStyleSheet(
             f"background-color: {Colors.CONSOLE_BACKGROUND}; "
             f"color: {Colors.CONSOLE_TEXT}; "
             f"font-family: {Fonts.CONSOLE_FONT_FAMILY}; "
-            f"font-size: {Fonts.CONSOLE_FONT_SIZE_PT};"
+            f"font-size: {scaled_font_size}pt;"
         )
         
         # Set initial content
         self._set_initial_content()
         
         layout.addWidget(self.console_output)
+    
+    def _get_ui_scale_factor(self):
+        """Get the Qt UI scale factor.
+        
+        Returns:
+            float: The UI scale factor (1.0 for normal scaling, higher for high DPI)
+        """
+        try:
+            # Get the device pixel ratio from the screen
+            screen = QtWidgets.QApplication.primaryScreen()
+            if screen:
+                return screen.devicePixelRatio()
+        except (AttributeError, RuntimeError):
+            pass
+        
+        # Fallback to 1.0 if we can't get the scale factor
+        return 1.0
     
     def _set_initial_content(self):
         """Set initial console content."""
