@@ -32,16 +32,20 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from ..widgets import ColoredGroupBox
+from ..widgets import (
+    ColoredGroupBox, HighlightableCheckBox, HighlightableSpinBox, 
+    HighlightableComboBox, HighlightableLineEdit
+)
 from ..constants import Settings, Sizes
 from ..config import apply_panel_config
+from ..storage_visual_indication import StorageVisualIndicationMixin
 from ....common.logging import setup_logging
 
 # Set up logger for this module
 logger = setup_logging(__name__)
 
 
-class SettingsView(QtWidgets.QWidget):
+class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
     """View for job and machine settings with responsive layout.
     
     This view handles the UI for job settings and machine settings sections,
@@ -60,6 +64,9 @@ class SettingsView(QtWidgets.QWidget):
         
         # Set up responsive resize handling
         self._setup_responsive_behavior()
+        
+        # Register widgets for visual indication
+        self._register_widgets_for_visual_indication()
     
     def _create_ui(self):
         """Create the settings UI components."""
@@ -99,7 +106,7 @@ class SettingsView(QtWidgets.QWidget):
         priority_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         priority_chunk_row.addWidget(priority_label)
         
-        self.priority_spin = QtWidgets.QSpinBox()
+        self.priority_spin = HighlightableSpinBox()
         self.priority_spin.setMinimum(0)
         self.priority_spin.setMaximum(100)
         self.priority_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
@@ -111,7 +118,7 @@ class SettingsView(QtWidgets.QWidget):
         chunk_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         priority_chunk_row.addWidget(chunk_label)
         
-        self.chunk_size_spin = QtWidgets.QSpinBox()
+        self.chunk_size_spin = HighlightableSpinBox()
         self.chunk_size_spin.setMinimum(1)
         self.chunk_size_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.chunk_size_spin.setToolTip("This is the number of frames that will be rendered at a time for each job task.")
@@ -130,13 +137,13 @@ class SettingsView(QtWidgets.QWidget):
         frames_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         frames_row.addWidget(frames_label)
         
-        self.frames_combo = QtWidgets.QComboBox()
+        self.frames_combo = HighlightableComboBox()
         self.frames_combo.addItems(Settings.FRAMES_OPTIONS)
         self.frames_combo.setFixedWidth(80)
         self.frames_combo.setToolTip("Select the Global, Input, or Custom frame list mode.")
         frames_row.addWidget(self.frames_combo)
         
-        self.frame_range_edit = QtWidgets.QLineEdit()
+        self.frame_range_edit = HighlightableLineEdit()
         self.frame_range_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
         self.frame_range_edit.setToolTip("If Custom frame list mode is selected, this is the list of frames to render.")
         frames_row.addWidget(self.frame_range_edit)
@@ -152,7 +159,7 @@ class SettingsView(QtWidgets.QWidget):
         empty_label1.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         node_frame_list_row.addWidget(empty_label1)
         
-        self.use_node_frame_list_check = QtWidgets.QCheckBox("Use node's frame list")
+        self.use_node_frame_list_check = HighlightableCheckBox("Use node's frame list")
         self.use_node_frame_list_check.setToolTip("If submitting each write node as a separate job, enable this to pull the frame range from the write node, instead of using the global frame range.")
         node_frame_list_row.addWidget(self.use_node_frame_list_check)
         node_frame_list_row.addStretch()
@@ -168,7 +175,7 @@ class SettingsView(QtWidgets.QWidget):
         timeout_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         timeout_row.addWidget(timeout_label)
         
-        self.task_timeout_spin = QtWidgets.QSpinBox()
+        self.task_timeout_spin = HighlightableSpinBox()
         self.task_timeout_spin.setMinimum(0)
         self.task_timeout_spin.setMaximum(999)
         self.task_timeout_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
@@ -179,7 +186,7 @@ class SettingsView(QtWidgets.QWidget):
         minutes_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         timeout_row.addWidget(minutes_label)
         
-        self.enable_auto_timeout_check = QtWidgets.QCheckBox("Enable auto task timeout")
+        self.enable_auto_timeout_check = HighlightableCheckBox("Enable auto task timeout")
         self.enable_auto_timeout_check.setToolTip("If the Auto Task Timeout is properly configured in the Repository Options, then enabling this will allow a task timeout to be automatically calculated based on the render times of previous frames for the job.")
         timeout_row.addWidget(self.enable_auto_timeout_check)
         timeout_row.addStretch()
@@ -195,7 +202,7 @@ class SettingsView(QtWidgets.QWidget):
         render_mode_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         render_mode_row.addWidget(render_mode_label)
         
-        self.render_mode_combo = QtWidgets.QComboBox()
+        self.render_mode_combo = HighlightableComboBox()
         self.render_mode_combo.addItems(["Full", "Proxy", "Both", "Script"])
         self.render_mode_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.render_mode_combo.setToolTip("The mode to render with.")
@@ -212,15 +219,15 @@ class SettingsView(QtWidgets.QWidget):
         empty_label2.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         checkboxes_row.addWidget(empty_label2)
         
-        self.render_nukex_check = QtWidgets.QCheckBox("Use Nuke X")
+        self.render_nukex_check = HighlightableCheckBox("Use Nuke X")
         self.render_nukex_check.setToolTip("If checked, NukeX will be used instead of just Nuke.")
         checkboxes_row.addWidget(self.render_nukex_check)
         
-        self.use_batch_mode_check = QtWidgets.QCheckBox("Use batch mode")
+        self.use_batch_mode_check = HighlightableCheckBox("Use batch mode")
         self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
         checkboxes_row.addWidget(self.use_batch_mode_check)
         
-        self.reload_plugin_check = QtWidgets.QCheckBox("Reload plugin between tasks")
+        self.reload_plugin_check = HighlightableCheckBox("Reload plugin between tasks")
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         checkboxes_row.addWidget(self.reload_plugin_check)
         checkboxes_row.addStretch()
@@ -243,14 +250,14 @@ class SettingsView(QtWidgets.QWidget):
         empty_label3.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_org_row1.addWidget(empty_label3)
         
-        self.separate_jobs_check = QtWidgets.QCheckBox("Write nodes as separate jobs")
+        self.separate_jobs_check = HighlightableCheckBox("Write nodes as separate jobs")
         self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
         job_org_row1.addWidget(self.separate_jobs_check)
         
         # Add some spacing between the two checkboxes
         job_org_row1.addSpacing(20)
         
-        self.views_separate_jobs_check = QtWidgets.QCheckBox("Views as separate jobs")
+        self.views_separate_jobs_check = HighlightableCheckBox("Views as separate jobs")
         self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
         job_org_row1.addWidget(self.views_separate_jobs_check)
         job_org_row1.addStretch()
@@ -265,7 +272,7 @@ class SettingsView(QtWidgets.QWidget):
         empty_label4.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_org_row2.addWidget(empty_label4)
         
-        self.render_order_dependencies_check = QtWidgets.QCheckBox("Render order dependencies")
+        self.render_order_dependencies_check = HighlightableCheckBox("Render order dependencies")
         self.render_order_dependencies_check.setToolTip("Enable job dependencies based on render order. This automatically enables 'Write nodes as separate jobs'.")
         job_org_row2.addWidget(self.render_order_dependencies_check)
         job_org_row2.addStretch()
@@ -280,7 +287,7 @@ class SettingsView(QtWidgets.QWidget):
         empty_label5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_org_row3.addWidget(empty_label5)
         
-        self.separate_tasks_check = QtWidgets.QCheckBox("Write nodes as separate tasks for the same job")
+        self.separate_tasks_check = HighlightableCheckBox("Write nodes as separate tasks for the same job")
         self.separate_tasks_check.setToolTip("Enable to submit a job to Deadline where each task for the job represents a different write node, and all frames for that write node are rendered by its corresponding task.")
         job_org_row3.addWidget(self.separate_tasks_check)
         job_org_row3.addStretch()
@@ -312,7 +319,7 @@ class SettingsView(QtWidgets.QWidget):
         pool_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         pool_group_row.addWidget(pool_label)
         
-        self.pool_combo = QtWidgets.QComboBox()
+        self.pool_combo = HighlightableComboBox()
         self.pool_combo.addItems(Settings.get_pool_options())
         self.pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.pool_combo.setToolTip("The pool that your job will be submitted to.")
@@ -322,7 +329,7 @@ class SettingsView(QtWidgets.QWidget):
         secondary_pool_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         pool_group_row.addWidget(secondary_pool_label)
         
-        self.secondary_pool_combo = QtWidgets.QComboBox()
+        self.secondary_pool_combo = HighlightableComboBox()
         self.secondary_pool_combo.addItems([""] + Settings.get_pool_options())
         self.secondary_pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.secondary_pool_combo.setToolTip("The secondary pool lets you specify a Pool to use if the primary Pool does not have any available Workers.")
@@ -332,7 +339,7 @@ class SettingsView(QtWidgets.QWidget):
         group_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
         pool_group_row.addWidget(group_label)
         
-        self.group_combo = QtWidgets.QComboBox()
+        self.group_combo = HighlightableComboBox()
         self.group_combo.addItems(Settings.get_group_options())
         self.group_combo.setFixedWidth(120)
         self.group_combo.setToolTip("The group that your job will be submitted to.")
@@ -350,7 +357,7 @@ class SettingsView(QtWidgets.QWidget):
         threads_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         threads_row.addWidget(threads_label)
         
-        self.threads_spin = QtWidgets.QSpinBox()
+        self.threads_spin = HighlightableSpinBox()
         self.threads_spin.setMinimum(1)
         self.threads_spin.setMaximum(64)
         self.threads_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
@@ -369,14 +376,14 @@ class SettingsView(QtWidgets.QWidget):
         min_ram_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         ram_row.addWidget(min_ram_label)
         
-        self.min_ram_spin = QtWidgets.QSpinBox()
+        self.min_ram_spin = HighlightableSpinBox()
         self.min_ram_spin.setMinimum(0)
         self.min_ram_spin.setMaximum(64)
         self.min_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.min_ram_spin.setToolTip("The minimum RAM usage (in GB) to be used for rendering. Set to 0 to not enforce a minimum amount of RAM.")
         ram_row.addWidget(self.min_ram_spin)
         
-        self.max_ram_spin = QtWidgets.QSpinBox()
+        self.max_ram_spin = HighlightableSpinBox()
         self.max_ram_spin.setMinimum(0)
         self.max_ram_spin.setMaximum(512)
         self.max_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
@@ -399,14 +406,14 @@ class SettingsView(QtWidgets.QWidget):
         gpu_device_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         gpu_row.addWidget(gpu_device_label)
         
-        self.gpu_override_spin = QtWidgets.QSpinBox()
+        self.gpu_override_spin = HighlightableSpinBox()
         self.gpu_override_spin.setMinimum(0)
         self.gpu_override_spin.setMaximum(16)
         self.gpu_override_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.gpu_override_spin.setToolTip("The GPU to use when rendering.")
         gpu_row.addWidget(self.gpu_override_spin)
         
-        self.use_gpu_check = QtWidgets.QCheckBox("Use GPU")
+        self.use_gpu_check = HighlightableCheckBox("Use GPU")
         self.use_gpu_check.setToolTip("If Nuke should also use the GPU for rendering.")
         gpu_row.addWidget(self.use_gpu_check)
         gpu_row.addStretch()
@@ -422,14 +429,14 @@ class SettingsView(QtWidgets.QWidget):
         concurrent_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         concurrent_row.addWidget(concurrent_label)
         
-        self.concurrent_tasks_spin = QtWidgets.QSpinBox()
+        self.concurrent_tasks_spin = HighlightableSpinBox()
         self.concurrent_tasks_spin.setMinimum(1)
         self.concurrent_tasks_spin.setMaximum(64)
         self.concurrent_tasks_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.concurrent_tasks_spin.setToolTip("The number of tasks that can render concurrently on a single Worker. This is useful if the rendering application only uses one thread to render and your Workers have multiple CPUs.")
         concurrent_row.addWidget(self.concurrent_tasks_spin)
         
-        self.limit_tasks_check = QtWidgets.QCheckBox("Limit tasks to worker's task limit")
+        self.limit_tasks_check = HighlightableCheckBox("Limit tasks to worker's task limit")
         self.limit_tasks_check.setToolTip("If you limit the tasks to a Worker's task limit, then by default, the Worker won't dequeue more tasks then it has CPUs. This task limit can be overridden for individual Workers by an administrator.")
         concurrent_row.addWidget(self.limit_tasks_check)
         concurrent_row.addStretch()
@@ -445,14 +452,14 @@ class SettingsView(QtWidgets.QWidget):
         machine_limit_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         limit_row.addWidget(machine_limit_label)
         
-        self.machine_limit_spin = QtWidgets.QSpinBox()
+        self.machine_limit_spin = HighlightableSpinBox()
         self.machine_limit_spin.setMinimum(0)
         self.machine_limit_spin.setMaximum(999)
         self.machine_limit_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.machine_limit_spin.setToolTip("Use the Machine Limit to specify the maximum number of machines that can render your job at one time. Specify 0 for no limit.")
         limit_row.addWidget(self.machine_limit_spin)
         
-        self.machine_deny_list_check = QtWidgets.QCheckBox("Machine list is a deny list")
+        self.machine_deny_list_check = HighlightableCheckBox("Machine list is a deny list")
         self.machine_deny_list_check.setToolTip("You can force the job to render on specific machines by using an allow list, or you can avoid specific machines by using a deny list.")
         limit_row.addWidget(self.machine_deny_list_check)
         limit_row.addStretch()
@@ -468,7 +475,7 @@ class SettingsView(QtWidgets.QWidget):
         machine_list_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         machine_list_row.addWidget(machine_list_label)
         
-        self.machine_list_edit = QtWidgets.QLineEdit()
+        self.machine_list_edit = HighlightableLineEdit()
         self.machine_list_edit.setMinimumWidth(300)
         self.machine_list_edit.setToolTip("The list of machines on the deny list or allow list.")
         machine_list_row.addWidget(self.machine_list_edit)
@@ -488,7 +495,7 @@ class SettingsView(QtWidgets.QWidget):
         limits_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         limits_row.addWidget(limits_label)
         
-        self.limits_edit = QtWidgets.QLineEdit()
+        self.limits_edit = HighlightableLineEdit()
         self.limits_edit.setMinimumWidth(300)
         self.limits_edit.setToolTip("The Limits that your job requires.")
         limits_row.addWidget(self.limits_edit)
@@ -928,4 +935,41 @@ class SettingsView(QtWidgets.QWidget):
     def refresh_all_dropdowns(self):
         """Refresh all pool and group dropdowns with updated options."""
         self.refresh_pool_dropdowns()
-        self.refresh_group_dropdown() 
+        self.refresh_group_dropdown()
+    
+    def _register_widgets_for_visual_indication(self):
+        """Register all widgets for visual indication based on storage state."""
+        # Job settings widgets
+        self.register_widget_for_visual_indication(self.priority_spin, 'priority')
+        self.register_widget_for_visual_indication(self.chunk_size_spin, 'chunk_size')
+        self.register_widget_for_visual_indication(self.frames_combo, 'frames_mode')
+        self.register_widget_for_visual_indication(self.frame_range_edit, 'frames')
+        self.register_widget_for_visual_indication(self.use_node_frame_list_check, 'use_node_frame_list')
+        self.register_widget_for_visual_indication(self.task_timeout_spin, 'task_timeout')
+        self.register_widget_for_visual_indication(self.enable_auto_timeout_check, 'enable_auto_timeout')
+        self.register_widget_for_visual_indication(self.render_mode_combo, 'render_mode')
+        self.register_widget_for_visual_indication(self.render_nukex_check, 'use_nuke_x')
+        self.register_widget_for_visual_indication(self.use_batch_mode_check, 'batch_mode')
+        self.register_widget_for_visual_indication(self.reload_plugin_check, 'reload_plugins')
+        self.register_widget_for_visual_indication(self.separate_tasks_check, 'separate_tasks')
+        self.register_widget_for_visual_indication(self.separate_jobs_check, 'separate_jobs')
+        self.register_widget_for_visual_indication(self.views_separate_jobs_check, 'views_separate_jobs')
+        self.register_widget_for_visual_indication(self.render_order_dependencies_check, 'render_order_dependencies')
+        
+        # Machine settings widgets
+        self.register_widget_for_visual_indication(self.pool_combo, 'pool')
+        self.register_widget_for_visual_indication(self.secondary_pool_combo, 'secondary_pool')
+        self.register_widget_for_visual_indication(self.group_combo, 'group')
+        self.register_widget_for_visual_indication(self.threads_spin, 'threads')
+        self.register_widget_for_visual_indication(self.min_ram_spin, 'stack_size')
+        self.register_widget_for_visual_indication(self.max_ram_spin, 'ram_use')
+        self.register_widget_for_visual_indication(self.gpu_override_spin, 'gpu_override')
+        self.register_widget_for_visual_indication(self.use_gpu_check, 'use_gpu')
+        self.register_widget_for_visual_indication(self.concurrent_tasks_spin, 'concurrent_tasks')
+        self.register_widget_for_visual_indication(self.limit_tasks_check, 'limit_worker_tasks')
+        self.register_widget_for_visual_indication(self.machine_limit_spin, 'machine_limit')
+        self.register_widget_for_visual_indication(self.machine_deny_list_check, 'machine_deny_list')
+        self.register_widget_for_visual_indication(self.machine_list_edit, 'machine_list')
+        self.register_widget_for_visual_indication(self.limits_edit, 'limit_groups')
+        
+        logger.debug("Registered all widgets for visual indication in SettingsView") 

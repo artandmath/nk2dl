@@ -32,12 +32,13 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from ..widgets import ColoredGroupBox
+from ..widgets import ColoredGroupBox, HighlightableLineEdit
 from ..constants import Settings, Sizes, GSVDefaults
 from ..config import apply_panel_config
+from ..storage_visual_indication import StorageVisualIndicationMixin
 
 
-class ExtraSettingsView(QtWidgets.QWidget):
+class ExtraSettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
     """View for extra settings like job name, comment, and department.
     
     This view handles the UI for additional job information that doesn't
@@ -52,6 +53,9 @@ class ExtraSettingsView(QtWidgets.QWidget):
         self._create_ui()
         self._connect_signals()
         self._load_settings_from_model()
+        
+        # Register widgets for visual indication
+        self._register_widgets_for_visual_indication()
     
     def _create_ui(self):
         """Create the extra settings UI components."""
@@ -67,17 +71,17 @@ class ExtraSettingsView(QtWidgets.QWidget):
         job_info_group.setLayout(job_info_layout)
         
         job_info_layout.addWidget(QtWidgets.QLabel("Job Name:"), 0, 0)
-        self.job_name_edit = QtWidgets.QLineEdit()
+        self.job_name_edit = HighlightableLineEdit()
         self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
         job_info_layout.addWidget(self.job_name_edit, 0, 1)
         
         job_info_layout.addWidget(QtWidgets.QLabel("Comment:"), 1, 0)
-        self.comment_edit = QtWidgets.QLineEdit()
+        self.comment_edit = HighlightableLineEdit()
         self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
         job_info_layout.addWidget(self.comment_edit, 1, 1)
         
         job_info_layout.addWidget(QtWidgets.QLabel("Department:"), 2, 0)
-        self.department_edit = QtWidgets.QLineEdit()
+        self.department_edit = HighlightableLineEdit()
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 2, 1)
         
@@ -149,4 +153,15 @@ class ExtraSettingsView(QtWidgets.QWidget):
             apply_panel_config(self.department_edit, "department")
             
         except Exception as e:
-            logger.error(f"Error applying configuration to ExtraSettingsView: {e}") 
+            logger.error(f"Error applying configuration to ExtraSettingsView: {e}")
+    
+    def _register_widgets_for_visual_indication(self):
+        """Register all widgets for visual indication based on storage state."""
+        # Job information widgets
+        self.register_widget_for_visual_indication(self.job_name_edit, 'job_name')
+        self.register_widget_for_visual_indication(self.comment_edit, 'comment')
+        self.register_widget_for_visual_indication(self.department_edit, 'department')
+        
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.debug("Registered all widgets for visual indication in ExtraSettingsView") 

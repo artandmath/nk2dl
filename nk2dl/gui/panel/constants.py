@@ -203,6 +203,9 @@ class Colors:
     CONSOLE_ERROR = "#ff4444"            # Red for errors
     CONSOLE_SUCCESS = "#44ff44"          # Green for success
     
+    # Widget highlight colors
+    WIDGET_HIGHLIGHT_COLOR = "#547699"   # Light blue for highlighting stored values
+    
     # Pinned row styling (using same colors as settings panels)
     PINNED_JOB_BACKGROUND = JOB_SETTINGS_BACKGROUND      # Same as job settings title
     PINNED_JOB_BORDER = JOB_SETTINGS_COLOR               # Same as job settings border

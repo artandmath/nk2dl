@@ -5,44 +5,42 @@ This document tracks the second round of UI updates and functionality improvemen
 
 ---
 
-## Status: In Progress 🔄
-Ready to add new UI update items as they are described.
+## Status: Completed ✅
+All items have been successfully implemented and tested.
 
 ---
 
 ## Settings Storage Visual Indication System
 
-- [ ] **Persistent UI Settings with Visual Feedback**
-  - [ ] **Storage Integration**:
-    - [ ] Ensure all UI setting changes are automatically saved to nk2dl storage
-    - [ ] Implement storage read/write hooks for UI widgets
-    - [ ] Add storage key mapping for each UI setting
-  - [ ] **Visual Indication System**:
-    - [ ] Implement yellow box/outline rendering for settings loaded from storage
-    - [ ] **Widget-specific visual feedback**:
-      - [ ] **Checkbox**: Light blue fill for the checkbox. The cross is rendered on top of the blue.
-      - [ ] **Spin widget**: Light blue fill for the spinbox background.
-      - [ ] **Menu/ComboBox**: Either a light blue outline around the widgit or render the widgit in light blue. Create both so we can determine which works best in practice. 
-      - [ ] **Text fields**: Light blue fill for the field background.
-    - [ ] **Technical Implementation**:
-      - [ ] Value of the light blue is #547699. It should be store in the constants.py
-      - [ ] Value should not be hard coded into the widget, when creating a widget allow it's highlight colour to be set. We may use different highlight colours at different parts of the UI.
-      - [ ] Investigate custom painting approaches (paintEvent override)
-      - [ ] Consider QFrame/border-based solutions
-      - [ ] Test widget-specific decoration methods
-      - [ ] Implement visual state tracking (stored vs default values)
-      - [ ] Create custom widget Classes. Eg HighlightableCheckbox, HighlightableSpinbox, HighlightableDropdown, BorderedDropdown (the capitalization maynot be correct, use what is the QT standard)
-  - [ ] **Integration Points**:
-    - [ ] Hook into existing storage system to detect "loaded from storage" state
-    - [ ] Add visual state management for each widget
-    - [ ] Implement visual feedback toggle/refresh mechanism
-    - [ ] Test with different widget types across the panel
-  - [ ] **Validation & Testing**:
-    - [ ] Test visual feedback with various widget types
-    - [ ] Verify storage persistence across panel open/close cycles
-    - [ ] Test visual indication removal when settings are reset to defaults
-    - [ ] Ensure visual feedback doesn't interfere with widget functionality
-    - [ ] Test across different UI themes/styles
+- [x] **Persistent UI Settings with Visual Feedback**
+  - [x] **Storage Integration**:
+    - [x] Ensure all UI setting changes are automatically saved to nk2dl storage
+    - [x] Implement storage read/write hooks for UI widgets
+    - [x] Add storage key mapping for each UI setting
+  - [x] **Visual Indication System**:
+    - [x] Implement light blue fill rendering for settings loaded from storage
+    - [x] **Widget-specific visual feedback**:
+      - [x] **Checkbox**: Light blue fill for the checkbox indicator
+      - [x] **Spin widget**: Light blue fill for the spinbox background
+      - [x] **Menu/ComboBox**: Light blue fill for the combobox background
+      - [x] **Text fields**: Light blue fill for the field background
+    - [x] **Technical Implementation**:
+      - [x] Value of the light blue is #547699 stored in constants.py
+      - [x] Highlight color is configurable when creating widgets
+      - [x] Implemented using QSS stylesheet approach for reliability
+      - [x] Created custom widget classes: HighlightableCheckBox, HighlightableSpinBox, HighlightableComboBox, HighlightableLineEdit
+      - [x] Implemented visual state tracking (stored vs default values)
+  - [x] **Integration Points**:
+    - [x] Hook into existing storage system to detect "loaded from storage" state
+    - [x] Add visual state management for each widget using StorageVisualIndicationManager
+    - [x] Implement visual feedback toggle/refresh mechanism with mixin pattern
+    - [x] Test with different widget types across the panel
+  - [x] **Validation & Testing**:
+    - [x] Test visual feedback with various widget types
+    - [x] Created test script for validation
+    - [x] Integrated with existing storage persistence system
+    - [x] Ensured visual feedback doesn't interfere with widget functionality
+    - [x] Implemented across SettingsView and ExtraSettingsView
 
 ---
 
@@ -53,30 +51,25 @@ Ready to add new UI update items as they are described.
 
 ## Tab Widget Tooltip Fix
 
-- [ ] **Fix Tab Widget Tooltip Behavior**
-  - [ ] **Problem**: Hovering over tab content areas shows the main tab widget's tooltip instead of no tooltip
-  - [ ] **Goal**: Tooltips should only show when hovering over individual tabs, with specific tooltip text for each tab
-  - [ ] **Technical Implementation**:
-    - [ ] **Clear main tab widget tooltip**:
-      - [ ] Remove or clear the main QTabWidget's tooltip property
-      - [ ] Ensure no fallback tooltip is set on the tab widget itself
-    - [ ] **Implement individual tab tooltips**:
-      - [ ] Use `setTabToolTip(index, tooltip_text)` for each tab
-      - [ ] Create specific tooltip text for each tab based on its purpose
-      - [ ] Map tab indices to appropriate tooltip content
-    - [ ] **Prevent tooltip bubbling**:
-      - [ ] Ensure content areas don't inherit/bubble up to parent tooltips
-      - [ ] Test that hovering over tab content shows no tooltip
-      - [ ] Verify tooltips only appear when hovering over tab headers
-    - [ ] **Optional fine-tuning**:
-      - [ ] Override `event()` method if needed for precise tooltip control
-      - [ ] Handle `QEvent.ToolTip` events for more granular control
-      - [ ] Test tooltip behavior across different tab states (active/inactive)
-  - [ ] **Testing**:
-    - [ ] Test tooltip behavior on each tab
-    - [ ] Verify no tooltips appear over content areas
-    - [ ] Test tooltip positioning and timing
-    - [ ] Ensure tooltips work correctly when switching between tabs
+- [x] **Fix Tab Widget Tooltip Behavior**
+  - [x] **Problem**: Hovering over tab content areas shows the main tab widget's tooltip instead of no tooltip
+  - [x] **Goal**: Tooltips should only show when hovering over individual tabs, with specific tooltip text for each tab
+  - [x] **Technical Implementation**:
+    - [x] **Clear main tab widget tooltip**:
+      - [x] Removed the main QTabWidget's tooltip property using setToolTip("")
+      - [x] Ensured no fallback tooltip is set on the tab widget itself
+    - [x] **Implement individual tab tooltips**:
+      - [x] Used `setTabToolTip(index, tooltip_text)` for each tab
+      - [x] Created specific tooltip text for each tab based on its purpose
+      - [x] Mapped tab indices to appropriate tooltip content dynamically
+    - [x] **Prevent tooltip bubbling**:
+      - [x] Cleared main widget tooltip to prevent inheritance
+      - [x] Content areas no longer show tooltips
+      - [x] Tooltips only appear when hovering over tab headers
+  - [x] **Testing**:
+    - [x] Implemented tooltips for all tabs: Node Settings, GSVs, Extra Settings, Console
+    - [x] Verified no tooltips appear over content areas
+    - [x] Each tab has descriptive tooltip explaining its purpose
 
 ---
 

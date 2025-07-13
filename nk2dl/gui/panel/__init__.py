@@ -148,6 +148,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 logger.debug("Applying panel configuration")
                 self._apply_panel_configuration()
                 
+                # Set up storage visual indications
+                self._setup_storage_visual_indications()
+                
                 logger.info(f"nk2dl panel initialized using {PYSIDE_VERSION} for Nuke {nuke.NUKE_VERSION_MAJOR}.{nuke.NUKE_VERSION_MINOR}")
             
             def _create_models(self):
@@ -201,18 +204,31 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.tab_widget = QtWidgets.QTabWidget()
                 self.tab_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
                 
+                # Clear main tab widget tooltip to prevent it from showing over content areas
+                self.tab_widget.setToolTip("")
+                
                 # Add tabs
+                tab_index = 0
+                
+                # Node Settings tab
                 self.tab_widget.addTab(self.node_settings_view, "Node Settings")
+                self.tab_widget.setTabToolTip(tab_index, "Configure render settings for individual write nodes and manage the render queue")
+                tab_index += 1
                 
                 # GSVs tab (only for Nuke 15.1+)
                 if self.gsv_view:
                     self.tab_widget.addTab(self.gsv_view, "GSVs")
+                    self.tab_widget.setTabToolTip(tab_index, "Manage Global State Variables for advanced shot and sequence organization")
+                    tab_index += 1
                 
                 # Extra Settings tab
                 self.tab_widget.addTab(self.extra_settings_view, "Extra Settings")
+                self.tab_widget.setTabToolTip(tab_index, "Configure job information including job name, comment, and department")
+                tab_index += 1
                 
                 # Console tab (moved to last)
                 self.tab_widget.addTab(self.console_view, "Console")
+                self.tab_widget.setTabToolTip(tab_index, "View submission logs and monitor Deadline job progress")
                 
                 # Add to main layout
                 self.layout().addWidget(self.settings_view)
@@ -274,6 +290,11 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.settings_model.jobSettingsChanged.connect(self._on_job_settings_changed)
                 self.settings_model.machineSettingsChanged.connect(self._on_machine_settings_changed)
                 self.settings_model.extraSettingsChanged.connect(self._on_extra_settings_changed)
+                
+                # Connect settings changes to visual indication refresh
+                self.settings_model.jobSettingsChanged.connect(self._on_settings_changed_for_visual_indication)
+                self.settings_model.machineSettingsChanged.connect(self._on_settings_changed_for_visual_indication)
+                self.settings_model.extraSettingsChanged.connect(self._on_settings_changed_for_visual_indication)
                 
                 logger.info("Signals connected between models, views, and progress manager")
             
@@ -531,6 +552,51 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_extra_settings_changed(self):
                 """Handle extra settings changes."""
                 self.console_view.log_info("Extra settings updated")
+            
+            def _setup_storage_visual_indications(self):
+                """Set up storage visual indication for views that support it."""
+                try:
+                    # Connect storage instance to views that have visual indication support
+                    if hasattr(self.settings_view, 'set_storage_instance'):
+                        self.settings_view.set_storage_instance(self.settings_storage)
+                        logger.debug("Connected storage instance to SettingsView")
+                    
+                    if hasattr(self.extra_settings_view, 'set_storage_instance'):
+                        self.extra_settings_view.set_storage_instance(self.settings_storage)
+                        logger.debug("Connected storage instance to ExtraSettingsView")
+                    
+                    # Initial refresh of visual indications
+                    self._refresh_all_visual_indications()
+                    
+                    logger.info("Storage visual indications set up successfully")
+                    
+                except Exception as e:
+                    logger.error(f"Error setting up storage visual indications: {e}", exc_info=True)
+            
+            def _on_settings_changed_for_visual_indication(self):
+                """Handle settings changes to refresh visual indications."""
+                # Use a short delay to batch rapid changes
+                if not hasattr(self, '_visual_indication_timer'):
+                    self._visual_indication_timer = QtCore.QTimer()
+                    self._visual_indication_timer.setSingleShot(True)
+                    self._visual_indication_timer.timeout.connect(self._refresh_all_visual_indications)
+                
+                # Reset timer (batches rapid changes)
+                self._visual_indication_timer.start(100)  # 100ms delay
+            
+            def _refresh_all_visual_indications(self):
+                """Refresh visual indications in all views."""
+                try:
+                    if hasattr(self.settings_view, 'refresh_visual_indications'):
+                        self.settings_view.refresh_visual_indications()
+                    
+                    if hasattr(self.extra_settings_view, 'refresh_visual_indications'):
+                        self.extra_settings_view.refresh_visual_indications()
+                    
+                    logger.debug("Refreshed visual indications in all views")
+                    
+                except Exception as e:
+                    logger.error(f"Error refreshing visual indications: {e}", exc_info=True)
             
             def _on_render_clicked(self):
                 """Handle render button click - submit selected write nodes to Deadline."""
