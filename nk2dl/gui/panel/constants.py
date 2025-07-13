@@ -218,7 +218,7 @@ class Fonts:
     
     # Console font settings
     CONSOLE_FONT_FAMILY = "'Courier New', monospace"
-    CONSOLE_FONT_SIZE = 6  # Smaller font size for better readability
+    CONSOLE_FONT_SIZE = 10  # Smaller font size for better readability
     CONSOLE_FONT_SIZE_PT = f"{CONSOLE_FONT_SIZE}pt"
     
     # Other font sizes
