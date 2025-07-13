@@ -1099,7 +1099,7 @@ class DefaultValues:
         "pool": "none",
         "secondary_pool": "none",
         "group": "none",
-        "threads": 0,
+        "threads": 4,
         "stack_size": 0,
         "ram_use": 0,
         "use_gpu": False,

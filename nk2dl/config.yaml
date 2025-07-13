@@ -25,7 +25,7 @@ submission:
   group: "none"
   chunk_size: 10
   concurrent_tasks: 1
-  threads: 0
+  threads: 4
   ram_use: 0
   stack_size: 0
   batch_name_template: "{nukescript}"

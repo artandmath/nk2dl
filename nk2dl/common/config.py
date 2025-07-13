@@ -424,11 +424,15 @@ class Config:
         current = self._config
         for part in key.split('.'):
             if not isinstance(current, dict) or part not in current:
-                logger.debug(f"Config key not found: {key}, using default: {default}")
+                # Only log if this is not a logging-related key to prevent recursion
+                if not key.startswith('logging.'):
+                    logger.debug(f"Config key not found: {key}, using default: {default}")
                 return default
             current = current[part]
         
-        logger.debug(f"Config get: {key} = {current}")
+        # Only log if this is not a logging-related key to prevent recursion
+        if not key.startswith('logging.'):
+            logger.debug(f"Config get: {key} = {current}")
         return current
 
     def _setup_config_logger(self) -> None:

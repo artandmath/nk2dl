@@ -53,11 +53,18 @@ class Nk2dlLogger(logging.Logger):
     
     def debug(self, message, *args, **kwargs):
         """Override debug to automatically add caller information when level is at or below configured threshold."""
-        # Get configured caller info level (default to DEBUG if not available)
-        call_level = 'DEBUG'  # Default value
+        # Get configured caller info level (default to INFO if not available)
+        call_level = 'INFO'  # Default value - no caller info until explicitly configured to DEBUG
         try:
             if config and hasattr(config, 'config'):
-                call_level = config.config.get('logging.call_level', 'DEBUG')
+                # Temporarily disable caller info to prevent recursion when accessing config
+                global _disable_caller_info
+                original_disable_state = _disable_caller_info
+                _disable_caller_info = True
+                try:
+                    call_level = config.config.get('logging.call_level', 'INFO')
+                finally:
+                    _disable_caller_info = original_disable_state
         except:
             pass
         
@@ -186,9 +193,16 @@ def setup_logging(name: str) -> Nk2dlLogger:
     
     if config and hasattr(config, 'config'):
         # Get configured values
-        log_format = config.config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        level = config.config.get('logging.level', 'INFO')
-        log_file = config.config.get('logging.file', None)
+        # Temporarily disable caller info to prevent recursion when accessing config
+        global _disable_caller_info
+        original_disable_state = _disable_caller_info
+        _disable_caller_info = True
+        try:
+            log_format = config.config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            level = config.config.get('logging.level', 'INFO')
+            log_file = config.config.get('logging.file', None)
+        finally:
+            _disable_caller_info = original_disable_state
     else:
         # Fallback configuration
         log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
@@ -230,8 +244,15 @@ def fix_existing_loggers() -> None:
     
     # Get configured format
     if config and hasattr(config, 'config'):
-        log_format = config.config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        level = config.config.get('logging.level', 'INFO')
+        # Temporarily disable caller info to prevent recursion when accessing config
+        global _disable_caller_info
+        original_disable_state = _disable_caller_info
+        _disable_caller_info = True
+        try:
+            log_format = config.config.get('logging.format', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            level = config.config.get('logging.level', 'INFO')
+        finally:
+            _disable_caller_info = original_disable_state
     else:
         log_format = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
         level = 'INFO'
@@ -260,6 +281,8 @@ def configure_logging(level: str = None, qt_level = None, call_level = None) -> 
         qt_level: Level for Qt debug messages - string (DEBUG, INFO, etc.) or numeric (None to keep current)
         call_level: Level for caller information - string (DEBUG, INFO, etc.) or numeric (None to keep current)
     """
+    global _disable_caller_info
+    
     if level:
         # Get the numeric level for easier comparison
         numeric_level = getattr(logging, level.upper())
@@ -295,25 +318,37 @@ def configure_logging(level: str = None, qt_level = None, call_level = None) -> 
     # Update Qt debug level if specified
     if qt_level is not None and config:
         try:
-            # Update config in memory
-            if 'logging' not in config.config._config:
-                config.config._config['logging'] = {}
-            config.config._config['logging']['qt_level'] = qt_level
-            
-            # Sync Qt logger levels
-            sync_qt_logger_levels()
-            logger.debug(f"Qt level set to {qt_level}")
+            # Temporarily disable caller info to prevent recursion when accessing config
+            original_disable_state = _disable_caller_info
+            _disable_caller_info = True
+            try:
+                # Update config in memory
+                if 'logging' not in config.config._config:
+                    config.config._config['logging'] = {}
+                config.config._config['logging']['qt_level'] = qt_level
+                
+                # Sync Qt logger levels
+                sync_qt_logger_levels()
+                logger.debug(f"Qt level set to {qt_level}")
+            finally:
+                _disable_caller_info = original_disable_state
         except Exception as e:
             logger.warning(f"Failed to set Qt level: {e}")
     
     # Update caller info level if specified  
     if call_level is not None and config:
         try:
-            # Update config in memory
-            if 'logging' not in config.config._config:
-                config.config._config['logging'] = {}
-            config.config._config['logging']['call_level'] = call_level
-            logger.debug(f"Call level set to {call_level}")
+            # Temporarily disable caller info to prevent recursion when accessing config
+            original_disable_state = _disable_caller_info
+            _disable_caller_info = True
+            try:
+                # Update config in memory
+                if 'logging' not in config.config._config:
+                    config.config._config['logging'] = {}
+                config.config._config['logging']['call_level'] = call_level
+                logger.debug(f"Call level set to {call_level}")
+            finally:
+                _disable_caller_info = original_disable_state
         except Exception as e:
             logger.warning(f"Failed to set call level: {e}")
 
@@ -343,7 +378,14 @@ class QtDebugLogger:
         qt_level = 'DEBUG'  # Default value  
         try:
             if config and hasattr(config, 'config'):
-                qt_level = config.config.get('logging.qt_level', 'DEBUG')
+                # Temporarily disable caller info to prevent recursion when accessing config
+                global _disable_caller_info
+                original_disable_state = _disable_caller_info
+                _disable_caller_info = True
+                try:
+                    qt_level = config.config.get('logging.qt_level', 'DEBUG')
+                finally:
+                    _disable_caller_info = original_disable_state
         except:
             pass
         
@@ -564,7 +606,14 @@ class QtDebugLogger:
         qt_level = 'DEBUG'  # Default value
         try:
             if config and hasattr(config, 'config'):
-                qt_level = config.config.get('logging.qt_level', 'DEBUG')
+                # Temporarily disable caller info to prevent recursion when accessing config
+                global _disable_caller_info
+                original_disable_state = _disable_caller_info
+                _disable_caller_info = True
+                try:
+                    qt_level = config.config.get('logging.qt_level', 'DEBUG')
+                finally:
+                    _disable_caller_info = original_disable_state
         except:
             pass
         
@@ -607,7 +656,14 @@ def sync_qt_logger_levels():
         # Get qt_level from configuration
         qt_level = 'DEBUG'  # Default value
         if config and hasattr(config, 'config'):
-            qt_level = config.config.get('logging.qt_level', 'DEBUG')
+            # Temporarily disable caller info to prevent recursion when accessing config
+            global _disable_caller_info
+            original_disable_state = _disable_caller_info
+            _disable_caller_info = True
+            try:
+                qt_level = config.config.get('logging.qt_level', 'DEBUG')
+            finally:
+                _disable_caller_info = original_disable_state
         
         # Convert to numeric level
         qt_level_numeric = _get_numeric_level(qt_level)
@@ -692,7 +748,14 @@ def qt_message_handler(mode, context, message):
     try:
         qt_level = 'DEBUG'  # Default value
         if config and hasattr(config, 'config'):
-            qt_level = config.config.get('logging.qt_level', 'DEBUG')
+            # Temporarily disable caller info to prevent recursion when accessing config
+            global _disable_caller_info
+            original_disable_state = _disable_caller_info
+            _disable_caller_info = True
+            try:
+                qt_level = config.config.get('logging.qt_level', 'DEBUG')
+            finally:
+                _disable_caller_info = original_disable_state
         
         # Convert to numeric level and set
         qt_level_numeric = _get_numeric_level(qt_level)

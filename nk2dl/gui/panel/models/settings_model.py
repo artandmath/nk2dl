@@ -85,7 +85,7 @@ class SettingsModel(QtCore.QObject):
             'pool': config.get('submission.pool', 'nuke'),
             'secondary_pool': '',     # UI-specific setting
             'group': config.get('submission.group', 'none'),
-            'threads': config.get('submission.threads', 0),
+            'threads': config.get('submission.threads', 4),
             'stack_size': config.get('submission.stack_size', 0),
             'ram_use': config.get('submission.ram_use', 0),
             'use_gpu': config.get('submission.use_gpu', False),
