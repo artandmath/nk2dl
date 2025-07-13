@@ -870,4 +870,153 @@ class NodeSettingsStorage:
             
         except Exception as e:
             logger.error(f"Error saving resource preferences: {e}", exc_info=True)
+            return False
+    
+    def save_user_changed_settings(self, user_changed_settings: Dict[str, Any]) -> bool:
+        """Save only user-changed settings to storage, creating minimal YAML files.
+        
+        This method implements the core logic of Phase 2, saving only the settings
+        that have been explicitly changed by the user, rather than all settings.
+        This results in minimal YAML files and proper visual indication behavior.
+        
+        Args:
+            user_changed_settings: Dictionary of only user-changed settings with their values
+            
+        Returns:
+            True if saved successfully, False otherwise
+        """
+        try:
+            # Load current node overrides (preserve existing node-specific settings)
+            node_overrides = self.load_node_overrides()
+            
+            # Ensure storage knobs exist
+            if not self._ensure_storage_knobs():
+                logger.error("Failed to create storage knobs")
+                return False
+            
+            # Prepare minimal data for storage - only user-changed settings
+            storage_data = {
+                'version': self.STORAGE_VERSION,
+                'timestamp': time.time(),
+                'global_settings': user_changed_settings,  # Only user-changed settings
+                'node_overrides': node_overrides
+            }
+            
+            # Serialize to YAML with proper formatting
+            class CustomDumper(yaml.SafeDumper):
+                def increase_indent(self, flow=False, indentless=False):
+                    return super(CustomDumper, self).increase_indent(flow, False)
+            
+            yaml_data = yaml.dump(storage_data, Dumper=CustomDumper, default_flow_style=False, 
+                                sort_keys=True, indent=2, width=float('inf'),
+                                allow_unicode=True)
+            
+            # Save to root node knob
+            nuke = nuke_module()
+            root_node = nuke.root()
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
+            settings_knob.setValue(yaml_data)
+            
+            logger.info(f"Saved minimal settings: {len(user_changed_settings)} user-changed global settings, {len(node_overrides)} node overrides")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error saving user-changed settings: {e}", exc_info=True)
+            return False
+    
+    def load_user_changed_settings(self) -> Dict[str, Any]:
+        """Load only user-changed settings from storage.
+        
+        This method returns only the settings that were explicitly saved as user-changed,
+        not the complete settings with config defaults applied.
+        
+        Returns:
+            Dictionary containing only user-changed settings
+        """
+        try:
+            nuke = nuke_module()
+            root_node = nuke.root()
+            
+            # Check if settings knob exists
+            if Storage.SETTINGS_KNOB_NAME not in root_node.knobs():
+                logger.debug("No settings knob found - returning empty user-changed settings")
+                return {}
+            
+            # Get YAML data from knob
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
+            yaml_data = settings_knob.value()
+            
+            if not yaml_data or not yaml_data.strip():
+                logger.debug("Empty settings data - returning empty user-changed settings")
+                return {}
+            
+            # Parse YAML
+            storage_data = yaml.safe_load(yaml_data)
+            
+            if not isinstance(storage_data, dict):
+                logger.warning("Invalid storage data format - returning empty user-changed settings")
+                return {}
+            
+            # Extract ONLY the stored global settings (these are user-changed)
+            user_changed_settings = storage_data.get('global_settings', {})
+            
+            logger.info(f"Loaded {len(user_changed_settings)} user-changed settings from storage")
+            return user_changed_settings
+            
+        except yaml.YAMLError as e:
+            logger.error(f"YAML parsing error loading user-changed settings: {e}")
+            return {}
+        except Exception as e:
+            logger.error(f"Error loading user-changed settings: {e}", exc_info=True)
+            return {}
+    
+    def create_minimal_storage_if_needed(self) -> bool:
+        """Create minimal storage structure if none exists.
+        
+        This method creates a basic YAML structure when the panel first loads
+        if no storage exists, ensuring the storage system is ready for user changes.
+        
+        Returns:
+            True if minimal storage was created or already exists, False on error
+        """
+        try:
+            nuke = nuke_module()
+            root_node = nuke.root()
+            
+            # Check if settings knob already exists and has data
+            if Storage.SETTINGS_KNOB_NAME in root_node.knobs():
+                settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
+                yaml_data = settings_knob.value()
+                
+                if yaml_data and yaml_data.strip():
+                    # Storage already exists with data
+                    logger.debug("Storage already exists with data - no need to create minimal structure")
+                    return True
+            
+            # Create minimal storage structure
+            minimal_storage_data = {
+                'version': self.STORAGE_VERSION,
+                'timestamp': time.time(),
+                'global_settings': {},  # Empty - will be populated as user makes changes
+                'node_overrides': {}    # Empty - will be populated as user makes node overrides
+            }
+            
+            # Ensure storage knobs exist
+            if not self._ensure_storage_knobs():
+                logger.error("Failed to create storage knobs")
+                return False
+            
+            # Serialize to YAML
+            yaml_data = yaml.dump(minimal_storage_data, default_flow_style=False, 
+                                sort_keys=True, indent=2)
+            
+            # Save to root node knob
+            settings_knob = root_node[Storage.SETTINGS_KNOB_NAME]
+            settings_knob.setValue(yaml_data)
+            
+            logger.info("Created minimal storage structure for user changes")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error creating minimal storage: {e}", exc_info=True)
             return False 

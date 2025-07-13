@@ -39,13 +39,14 @@ from ..widgets import (
 from ..constants import Settings, Sizes
 from ..config import apply_panel_config
 from ..storage_visual_indication import StorageVisualIndicationMixin
+from ..widget_change_tracker import WidgetChangeTrackingMixin
 from ....common.logging import setup_logging
 
 # Set up logger for this module
 logger = setup_logging(__name__)
 
 
-class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
+class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWidgets.QWidget):
     """View for job and machine settings with responsive layout.
     
     This view handles the UI for job settings and machine settings sections,
@@ -67,6 +68,9 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         
         # Register widgets for visual indication
         self._register_widgets_for_visual_indication()
+        
+        # Register widgets for change tracking
+        self._register_widgets_for_change_tracking()
     
     def _create_ui(self):
         """Create the settings UI components."""
@@ -511,47 +515,71 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
     
     def _connect_signals(self):
         """Connect UI signals to model updates."""
-        # Job Settings signals
-        self.priority_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('priority', v))
-        self.chunk_size_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('chunk_size', v))
+        # Job Settings signals with user change tracking
+        self.priority_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('priority', v, 'job'))
+        self.chunk_size_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('chunk_size', v, 'job'))
         self.frames_combo.currentTextChanged.connect(self._on_frames_mode_changed)
-        self.frame_range_edit.textChanged.connect(lambda t: self.settings_model.set_job_setting('frames', t))
-        self.use_node_frame_list_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_node_frame_list', c))
-        self.task_timeout_spin.valueChanged.connect(lambda v: self.settings_model.set_job_setting('task_timeout', v))
-        self.enable_auto_timeout_check.toggled.connect(lambda c: self.settings_model.set_job_setting('enable_auto_timeout', c))
-        self.render_mode_combo.currentTextChanged.connect(lambda t: self.settings_model.set_job_setting('render_mode', t))
-        self.render_nukex_check.toggled.connect(lambda c: self.settings_model.set_job_setting('use_nuke_x', c))
-        self.use_batch_mode_check.toggled.connect(lambda c: self.settings_model.set_job_setting('batch_mode', c))
-        self.reload_plugin_check.toggled.connect(lambda c: self.settings_model.set_job_setting('reload_plugins', c))
+        self.frame_range_edit.textChanged.connect(lambda t: self._on_user_changed_setting('frames', t, 'job'))
+        self.use_node_frame_list_check.toggled.connect(lambda c: self._on_user_changed_setting('use_node_frame_list', c, 'job'))
+        self.task_timeout_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('task_timeout', v, 'job'))
+        self.enable_auto_timeout_check.toggled.connect(lambda c: self._on_user_changed_setting('enable_auto_timeout', c, 'job'))
+        self.render_mode_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('render_mode', t, 'job'))
+        self.render_nukex_check.toggled.connect(lambda c: self._on_user_changed_setting('use_nuke_x', c, 'job'))
+        self.use_batch_mode_check.toggled.connect(lambda c: self._on_user_changed_setting('batch_mode', c, 'job'))
+        self.reload_plugin_check.toggled.connect(lambda c: self._on_user_changed_setting('reload_plugins', c, 'job'))
         self.separate_tasks_check.toggled.connect(self._on_separate_tasks_toggled)
         self.separate_jobs_check.toggled.connect(self._on_separate_jobs_toggled)
-        self.views_separate_jobs_check.toggled.connect(lambda c: self.settings_model.set_job_setting('views_separate_jobs', c))
-        self.render_order_dependencies_check.toggled.connect(lambda c: self.settings_model.set_job_setting('render_order_dependencies', c))
+        self.views_separate_jobs_check.toggled.connect(lambda c: self._on_user_changed_setting('views_separate_jobs', c, 'job'))
+        self.render_order_dependencies_check.toggled.connect(lambda c: self._on_user_changed_setting('render_order_dependencies', c, 'job'))
         
-        # Machine Settings signals
-        self.pool_combo.currentTextChanged.connect(lambda t: self.settings_model.set_machine_setting('pool', t))
-        self.secondary_pool_combo.currentTextChanged.connect(lambda t: self.settings_model.set_machine_setting('secondary_pool', t))
-        self.group_combo.currentTextChanged.connect(lambda t: self.settings_model.set_machine_setting('group', t))
-        self.threads_spin.valueChanged.connect(lambda v: self.settings_model.set_machine_setting('threads', v))
-        self.min_ram_spin.valueChanged.connect(lambda v: self.settings_model.set_machine_setting('stack_size', v))
-        self.max_ram_spin.valueChanged.connect(lambda v: self.settings_model.set_machine_setting('ram_use', v))
-        self.gpu_override_spin.valueChanged.connect(lambda v: self.settings_model.set_machine_setting('gpu_override', v))
-        self.use_gpu_check.toggled.connect(lambda c: self.settings_model.set_machine_setting('use_gpu', c))
-        self.concurrent_tasks_spin.valueChanged.connect(lambda v: self.settings_model.set_machine_setting('concurrent_tasks', v))
-        self.limit_tasks_check.toggled.connect(lambda c: self.settings_model.set_machine_setting('limit_worker_tasks', c))
-        self.machine_limit_spin.valueChanged.connect(lambda v: self.settings_model.set_machine_setting('machine_limit', v))
-        self.machine_deny_list_check.toggled.connect(lambda c: self.settings_model.set_machine_setting('machine_deny_list', c))
-        self.machine_list_edit.textChanged.connect(lambda t: self.settings_model.set_machine_setting('machine_list', t))
-        self.limits_edit.textChanged.connect(lambda t: self.settings_model.set_machine_setting('limit_groups', t))
+        # Machine Settings signals with user change tracking
+        self.pool_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('pool', t, 'machine'))
+        self.secondary_pool_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('secondary_pool', t, 'machine'))
+        self.group_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('group', t, 'machine'))
+        self.threads_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('threads', v, 'machine'))
+        self.min_ram_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('stack_size', v, 'machine'))
+        self.max_ram_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('ram_use', v, 'machine'))
+        self.gpu_override_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('gpu_override', v, 'machine'))
+        self.use_gpu_check.toggled.connect(lambda c: self._on_user_changed_setting('use_gpu', c, 'machine'))
+        self.concurrent_tasks_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('concurrent_tasks', v, 'machine'))
+        self.limit_tasks_check.toggled.connect(lambda c: self._on_user_changed_setting('limit_worker_tasks', c, 'machine'))
+        self.machine_limit_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('machine_limit', v, 'machine'))
+        self.machine_deny_list_check.toggled.connect(lambda c: self._on_user_changed_setting('machine_deny_list', c, 'machine'))
+        self.machine_list_edit.textChanged.connect(lambda t: self._on_user_changed_setting('machine_list', t, 'machine'))
+        self.limits_edit.textChanged.connect(lambda t: self._on_user_changed_setting('limit_groups', t, 'machine'))
         
         # Model change signals
         self.settings_model.jobSettingsChanged.connect(self._on_job_settings_changed)
         self.settings_model.machineSettingsChanged.connect(self._on_machine_settings_changed)
     
+    def _on_user_changed_setting(self, param_name, value, setting_type):
+        """Handle user changes to settings with tracking.
+        
+        Args:
+            param_name: The parameter name
+            value: The new value
+            setting_type: 'job', 'machine', or 'extra'
+        """
+        # Update the model with the new value
+        if setting_type == 'job':
+            self.settings_model.set_job_setting(param_name, value)
+        elif setting_type == 'machine':
+            self.settings_model.set_machine_setting(param_name, value)
+        elif setting_type == 'extra':
+            self.settings_model.set_extra_setting(param_name, value)
+        
+        # Mark as user-changed for tracking
+        self.settings_model.mark_as_user_changed(param_name)
+        
+        logger.debug(f"User changed {setting_type} setting: {param_name} = {value}")
+    
     def _load_settings_from_model(self):
         """Load current settings from the model into the UI."""
         # Block signals to prevent feedback loops
         self._block_signals(True)
+        
+        # Disable change tracking during programmatic updates
+        self.settings_model.disable_user_change_tracking()
         
         try:
             # Load job settings (convert to int for spinboxes)
@@ -629,6 +657,9 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         finally:
             # Re-enable signals
             self._block_signals(False)
+            
+            # Re-enable change tracking
+            self.settings_model.enable_user_change_tracking()
     
     def _block_signals(self, block):
         """Block or unblock signals for all UI controls."""
@@ -696,6 +727,9 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         # Update the frames mode in the model
         self.settings_model.set_job_setting('frames_mode', mode)
         
+        # Mark as user-changed for tracking
+        self.settings_model.mark_as_user_changed('frames_mode')
+        
         # Update the frame range based on the new mode
         self.settings_model.update_frame_range_for_mode(mode)
         
@@ -725,6 +759,9 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         # Update the model
         self.settings_model.set_job_setting('separate_tasks', checked)
         
+        # Mark as user-changed for tracking
+        self.settings_model.mark_as_user_changed('separate_tasks')
+        
         # Apply checkbox dependencies
         self._update_checkbox_dependencies()
     
@@ -732,6 +769,9 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         """Handle separate jobs checkbox toggle."""
         # Update the model
         self.settings_model.set_job_setting('separate_jobs', checked)
+        
+        # Mark as user-changed for tracking
+        self.settings_model.mark_as_user_changed('separate_jobs')
         
         # Apply checkbox dependencies
         self._update_checkbox_dependencies()
@@ -972,4 +1012,41 @@ class SettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         self.register_widget_for_visual_indication(self.machine_list_edit, 'machine_list')
         self.register_widget_for_visual_indication(self.limits_edit, 'limit_groups')
         
-        logger.debug("Registered all widgets for visual indication in SettingsView") 
+        logger.debug("Registered all widgets for visual indication in SettingsView")
+    
+    def _register_widgets_for_change_tracking(self):
+        """Register all widgets for change tracking to detect user vs programmatic changes."""
+        # Job settings widgets
+        self.register_widget_for_change_tracking(self.priority_spin, 'priority')
+        self.register_widget_for_change_tracking(self.chunk_size_spin, 'chunk_size')
+        self.register_widget_for_change_tracking(self.frames_combo, 'frames_mode')
+        self.register_widget_for_change_tracking(self.frame_range_edit, 'frames')
+        self.register_widget_for_change_tracking(self.use_node_frame_list_check, 'use_node_frame_list')
+        self.register_widget_for_change_tracking(self.task_timeout_spin, 'task_timeout')
+        self.register_widget_for_change_tracking(self.enable_auto_timeout_check, 'enable_auto_timeout')
+        self.register_widget_for_change_tracking(self.render_mode_combo, 'render_mode')
+        self.register_widget_for_change_tracking(self.render_nukex_check, 'use_nuke_x')
+        self.register_widget_for_change_tracking(self.use_batch_mode_check, 'batch_mode')
+        self.register_widget_for_change_tracking(self.reload_plugin_check, 'reload_plugins')
+        self.register_widget_for_change_tracking(self.separate_tasks_check, 'separate_tasks')
+        self.register_widget_for_change_tracking(self.separate_jobs_check, 'separate_jobs')
+        self.register_widget_for_change_tracking(self.views_separate_jobs_check, 'views_separate_jobs')
+        self.register_widget_for_change_tracking(self.render_order_dependencies_check, 'render_order_dependencies')
+        
+        # Machine settings widgets
+        self.register_widget_for_change_tracking(self.pool_combo, 'pool')
+        self.register_widget_for_change_tracking(self.secondary_pool_combo, 'secondary_pool')
+        self.register_widget_for_change_tracking(self.group_combo, 'group')
+        self.register_widget_for_change_tracking(self.threads_spin, 'threads')
+        self.register_widget_for_change_tracking(self.min_ram_spin, 'stack_size')
+        self.register_widget_for_change_tracking(self.max_ram_spin, 'ram_use')
+        self.register_widget_for_change_tracking(self.gpu_override_spin, 'gpu_override')
+        self.register_widget_for_change_tracking(self.use_gpu_check, 'use_gpu')
+        self.register_widget_for_change_tracking(self.concurrent_tasks_spin, 'concurrent_tasks')
+        self.register_widget_for_change_tracking(self.limit_tasks_check, 'limit_worker_tasks')
+        self.register_widget_for_change_tracking(self.machine_limit_spin, 'machine_limit')
+        self.register_widget_for_change_tracking(self.machine_deny_list_check, 'machine_deny_list')
+        self.register_widget_for_change_tracking(self.machine_list_edit, 'machine_list')
+        self.register_widget_for_change_tracking(self.limits_edit, 'limit_groups')
+        
+        logger.debug("Registered all widgets for change tracking in SettingsView") 

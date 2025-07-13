@@ -565,85 +565,49 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.console_view.log_info("Extra settings updated")
             
             def _on_settings_changed_save_to_storage(self):
-                """Handle settings changes by saving to storage."""
+                """Handle settings changes by saving only user-changed settings to storage."""
                 # Skip saving if we're currently loading from storage
                 if self._loading_from_storage:
                     logger.debug("Skipping save to storage (currently loading)")
                     return
                     
                 try:
-                    # Get all current settings from the model
-                    job_settings = self.settings_model.get_all_job_settings()
-                    machine_settings = self.settings_model.get_all_machine_settings()
-                    extra_settings = self.settings_model.get_all_extra_settings()
+                    # Get only user-changed settings from the model
+                    user_changed_settings = self.settings_model.get_user_changed_settings()
                     
-                    # Combine all settings into global_settings for storage
-                    global_settings = {}
-                    global_settings.update(job_settings)
-                    global_settings.update(machine_settings)
-                    global_settings.update(extra_settings)
-                    
-                    # Save to storage
-                    success = self.settings_storage.save_all_settings(global_settings)
+                    # Save only user-changed settings to storage (creates minimal YAML)
+                    success = self.settings_storage.save_user_changed_settings(user_changed_settings)
                     
                     if success:
-                        logger.debug("Settings saved to storage successfully")
+                        logger.debug(f"Saved {len(user_changed_settings)} user-changed settings to storage")
                     else:
-                        logger.warning("Failed to save settings to storage")
+                        logger.warning("Failed to save user-changed settings to storage")
                         
                 except Exception as e:
-                    logger.error(f"Error saving settings to storage: {e}", exc_info=True)
+                    logger.error(f"Error saving user-changed settings to storage: {e}", exc_info=True)
             
             def _load_settings_from_storage(self):
-                """Load settings from storage and populate the settings model."""
+                """Load user-changed settings from storage and populate the settings model."""
                 try:
                     # Set flag to prevent recursive saving during loading
                     self._loading_from_storage = True
                     
-                    # Load all settings from storage
-                    all_settings = self.settings_storage.load_all_settings()
+                    # Create minimal storage structure if needed
+                    self.settings_storage.create_minimal_storage_if_needed()
                     
-                    # Get global settings and separate them by category
-                    global_settings = all_settings.get('global_settings', {})
+                    # Load only user-changed settings from storage
+                    user_changed_settings = self.settings_storage.load_user_changed_settings()
                     
-                    if global_settings:
-                        # Filter settings by category (job, machine, extra)
-                        from ..constants import SettingsSchema
-                        
-                        job_settings = {}
-                        machine_settings = {}
-                        extra_settings = {}
-                        
-                        for param_name, value in global_settings.items():
-                            param_info = SettingsSchema.SCHEMA.get(param_name)
-                            if param_info:
-                                category = param_info.get('category', 'job')
-                                if category == 'job':
-                                    job_settings[param_name] = value
-                                elif category == 'machine':
-                                    machine_settings[param_name] = value
-                                elif category == 'extra':
-                                    extra_settings[param_name] = value
-                        
-                        # Update the settings model with loaded settings
-                        if job_settings:
-                            self.settings_model.set_all_job_settings(job_settings)
-                            logger.debug(f"Loaded {len(job_settings)} job settings from storage")
-                        
-                        if machine_settings:
-                            self.settings_model.set_all_machine_settings(machine_settings)
-                            logger.debug(f"Loaded {len(machine_settings)} machine settings from storage")
-                        
-                        if extra_settings:
-                            self.settings_model.set_all_extra_settings(extra_settings)
-                            logger.debug(f"Loaded {len(extra_settings)} extra settings from storage")
-                        
-                        logger.info("Settings loaded from storage successfully")
+                    if user_changed_settings:
+                        # Apply user-changed settings on top of config defaults
+                        # The settings model will already have defaults, so we just override specific values
+                        self.settings_model.set_user_changed_settings(user_changed_settings)
+                        logger.info(f"Loaded {len(user_changed_settings)} user-changed settings from storage")
                     else:
-                        logger.debug("No stored settings found, using defaults")
+                        logger.debug("No user-changed settings found in storage, using config defaults")
                 
                 except Exception as e:
-                    logger.error(f"Error loading settings from storage: {e}", exc_info=True)
+                    logger.error(f"Error loading user-changed settings from storage: {e}", exc_info=True)
                 finally:
                     # Always clear the flag
                     self._loading_from_storage = False

@@ -36,9 +36,10 @@ from ..widgets import ColoredGroupBox, HighlightableLineEdit
 from ..constants import Settings, Sizes, GSVDefaults
 from ..config import apply_panel_config
 from ..storage_visual_indication import StorageVisualIndicationMixin
+from ..widget_change_tracker import WidgetChangeTrackingMixin
 
 
-class ExtraSettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
+class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWidgets.QWidget):
     """View for extra settings like job name, comment, and department.
     
     This view handles the UI for additional job information that doesn't
@@ -56,6 +57,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         
         # Register widgets for visual indication
         self._register_widgets_for_visual_indication()
+        
+        # Register widgets for change tracking
+        self._register_widgets_for_change_tracking()
     
     def _create_ui(self):
         """Create the extra settings UI components."""
@@ -92,17 +96,37 @@ class ExtraSettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
     
     def _connect_signals(self):
         """Connect UI signals to model updates."""
-        self.job_name_edit.textChanged.connect(lambda t: self.settings_model.set_extra_setting('job_name', t))
-        self.comment_edit.textChanged.connect(lambda t: self.settings_model.set_extra_setting('comment', t))
-        self.department_edit.textChanged.connect(lambda t: self.settings_model.set_extra_setting('department', t))
+        self.job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_name', t))
+        self.comment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('comment', t))
+        self.department_edit.textChanged.connect(lambda t: self._on_user_changed_setting('department', t))
         
         # Model change signals
         self.settings_model.extraSettingsChanged.connect(self._on_extra_settings_changed)
+    
+    def _on_user_changed_setting(self, param_name, value):
+        """Handle user changes to extra settings with tracking.
+        
+        Args:
+            param_name: The parameter name
+            value: The new value
+        """
+        # Update the model with the new value
+        self.settings_model.set_extra_setting(param_name, value)
+        
+        # Mark as user-changed for tracking
+        self.settings_model.mark_as_user_changed(param_name)
+        
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.debug(f"User changed extra setting: {param_name} = {value}")
     
     def _load_settings_from_model(self):
         """Load current settings from the model into the UI."""
         # Block signals to prevent feedback loops
         self._block_signals(True)
+        
+        # Disable change tracking during programmatic updates
+        self.settings_model.disable_user_change_tracking()
         
         try:
             # Load extra settings
@@ -113,6 +137,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         finally:
             # Re-enable signals
             self._block_signals(False)
+            
+            # Re-enable change tracking
+            self.settings_model.enable_user_change_tracking()
     
     def _block_signals(self, block):
         """Block or unblock signals for all UI controls."""
@@ -164,4 +191,15 @@ class ExtraSettingsView(StorageVisualIndicationMixin, QtWidgets.QWidget):
         
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
-        logger.debug("Registered all widgets for visual indication in ExtraSettingsView") 
+        logger.debug("Registered all widgets for visual indication in ExtraSettingsView")
+    
+    def _register_widgets_for_change_tracking(self):
+        """Register all widgets for change tracking to detect user vs programmatic changes."""
+        # Extra settings widgets
+        self.register_widget_for_change_tracking(self.job_name_edit, 'job_name')
+        self.register_widget_for_change_tracking(self.comment_edit, 'comment')
+        self.register_widget_for_change_tracking(self.department_edit, 'department')
+        
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.debug("Registered all widgets for change tracking in ExtraSettingsView") 

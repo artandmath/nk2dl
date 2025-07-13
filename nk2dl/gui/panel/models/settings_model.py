@@ -32,6 +32,11 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
+from ..widget_change_tracker import WidgetChangeTracker
+from ....common.logging import setup_logging
+
+logger = setup_logging('nk2dl.gui.panel.models.settings_model')
+
 
 class SettingsModel(QtCore.QObject):
     """Model for managing job and machine settings data.
@@ -54,8 +59,14 @@ class SettingsModel(QtCore.QObject):
         self._machine_settings = {}
         self._extra_settings = {}
         
+        # Initialize user change tracking
+        self._user_changed_settings = {}
+        self._programmatic_change_flag = False
+        
         # Initialize with default values
         self._initialize_defaults()
+        
+        logger.debug("SettingsModel initialized with change tracking")
     
     def _initialize_defaults(self):
         """Initialize settings with default values from config system."""
@@ -118,16 +129,23 @@ class SettingsModel(QtCore.QObject):
         """
         return self._job_settings.get(key, default)
     
-    def set_job_setting(self, key, value):
+    def set_job_setting(self, key, value, user_changed=True):
         """Set a job setting value.
         
         Args:
             key (str): Setting key
             value: Setting value
+            user_changed (bool): Whether this change was made by user (default: True)
         """
         old_value = self._job_settings.get(key)
         if old_value != value:
             self._job_settings[key] = value
+            
+            # Track user changes if not programmatic
+            if user_changed and not self._programmatic_change_flag:
+                self._user_changed_settings[key] = True
+                logger.debug(f"Marked job setting {key} as user-changed")
+            
             self.jobSettingsChanged.emit()
     
     def get_all_job_settings(self):
@@ -161,16 +179,23 @@ class SettingsModel(QtCore.QObject):
         """
         return self._machine_settings.get(key, default)
     
-    def set_machine_setting(self, key, value):
+    def set_machine_setting(self, key, value, user_changed=True):
         """Set a machine setting value.
         
         Args:
             key (str): Setting key
             value: Setting value
+            user_changed (bool): Whether this change was made by user (default: True)
         """
         old_value = self._machine_settings.get(key)
         if old_value != value:
             self._machine_settings[key] = value
+            
+            # Track user changes if not programmatic
+            if user_changed and not self._programmatic_change_flag:
+                self._user_changed_settings[key] = True
+                logger.debug(f"Marked machine setting {key} as user-changed")
+            
             self.machineSettingsChanged.emit()
     
     def get_all_machine_settings(self):
@@ -204,16 +229,23 @@ class SettingsModel(QtCore.QObject):
         """
         return self._extra_settings.get(key, default)
     
-    def set_extra_setting(self, key, value):
+    def set_extra_setting(self, key, value, user_changed=True):
         """Set an extra setting value.
         
         Args:
             key (str): Setting key
             value: Setting value
+            user_changed (bool): Whether this change was made by user (default: True)
         """
         old_value = self._extra_settings.get(key)
         if old_value != value:
             self._extra_settings[key] = value
+            
+            # Track user changes if not programmatic
+            if user_changed and not self._programmatic_change_flag:
+                self._user_changed_settings[key] = True
+                logger.debug(f"Marked extra setting {key} as user-changed")
+            
             self.extraSettingsChanged.emit()
     
     def get_all_extra_settings(self):
@@ -443,4 +475,144 @@ class SettingsModel(QtCore.QObject):
                 self.extraSettingsChanged.emit()
                 changed = True
         
-        return changed 
+        return changed
+    
+    # User change tracking methods
+    def mark_as_user_changed(self, param_name: str) -> None:
+        """Mark a parameter as user-changed.
+        
+        Args:
+            param_name: The parameter name to mark as user-changed
+        """
+        self._user_changed_settings[param_name] = True
+        logger.debug(f"Marked parameter {param_name} as user-changed")
+    
+    def mark_as_reset_to_default(self, param_name: str) -> None:
+        """Mark a parameter as reset to default (no longer user-changed).
+        
+        Args:
+            param_name: The parameter name to mark as reset
+        """
+        self._user_changed_settings[param_name] = False
+        logger.debug(f"Marked parameter {param_name} as reset to default")
+    
+    def is_user_changed(self, param_name: str) -> bool:
+        """Check if a parameter has been changed by the user.
+        
+        Args:
+            param_name: The parameter name to check
+            
+        Returns:
+            True if the parameter has been changed by the user
+        """
+        return self._user_changed_settings.get(param_name, False)
+    
+    def get_user_changed_settings(self) -> dict:
+        """Get only the settings that have been changed by the user.
+        
+        Returns:
+            Dictionary containing only user-changed settings with their values
+        """
+        user_changed = {}
+        
+        # Get user-changed job settings
+        for key, value in self._job_settings.items():
+            if self.is_user_changed(key):
+                user_changed[key] = value
+        
+        # Get user-changed machine settings
+        for key, value in self._machine_settings.items():
+            if self.is_user_changed(key):
+                user_changed[key] = value
+        
+        # Get user-changed extra settings
+        for key, value in self._extra_settings.items():
+            if self.is_user_changed(key):
+                user_changed[key] = value
+        
+        return user_changed
+    
+    def get_user_changed_param_names(self) -> set:
+        """Get set of parameter names that have been changed by the user.
+        
+        Returns:
+            Set of parameter names that are user-changed
+        """
+        return {param for param, changed in self._user_changed_settings.items() if changed}
+    
+    def disable_user_change_tracking(self) -> None:
+        """Temporarily disable user change tracking.
+        
+        This is useful when making programmatic changes that shouldn't
+        be tracked as user changes.
+        """
+        self._programmatic_change_flag = True
+        logger.debug("User change tracking disabled")
+    
+    def enable_user_change_tracking(self) -> None:
+        """Re-enable user change tracking."""
+        self._programmatic_change_flag = False
+        logger.debug("User change tracking enabled")
+    
+    def is_user_change_tracking_disabled(self) -> bool:
+        """Check if user change tracking is currently disabled.
+        
+        Returns:
+            True if tracking is disabled
+        """
+        return self._programmatic_change_flag
+    
+    def clear_all_user_changes(self) -> None:
+        """Clear all user change tracking.
+        
+        This resets all parameters to not user-changed state.
+        """
+        self._user_changed_settings.clear()
+        logger.debug("Cleared all user change tracking")
+    
+    def set_user_changed_settings(self, user_changed_settings: dict) -> None:
+        """Set settings that have been marked as user-changed.
+        
+        This method is used when loading settings from storage to restore
+        which parameters were user-changed.
+        
+        Args:
+            user_changed_settings: Dictionary of parameter names and values that are user-changed
+        """
+        # Disable tracking during this operation
+        self.disable_user_change_tracking()
+        
+        try:
+            # Set the values in the appropriate settings dictionaries
+            for param_name, value in user_changed_settings.items():
+                # Determine which settings category this parameter belongs to
+                if param_name in self._job_settings:
+                    self.set_job_setting(param_name, value, user_changed=False)
+                elif param_name in self._machine_settings:
+                    self.set_machine_setting(param_name, value, user_changed=False)
+                elif param_name in self._extra_settings:
+                    self.set_extra_setting(param_name, value, user_changed=False)
+                
+                # Mark as user-changed
+                self._user_changed_settings[param_name] = True
+                
+        finally:
+            # Re-enable tracking
+            self.enable_user_change_tracking()
+        
+        logger.debug(f"Set {len(user_changed_settings)} user-changed settings")
+    
+    def get_change_tracking_stats(self) -> dict:
+        """Get statistics about user change tracking.
+        
+        Returns:
+            Dictionary with tracking statistics
+        """
+        total_params = len(self._job_settings) + len(self._machine_settings) + len(self._extra_settings)
+        user_changed_count = sum(1 for changed in self._user_changed_settings.values() if changed)
+        
+        return {
+            'total_params': total_params,
+            'user_changed_count': user_changed_count,
+            'tracking_disabled': self._programmatic_change_flag
+        } 

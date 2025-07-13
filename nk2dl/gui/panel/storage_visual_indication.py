@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Storage visual indication system for the nk2dl panel.
 
-This module provides functionality to visually indicate which widgets have stored values
-by applying highlight colors to widgets that have been persisted to the storage system.
+This module provides functionality to visually indicate which widgets have user-changed values
+by applying highlight colors to widgets that have been explicitly modified by the user and
+persisted to the storage system.
 """
 
 from typing import Dict, Any, Optional, Set, List
@@ -12,10 +13,10 @@ logger = setup_logging('nk2dl.gui.panel.storage_visual_indication')
 
 
 class StorageVisualIndicationManager:
-    """Manager for applying visual indication to widgets based on storage state.
+    """Manager for applying visual indication to widgets based on user-changed storage state.
     
-    This class tracks which widgets have stored values and applies/removes
-    highlights accordingly.
+    This class tracks which widgets have user-changed stored values and applies/removes
+    highlights accordingly. Only widgets with explicitly user-modified values will be highlighted.
     """
     
     def __init__(self, storage_instance=None):
@@ -77,9 +78,8 @@ class StorageVisualIndicationManager:
             return
         
         try:
-            # Get all stored settings
-            all_settings = self.storage_instance.load_all_settings()
-            global_settings = all_settings.get('global_settings', {})
+            # Get only user-changed settings (this is what should be highlighted)
+            user_changed_settings = self.storage_instance.load_user_changed_settings()
             
             updated_count = 0
             
@@ -87,8 +87,8 @@ class StorageVisualIndicationManager:
                 if not widget or not hasattr(widget, 'set_highlighted'):
                     continue
                 
-                # Check if this parameter has a stored value
-                is_stored = self._is_parameter_stored(param_name, global_settings)
+                # Check if this parameter has a user-changed stored value
+                is_stored = self._is_parameter_stored(param_name, user_changed_settings)
                 
                 # Update widget highlight state
                 if self.widget_states[widget_id] != is_stored:
@@ -124,12 +124,11 @@ class StorageVisualIndicationManager:
                 logger.warning(f"Widget {widget_id} is invalid or doesn't support highlighting")
                 return
             
-            # Get stored settings
-            all_settings = self.storage_instance.load_all_settings()
-            global_settings = all_settings.get('global_settings', {})
+            # Get only user-changed settings (this is what should be highlighted)
+            user_changed_settings = self.storage_instance.load_user_changed_settings()
             
-            # Check if this parameter has a stored value
-            is_stored = self._is_parameter_stored(param_name, global_settings)
+            # Check if this parameter has a user-changed stored value
+            is_stored = self._is_parameter_stored(param_name, user_changed_settings)
             
             # Update widget highlight state
             if self.widget_states[widget_id] != is_stored:
@@ -140,21 +139,21 @@ class StorageVisualIndicationManager:
         except Exception as e:
             logger.error(f"Error refreshing widget {widget_id}: {e}", exc_info=True)
     
-    def _is_parameter_stored(self, param_name, global_settings):
-        """Check if a parameter has a stored value.
+    def _is_parameter_stored(self, param_name, user_changed_settings):
+        """Check if a parameter has a user-changed stored value.
         
         Args:
             param_name (str): The parameter name
-            global_settings (dict): The global settings dictionary
+            user_changed_settings (dict): The user-changed settings dictionary
             
         Returns:
-            bool: True if the parameter has a stored value
+            bool: True if the parameter has a user-changed stored value
         """
-        if not global_settings:
+        if not user_changed_settings:
             return False
         
-        # Check if parameter exists in stored settings
-        return param_name in global_settings and global_settings[param_name] is not None
+        # Check if parameter exists in user-changed settings
+        return param_name in user_changed_settings and user_changed_settings[param_name] is not None
     
     def get_tracked_widget_count(self):
         """Get the number of tracked widgets.
