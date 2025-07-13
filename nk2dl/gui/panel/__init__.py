@@ -361,8 +361,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                         logger.debug("Deadline resource loading already in progress")
                         return
                     
-                    # Start progress indication
-                    self.progress_manager.start_operation("Fetching Deadline Pools and Groups", indeterminate=True)
+                    # Start progress indication with task tracking
+                    self._deadline_task_id = self.progress_manager.start_operation("Fetching Deadline Pools and Groups", indeterminate=True)
                     
                     # Populate initial values first
                     self._populate_initial_pool_group_values()
@@ -392,7 +392,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 except Exception as e:
                     logger.error(f"Error starting Deadline resource loading: {e}", exc_info=True)
                     # Finish progress on error
-                    self.progress_manager.finish_operation(success=False, final_message="Failed to start Deadline resource loading")
+                    if hasattr(self, '_deadline_task_id'):
+                        self.progress_manager.finish_operation(success=False, final_message="Failed to start Deadline resource loading", task_id=self._deadline_task_id)
                     # Use fallback values on error
                     self._use_fallback_resources()
             
@@ -549,8 +550,8 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 """Handle Deadline resource loading errors."""
                 logger.warning(f"Deadline resource loading failed: {error_msg}")
                 # Finish progress indication with error
-                if hasattr(self, 'progress_manager'):
-                    self.progress_manager.finish_operation(success=False, final_message=f"Deadline connection failed: {error_msg}")
+                if hasattr(self, 'progress_manager') and hasattr(self, '_deadline_task_id'):
+                    self.progress_manager.finish_operation(success=False, final_message=f"Deadline connection failed: {error_msg}", task_id=self._deadline_task_id)
                 # Use fallback values
                 self._use_fallback_resources()
             
@@ -559,15 +560,15 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 logger.debug(f"Deadline resource progress: {message}")
                 # Update progress bar status message without changing progress value
                 # to maintain indeterminate mode (crawling zebra pattern)
-                if hasattr(self, 'progress_manager') and self.progress_manager.is_busy():
-                    self.progress_manager.update_status_message(message)
+                if hasattr(self, 'progress_manager') and hasattr(self, '_deadline_task_id'):
+                    self.progress_manager.update_status_message(message, task_id=self._deadline_task_id)
             
             def _on_deadline_resource_finished(self):
                 """Handle Deadline resource loading completion."""
                 logger.info("Deadline resource loading finished")
                 # Finish progress indication with auto-reset to "Ready"
-                if hasattr(self, 'progress_manager'):
-                    self.progress_manager.finish_operation(success=True, final_message="Deadline resources loaded", auto_reset_delay=500)
+                if hasattr(self, 'progress_manager') and hasattr(self, '_deadline_task_id'):
+                    self.progress_manager.finish_operation(success=True, final_message="Deadline resources loaded", auto_reset_delay=500, task_id=self._deadline_task_id)
                 # Clean up worker reference
                 if hasattr(self, '_deadline_resource_worker'):
                     self._deadline_resource_worker = None
@@ -1108,16 +1109,14 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             # Progress and data loading handlers
             def _refresh_node_data(self):
                 """Refresh node data from the current Nuke script."""
-                if self.progress_manager.is_busy():
-                    logger.warning("Cannot refresh node data while another operation is in progress")
-                    return
-                
+                # Note: We no longer block other operations since we support multiple concurrent tasks
                 self.console_view.log_info("Refreshing node data from script...")
                 self.table_model.refresh_from_nodes_async()
             
             def _on_loading_started(self):
                 """Handle start of data loading operation."""
-                self.progress_manager.start_operation("Loading node data")
+                # Start progress indication with task tracking and indeterminate mode
+                self._node_data_task_id = self.progress_manager.start_operation("Loading node data", indeterminate=True)
                 # Disable update button during loading
                 if hasattr(self.node_settings_view, 'update_btn'):
                     self.node_settings_view.update_btn.setEnabled(False)
@@ -1125,7 +1124,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             
             def _on_loading_finished(self):
                 """Handle completion of data loading operation."""
-                self.progress_manager.finish_operation(success=True, final_message="Node data loaded successfully")
+                # Finish progress indication with task tracking
+                if hasattr(self, '_node_data_task_id'):
+                    self.progress_manager.finish_operation(success=True, final_message="Node data loaded successfully", task_id=self._node_data_task_id)
                 # Re-enable update button
                 if hasattr(self.node_settings_view, 'update_btn'):
                     self.node_settings_view.update_btn.setEnabled(True)
@@ -1136,7 +1137,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             
             def _on_loading_progress(self, progress_percent, status_message):
                 """Handle progress updates during data loading."""
-                self.progress_manager.update_progress(progress_percent, status_message)
+                # Update progress with task tracking (but keep indeterminate mode)
+                if hasattr(self, '_node_data_task_id'):
+                    self.progress_manager.update_status_message(status_message, task_id=self._node_data_task_id)
             
             def _on_debug_info(self, debug_message):
                 """Handle debug information from background threads.
