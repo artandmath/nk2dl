@@ -120,6 +120,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                     
                 QtWidgets.QWidget.__init__(self, parent)
                 
+                # Flag to prevent recursive saving during loading
+                self._loading_from_storage = False
+                
                 # Initialize models first
                 self._create_models()
                 
@@ -296,10 +299,18 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.settings_model.machineSettingsChanged.connect(self._on_settings_changed_for_visual_indication)
                 self.settings_model.extraSettingsChanged.connect(self._on_settings_changed_for_visual_indication)
                 
+                # Connect settings changes to storage saves
+                self.settings_model.jobSettingsChanged.connect(self._on_settings_changed_save_to_storage)
+                self.settings_model.machineSettingsChanged.connect(self._on_settings_changed_save_to_storage)
+                self.settings_model.extraSettingsChanged.connect(self._on_settings_changed_save_to_storage)
+                
                 logger.info("Signals connected between models, views, and progress manager")
             
             def _load_initial_data(self):
                 """Load initial node data from Nuke script."""
+                # Load settings from storage first
+                self._load_settings_from_storage()
+                
                 # Auto-refresh on panel initialization using event-based approach
                 # This ensures the panel is fully initialized before data loading
                 self._schedule_initial_data_load()
@@ -552,6 +563,90 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_extra_settings_changed(self):
                 """Handle extra settings changes."""
                 self.console_view.log_info("Extra settings updated")
+            
+            def _on_settings_changed_save_to_storage(self):
+                """Handle settings changes by saving to storage."""
+                # Skip saving if we're currently loading from storage
+                if self._loading_from_storage:
+                    logger.debug("Skipping save to storage (currently loading)")
+                    return
+                    
+                try:
+                    # Get all current settings from the model
+                    job_settings = self.settings_model.get_all_job_settings()
+                    machine_settings = self.settings_model.get_all_machine_settings()
+                    extra_settings = self.settings_model.get_all_extra_settings()
+                    
+                    # Combine all settings into global_settings for storage
+                    global_settings = {}
+                    global_settings.update(job_settings)
+                    global_settings.update(machine_settings)
+                    global_settings.update(extra_settings)
+                    
+                    # Save to storage
+                    success = self.settings_storage.save_all_settings(global_settings)
+                    
+                    if success:
+                        logger.debug("Settings saved to storage successfully")
+                    else:
+                        logger.warning("Failed to save settings to storage")
+                        
+                except Exception as e:
+                    logger.error(f"Error saving settings to storage: {e}", exc_info=True)
+            
+            def _load_settings_from_storage(self):
+                """Load settings from storage and populate the settings model."""
+                try:
+                    # Set flag to prevent recursive saving during loading
+                    self._loading_from_storage = True
+                    
+                    # Load all settings from storage
+                    all_settings = self.settings_storage.load_all_settings()
+                    
+                    # Get global settings and separate them by category
+                    global_settings = all_settings.get('global_settings', {})
+                    
+                    if global_settings:
+                        # Filter settings by category (job, machine, extra)
+                        from ..constants import SettingsSchema
+                        
+                        job_settings = {}
+                        machine_settings = {}
+                        extra_settings = {}
+                        
+                        for param_name, value in global_settings.items():
+                            param_info = SettingsSchema.SCHEMA.get(param_name)
+                            if param_info:
+                                category = param_info.get('category', 'job')
+                                if category == 'job':
+                                    job_settings[param_name] = value
+                                elif category == 'machine':
+                                    machine_settings[param_name] = value
+                                elif category == 'extra':
+                                    extra_settings[param_name] = value
+                        
+                        # Update the settings model with loaded settings
+                        if job_settings:
+                            self.settings_model.set_all_job_settings(job_settings)
+                            logger.debug(f"Loaded {len(job_settings)} job settings from storage")
+                        
+                        if machine_settings:
+                            self.settings_model.set_all_machine_settings(machine_settings)
+                            logger.debug(f"Loaded {len(machine_settings)} machine settings from storage")
+                        
+                        if extra_settings:
+                            self.settings_model.set_all_extra_settings(extra_settings)
+                            logger.debug(f"Loaded {len(extra_settings)} extra settings from storage")
+                        
+                        logger.info("Settings loaded from storage successfully")
+                    else:
+                        logger.debug("No stored settings found, using defaults")
+                
+                except Exception as e:
+                    logger.error(f"Error loading settings from storage: {e}", exc_info=True)
+                finally:
+                    # Always clear the flag
+                    self._loading_from_storage = False
             
             def _setup_storage_visual_indications(self):
                 """Set up storage visual indication for views that support it."""
