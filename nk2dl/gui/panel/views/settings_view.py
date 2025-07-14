@@ -143,14 +143,19 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.frames_combo = HighlightableComboBox()
         self.frames_combo.addItems(Settings.FRAMES_OPTIONS)
-        self.frames_combo.setFixedWidth(80)
+        # Calculate width needed for the widest option "First Middle Last"
+        font_metrics = self.frames_combo.fontMetrics()
+        max_width = max(font_metrics.horizontalAdvance(option) for option in Settings.FRAMES_OPTIONS)
+        # Add padding for dropdown arrow and margins
+        combo_width = max_width + 30
+        self.frames_combo.setFixedWidth(combo_width)
         self.frames_combo.setToolTip("Select the Global, Input, or Custom frame list mode.")
         frames_row.addWidget(self.frames_combo)
         
         self.frame_range_edit = HighlightableLineEdit()
         self.frame_range_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
         self.frame_range_edit.setToolTip("If Custom frame list mode is selected, this is the list of frames to render.")
-        frames_row.addWidget(self.frame_range_edit)
+        frames_row.addWidget(self.frame_range_edit, 1)  # Add stretch factor to fill remaining space
         frames_row.addStretch()
         
         job_main_layout.addLayout(frames_row)
