@@ -303,6 +303,75 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         job_main_layout.addLayout(job_org_row3)
         
+        # Divider
+        divider2 = QtWidgets.QFrame()
+        divider2.setFrameShape(QtWidgets.QFrame.HLine)
+        divider2.setFrameShadow(QtWidgets.QFrame.Sunken)
+        divider2.setStyleSheet("color: #C0C0C0; margin: 5px 0px;")
+        job_main_layout.addWidget(divider2)
+        
+        # New job settings section
+        # Row 1: Render settings from metadata + Submit suspended
+        new_job_row1 = QtWidgets.QHBoxLayout()
+        new_job_row1.setSpacing(10)
+        
+        empty_label6 = QtWidgets.QLabel("")
+        empty_label6.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        new_job_row1.addWidget(empty_label6)
+        
+        self.render_settings_from_metadata_check = HighlightableCheckBox("Render settings from metadata")
+        self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
+        new_job_row1.addWidget(self.render_settings_from_metadata_check)
+        
+        # Add some spacing between the two checkboxes
+        new_job_row1.addSpacing(20)
+        
+        self.submit_suspended_check = HighlightableCheckBox("Submit suspended")
+        self.submit_suspended_check.setToolTip("Whether to submit the job suspended.")
+        new_job_row1.addWidget(self.submit_suspended_check)
+        new_job_row1.addStretch()
+        
+        job_main_layout.addLayout(new_job_row1)
+        
+        # Row 2: Continue on error
+        new_job_row2 = QtWidgets.QHBoxLayout()
+        new_job_row2.setSpacing(10)
+        
+        empty_label7 = QtWidgets.QLabel("")
+        empty_label7.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        new_job_row2.addWidget(empty_label7)
+        
+        self.continue_on_error_check = HighlightableCheckBox("Continue on error")
+        self.continue_on_error_check.setToolTip("Whether to continue rendering on error.")
+        new_job_row2.addWidget(self.continue_on_error_check)
+        new_job_row2.addStretch()
+        
+        job_main_layout.addLayout(new_job_row2)
+        
+        # Row 3: Job dependencies
+        job_deps_row = QtWidgets.QHBoxLayout()
+        job_deps_row.setSpacing(10)
+        
+        job_deps_label = QtWidgets.QLabel("Job Dependencies")
+        job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_deps_row.addWidget(job_deps_label)
+        
+        self.job_dependencies_edit = HighlightableLineEdit()
+        self.job_dependencies_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
+        self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
+        job_deps_row.addWidget(self.job_dependencies_edit, 1)  # Add stretch factor to fill remaining space
+        
+        # Add browse button for job dependencies
+        self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
+        self.job_deps_browse_btn.setFixedWidth(60)
+        self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
+        job_deps_row.addWidget(self.job_deps_browse_btn)
+        
+        job_deps_row.addStretch()
+        
+        job_main_layout.addLayout(job_deps_row)
+        
         job_layout.addLayout(job_main_layout)
         job_layout.addStretch()
     
@@ -537,6 +606,13 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.views_separate_jobs_check.toggled.connect(lambda c: self._on_user_changed_setting('views_separate_jobs', c, 'job'))
         self.render_order_dependencies_check.toggled.connect(lambda c: self._on_user_changed_setting('render_order_dependencies', c, 'job'))
         
+        # New job settings signals
+        self.render_settings_from_metadata_check.toggled.connect(lambda c: self._on_user_changed_setting('render_settings_from_metadata', c, 'job'))
+        self.submit_suspended_check.toggled.connect(lambda c: self._on_user_changed_setting('submit_suspended', c, 'job'))
+        self.continue_on_error_check.toggled.connect(lambda c: self._on_user_changed_setting('continue_on_error', c, 'job'))
+        self.job_dependencies_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_dependencies', t, 'job'))
+        self.job_deps_browse_btn.clicked.connect(self._on_job_deps_browse_clicked)
+        
         # Machine Settings signals with user change tracking
         self.pool_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('pool', t, 'machine'))
         self.secondary_pool_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('secondary_pool', t, 'machine'))
@@ -556,6 +632,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         # Model change signals
         self.settings_model.jobSettingsChanged.connect(self._on_job_settings_changed)
         self.settings_model.machineSettingsChanged.connect(self._on_machine_settings_changed)
+    
+    def _on_job_deps_browse_clicked(self):
+        """Handle job dependencies browse button click."""
+        # TODO: Implement job dependencies browsing functionality
+        # This could open a dialog to select from existing jobs
+        logger.debug("Job dependencies browse button clicked - functionality to be implemented")
     
     def _on_user_changed_setting(self, param_name, value, setting_type):
         """Handle user changes to settings with tracking.
@@ -638,6 +720,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             self.views_separate_jobs_check.setChecked(job_settings.get('views_separate_jobs', False))
             self.render_order_dependencies_check.setChecked(job_settings.get('render_order_dependencies', False))
             
+            # Load new job settings
+            self.render_settings_from_metadata_check.setChecked(job_settings.get('render_settings_from_metadata', False))
+            self.submit_suspended_check.setChecked(job_settings.get('submit_suspended', False))
+            self.continue_on_error_check.setChecked(job_settings.get('continue_on_error', False))
+            self.job_dependencies_edit.setText(str(job_settings.get('job_dependencies', '')))
+            
             # Apply checkbox dependencies after loading all checkbox states
             self._update_checkbox_dependencies()
             
@@ -703,6 +791,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.separate_jobs_check.blockSignals(block)
         self.views_separate_jobs_check.blockSignals(block)
         self.render_order_dependencies_check.blockSignals(block)
+        
+        # New job settings controls
+        self.render_settings_from_metadata_check.blockSignals(block)
+        self.submit_suspended_check.blockSignals(block)
+        self.continue_on_error_check.blockSignals(block)
+        self.job_dependencies_edit.blockSignals(block)
         
         # Machine settings controls
         self.pool_combo.blockSignals(block)
@@ -925,6 +1019,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             apply_panel_config(self.views_separate_jobs_check, "views_separate_jobs")
             apply_panel_config(self.render_order_dependencies_check, "render_order_dependencies")
             
+            # Apply configuration to new job settings controls
+            apply_panel_config(self.render_settings_from_metadata_check, "render_settings_from_metadata")
+            apply_panel_config(self.submit_suspended_check, "submit_suspended")
+            apply_panel_config(self.continue_on_error_check, "continue_on_error")
+            apply_panel_config(self.job_dependencies_edit, "job_dependencies")
+            
             # Apply configuration to machine settings controls
             apply_panel_config(self.pool_combo, "pool")
             apply_panel_config(self.secondary_pool_combo, "secondary_pool")
@@ -1061,6 +1161,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.register_widget_for_visual_indication(self.views_separate_jobs_check, 'views_separate_jobs')
         self.register_widget_for_visual_indication(self.render_order_dependencies_check, 'render_order_dependencies')
         
+        # New job settings widgets
+        self.register_widget_for_visual_indication(self.render_settings_from_metadata_check, 'render_settings_from_metadata')
+        self.register_widget_for_visual_indication(self.submit_suspended_check, 'submit_suspended')
+        self.register_widget_for_visual_indication(self.continue_on_error_check, 'continue_on_error')
+        self.register_widget_for_visual_indication(self.job_dependencies_edit, 'job_dependencies')
+        
         # Machine settings widgets
         self.register_widget_for_visual_indication(self.pool_combo, 'pool')
         self.register_widget_for_visual_indication(self.secondary_pool_combo, 'secondary_pool')
@@ -1097,6 +1203,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.register_widget_for_change_tracking(self.separate_jobs_check, 'separate_jobs')
         self.register_widget_for_change_tracking(self.views_separate_jobs_check, 'views_separate_jobs')
         self.register_widget_for_change_tracking(self.render_order_dependencies_check, 'render_order_dependencies')
+        
+        # New job settings widgets
+        self.register_widget_for_change_tracking(self.render_settings_from_metadata_check, 'render_settings_from_metadata')
+        self.register_widget_for_change_tracking(self.submit_suspended_check, 'submit_suspended')
+        self.register_widget_for_change_tracking(self.continue_on_error_check, 'continue_on_error')
+        self.register_widget_for_change_tracking(self.job_dependencies_edit, 'job_dependencies')
         
         # Machine settings widgets
         self.register_widget_for_change_tracking(self.pool_combo, 'pool')
