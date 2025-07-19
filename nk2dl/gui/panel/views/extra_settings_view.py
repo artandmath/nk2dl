@@ -61,7 +61,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Register widgets for change tracking
         self._register_widgets_for_change_tracking()
         
-        # Set up responsive resize handling
+        # Set up responsive behavior (will be controlled by main panel)
         self._setup_responsive_behavior()
     
     def _create_ui(self):
@@ -296,31 +296,26 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         right_layout.addStretch()
     
     def _setup_responsive_behavior(self):
-        """Set up responsive resize handling."""
-        # Override the resize event for responsive behavior
-        original_resize = self.resizeEvent
-        def responsive_resize_event(event):
-            self._handle_responsive_resize(event)
-            if original_resize:
-                original_resize(event)
-        self.resizeEvent = responsive_resize_event
+        """Set up responsive behavior controlled by main panel."""
+        # No individual resize handling - will be controlled by main panel
+        pass
     
-    def _handle_responsive_resize(self, event):
-        """Handle resize to make settings responsive."""
-        panel_width = event.size().width()
+    def set_layout_mode(self, is_two_columns: bool):
+        """Set the layout mode based on main panel's responsive state.
         
-        # Calculate available width accounting for margins (same as SettingsView)
-        available_width = panel_width - 60  # Account for margins and padding
-        
-        # Use the same breakpoint as Job and Machine settings
-        if available_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
+        Args:
+            is_two_columns (bool): True for two columns, False for one column
+        """
+        if is_two_columns:
+            # Set to two columns
+            if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
+                self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
+                self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)
+        else:
+            # Set to one column
             if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom)
                 self.content_layout.setSpacing(20)  # More spacing when stacked vertically
-        else:  # Side by side when wide enough
-            if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
-                self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
-                self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)  # Less spacing when side by side
     
     def _connect_signals(self):
         """Connect UI signals to model updates."""

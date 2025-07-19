@@ -306,6 +306,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.settings_model.machineSettingsChanged.connect(self._on_settings_changed_save_to_storage)
                 self.settings_model.extraSettingsChanged.connect(self._on_settings_changed_save_to_storage)
                 
+                # Connect responsive layout changes from settings view to extra settings view
+                self.settings_view.layoutChanged.connect(self._on_settings_layout_changed)
+                
                 logger.info("Signals connected between models, views, and progress manager")
             
             def _load_initial_data(self):
@@ -650,6 +653,16 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             def _on_extra_settings_changed(self):
                 """Handle extra settings changes."""
                 self.console_view.log_info("Extra settings updated")
+            
+            def _on_settings_layout_changed(self, is_two_columns: bool):
+                """Handle responsive layout changes from settings view.
+                
+                Args:
+                    is_two_columns (bool): True for two columns, False for one column
+                """
+                # Propagate layout change to extra settings view
+                self.extra_settings_view.set_layout_mode(is_two_columns)
+                logger.debug(f"Settings layout changed to {'two columns' if is_two_columns else 'one column'}")
             
             def _on_settings_changed_save_to_storage(self):
                 """Handle settings changes by saving only user-changed settings to storage."""

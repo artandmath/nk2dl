@@ -823,6 +823,9 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             if original_resize:
                 original_resize(event)
         self.resizeEvent = responsive_resize_event
+        
+        # Create signal for layout changes
+        self.layoutChanged = QtCore.Signal(bool)  # True for two columns, False for one column
     
     def _handle_responsive_resize(self, event):
         """Handle resize to make settings responsive."""
@@ -830,6 +833,8 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         # Calculate if we have enough space for horizontal layout
         available_width = panel_width - 60  # Account for margins and group box padding
+        
+        old_direction = self.content_layout.direction()
         
         if available_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
             if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
@@ -839,6 +844,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
                 self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)  # Less spacing when side by side
+        
+        # Emit signal if layout direction changed
+        new_direction = self.content_layout.direction()
+        if old_direction != new_direction:
+            is_two_columns = (new_direction == QtWidgets.QBoxLayout.LeftToRight)
+            self.layoutChanged.emit(is_two_columns)
     
     def _on_frames_mode_changed(self, mode):
         """Handle frames mode dropdown change."""

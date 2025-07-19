@@ -53,7 +53,8 @@ def main():
         debug_info = QtWidgets.QLabel(
             f"RESPONSIVE_BREAKPOINT: {Sizes.RESPONSIVE_BREAKPOINT}px\n"
             "Available width = panel_width - 60\n"
-            "Breakpoint triggers when available_width < 1250px"
+            "Breakpoint triggers when available_width < 1250px\n"
+            "NEW: Extra Settings now follows Job/Machine settings layout"
         )
         debug_info.setStyleSheet("margin: 5px 10px; color: #666; font-family: monospace;")
         main_layout.addWidget(debug_info)
@@ -146,6 +147,7 @@ def main():
         print("2. Watch the debug info update in real-time")
         print("3. The breakpoint should trigger at 1310px panel width (1250 + 60)")
         print("4. Check if the layout direction changes when crossing the breakpoint")
+        print("5. NEW: Extra Settings should now follow Job/Machine settings layout changes")
         
         # Keep the window alive
         try:
