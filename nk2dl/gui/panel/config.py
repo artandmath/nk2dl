@@ -66,7 +66,7 @@ CONTROL_GROUPS = {
         'update', 'all', 'clear', 'selection', 'inside_groups', 'column_dropdown', 'filter'
     },
     'extra_settings': {
-        'job_name', 'comment', 'department', 'batch_mode', 'reload_plugins', 'render_settings_from_metadata'
+        'job_name', 'comment', 'department', 'job_dependencies', 'batch_mode', 'reload_plugins', 'render_settings_from_metadata'
     }
 }
 

@@ -835,6 +835,12 @@ class SettingsSchema:
             'required': False,
             'category': 'extra'
         },
+        'job_dependencies': {
+            'type': TYPE_STRING,
+            'config_key': 'submission.job_dependencies',
+            'required': False,
+            'category': 'extra'
+        },
         'script_copy_path': {
             'type': TYPE_STRING,
             'config_key': 'submission.script_copy_path',

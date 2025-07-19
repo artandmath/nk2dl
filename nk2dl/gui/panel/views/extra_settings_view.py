@@ -92,8 +92,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         left_layout.setSpacing(15)
         self.left_column_widget.setLayout(left_layout)
         
-        # Job Information section
-        job_info_group = QtWidgets.QGroupBox("Job Information")
+        # Job section
+        job_info_group = QtWidgets.QGroupBox("Job")
         job_info_layout = QtWidgets.QGridLayout()
         job_info_layout.setSpacing(8)
         job_info_group.setLayout(job_info_layout)
@@ -112,6 +112,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.department_edit = HighlightableLineEdit()
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 2, 1)
+        
+        # Job Dependencies
+        job_info_layout.addWidget(QtWidgets.QLabel("Job Dependencies:"), 3, 0)
+        self.job_dependencies_edit = HighlightableLineEdit()
+        self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
+        job_info_layout.addWidget(self.job_dependencies_edit, 3, 1)
+        
+        # Add browse button for job dependencies
+        self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
+        self.job_deps_browse_btn.setFixedWidth(60)
+        self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
+        job_info_layout.addWidget(self.job_deps_browse_btn, 3, 2)
         
         left_layout.addWidget(job_info_group)
         
@@ -353,6 +365,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_name', t))
         self.comment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('comment', t))
         self.department_edit.textChanged.connect(lambda t: self._on_user_changed_setting('department', t))
+        self.job_dependencies_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_dependencies', t))
+        self.job_deps_browse_btn.clicked.connect(self._on_job_deps_browse_clicked)
         
         # Plugin Settings signals
         self.use_batch_mode_check.toggled.connect(lambda c: self._on_user_changed_setting('batch_mode', c))
@@ -392,6 +406,13 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         # Model change signals
         self.settings_model.extraSettingsChanged.connect(self._on_extra_settings_changed)
+    
+    def _on_job_deps_browse_clicked(self):
+        """Handle job dependencies browse button click."""
+        # TODO: Implement job dependencies browsing functionality
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.info("Job dependencies browse functionality not yet implemented")
     
     def _on_user_changed_setting(self, param_name, value):
         """Handle user changes to extra settings with tracking.
@@ -440,6 +461,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.job_name_edit.setText(extra_settings.get('job_name', ''))
             self.comment_edit.setText(extra_settings.get('comment', ''))
             self.department_edit.setText(extra_settings.get('department', ''))
+            self.job_dependencies_edit.setText(extra_settings.get('job_dependencies', ''))
             
             # Plugin Settings
             self.use_batch_mode_check.setChecked(extra_settings.get('batch_mode', False))
@@ -499,6 +521,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_name_edit.blockSignals(block)
         self.comment_edit.blockSignals(block)
         self.department_edit.blockSignals(block)
+        self.job_dependencies_edit.blockSignals(block)
         
         # Plugin Settings controls
         self.use_batch_mode_check.blockSignals(block)
@@ -563,6 +586,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.job_name_edit.setObjectName("job_name")
             self.comment_edit.setObjectName("comment")
             self.department_edit.setObjectName("department")
+            self.job_dependencies_edit.setObjectName("job_dependencies")
             
             # Script Submission
             self.submit_script_as_auxiliary_combo.setObjectName("submit_script_as_auxiliary_file")
@@ -600,6 +624,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             apply_panel_config(self.job_name_edit, "job_name")
             apply_panel_config(self.comment_edit, "comment")
             apply_panel_config(self.department_edit, "department")
+            apply_panel_config(self.job_dependencies_edit, "job_dependencies")
             
             # Script Submission
             apply_panel_config(self.submit_script_as_auxiliary_combo, "submit_script_as_auxiliary_file")
@@ -641,6 +666,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_visual_indication(self.job_name_edit, 'job_name')
         self.register_widget_for_visual_indication(self.comment_edit, 'comment')
         self.register_widget_for_visual_indication(self.department_edit, 'department')
+        self.register_widget_for_visual_indication(self.job_dependencies_edit, 'job_dependencies')
         
         # Plugin Settings widgets
         self.register_widget_for_visual_indication(self.use_batch_mode_check, 'batch_mode')
@@ -688,6 +714,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_change_tracking(self.job_name_edit, 'job_name')
         self.register_widget_for_change_tracking(self.comment_edit, 'comment')
         self.register_widget_for_change_tracking(self.department_edit, 'department')
+        self.register_widget_for_change_tracking(self.job_dependencies_edit, 'job_dependencies')
         
         # Plugin Settings widgets
         self.register_widget_for_change_tracking(self.use_batch_mode_check, 'batch_mode')

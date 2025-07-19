@@ -88,7 +88,6 @@ class SettingsModel(QtCore.QObject):
             'views_separate_jobs': False,  # UI-specific setting
             # New job settings from nuke.submission
             'submit_suspended': config.get('submission.submit_suspended', False),
-            'job_dependencies': config.get('submission.job_dependencies', None),
             'continue_on_error': config.get('submission.continue_on_error', False),
         }
         
@@ -145,6 +144,8 @@ class SettingsModel(QtCore.QObject):
             'batch_mode': config.get('submission.batch_mode', True),
             'reload_plugins': config.get('submission.reload_plugins', False),
             'render_settings_from_metadata': config.get('submission.render_settings_from_metadata', False),
+            # Job dependencies (moved from job settings)
+            'job_dependencies': config.get('submission.job_dependencies', None),
         }
     
     # Job Settings methods
@@ -395,10 +396,6 @@ class SettingsModel(QtCore.QObject):
             errors.append("Invalid frame range format")
         
         # Validate new job settings
-        # Validate job dependencies format
-        job_dependencies = self._job_settings.get('job_dependencies', None)
-        if job_dependencies and not self._is_valid_job_dependencies(job_dependencies):
-            errors.append("Job dependencies must be comma or space separated job IDs")
         
         # Validate boolean settings
         boolean_job_settings = [
@@ -512,6 +509,11 @@ class SettingsModel(QtCore.QObject):
             value = self._extra_settings.get(setting, None)
             if value is not None and not isinstance(value, dict):
                 errors.append(f"{setting} must be a dictionary value")
+        
+        # Validate job dependencies format
+        job_dependencies = self._extra_settings.get('job_dependencies', None)
+        if job_dependencies and not self._is_valid_job_dependencies(job_dependencies):
+            errors.append("Job dependencies must be comma or space separated job IDs")
         
         # Validate script path settings
         script_path_settings = [
