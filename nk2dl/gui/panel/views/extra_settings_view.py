@@ -232,7 +232,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label5 = QtWidgets.QLabel("")
         empty_label5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         copy_script_row.addWidget(empty_label5)
-        self.copy_script_check = HighlightableCheckBox("Copy script")
+        self.copy_script_check = HighlightableCheckBox("Copy nukescript")
         self.copy_script_check.setToolTip("Whether to copy the script before submission.")
         copy_script_row.addWidget(self.copy_script_check)
         
@@ -248,7 +248,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Copy script path
         copy_script_path_row = QtWidgets.QHBoxLayout()
         copy_script_path_row.setSpacing(10)
-        copy_script_path_label = QtWidgets.QLabel("Copy script path(s)")
+        copy_script_path_label = QtWidgets.QLabel("Copy to path(s)")
         copy_script_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         copy_script_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         copy_script_path_row.addWidget(copy_script_path_label)
@@ -371,7 +371,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # On job complete
         on_job_complete_row = QtWidgets.QHBoxLayout()
         on_job_complete_row.setSpacing(10)
-        on_job_complete_label = QtWidgets.QLabel("On job complete")
+        on_job_complete_label = QtWidgets.QLabel("On-job complete")
         on_job_complete_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         on_job_complete_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         on_job_complete_row.addWidget(on_job_complete_label)
@@ -383,7 +383,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Pre job script
         pre_job_script_row = QtWidgets.QHBoxLayout()
         pre_job_script_row.setSpacing(10)
-        pre_job_script_label = QtWidgets.QLabel("Pre job script")
+        pre_job_script_label = QtWidgets.QLabel("Pre-job script")
         pre_job_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         pre_job_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         pre_job_script_row.addWidget(pre_job_script_label)
@@ -395,7 +395,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Post job script
         post_job_script_row = QtWidgets.QHBoxLayout()
         post_job_script_row.setSpacing(10)
-        post_job_script_label = QtWidgets.QLabel("Post job script")
+        post_job_script_label = QtWidgets.QLabel("Post-job script")
         post_job_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         post_job_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         post_job_script_row.addWidget(post_job_script_label)
@@ -407,7 +407,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Pre task script
         pre_task_script_row = QtWidgets.QHBoxLayout()
         pre_task_script_row.setSpacing(10)
-        pre_task_script_label = QtWidgets.QLabel("Pre task script")
+        pre_task_script_label = QtWidgets.QLabel("Pre-task script")
         pre_task_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         pre_task_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         pre_task_script_row.addWidget(pre_task_script_label)
@@ -419,7 +419,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Post task script
         post_task_script_row = QtWidgets.QHBoxLayout()
         post_task_script_row.setSpacing(10)
-        post_task_script_label = QtWidgets.QLabel("Post task script")
+        post_task_script_label = QtWidgets.QLabel("Post-task script")
         post_task_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         post_task_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         post_task_script_row.addWidget(post_task_script_label)
