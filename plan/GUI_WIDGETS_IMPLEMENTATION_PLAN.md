@@ -78,6 +78,48 @@ Extend the existing `SettingsModel` to support all missing parameters from nuke.
 - [ ] `environment` - Dict (default: None)
 - [ ] `omit_environment_keys` - List (default: None)
 
+#### 1.3 Investigate Missing Advanced Parameters
+**Current Status**: After comprehensive analysis of all panel views, these parameters are missing from the UI but available in submission.py.
+
+**Parameters to investigate for UI implementation:**
+
+**Build Job Parameters:**
+- [ ] `build_job_script_path` - Full path template for the build job script file
+  - **Investigation needed**: Determine if this should be in Extra Settings or a separate Build Job section
+  - **Complexity**: Supports tokens like {scriptdir}, {stem}, {YYYY}, etc.
+  - **Priority**: Medium (advanced build job feature)
+
+**Output Control Parameters:**
+- [ ] `output_file_path` - Output directory for rendered files
+  - **Investigation needed**: Determine if this should be in Machine Settings or Extra Settings
+  - **Complexity**: Usually auto-detected, but user override might be useful
+  - **Priority**: Low (usually handled automatically)
+- [ ] `parse_output_paths_to_deadline` - Whether to parse output paths to add as OutputFilename entries
+  - **Investigation needed**: Determine if this should be a checkbox in Machine Settings
+  - **Complexity**: Boolean flag, auto-detected when script_is_open=True
+  - **Priority**: Low (usually auto-detected)
+
+**Advanced Render Parameters:**
+- [ ] `proxy_args` - Dual render mode parameters (for when render_mode="both")
+  - **Investigation needed**: Determine if this should be a separate Proxy Settings section
+  - **Complexity**: Dictionary of arguments to override for proxy submissions
+  - **Priority**: Low (only used for dual render mode)
+- [ ] `nuke_version` - Version of Nuke to use for rendering
+  - **Investigation needed**: Determine if this should be in Machine Settings
+  - **Complexity**: String/Float/Int, usually auto-detected
+  - **Priority**: Low (usually auto-detected)
+- [ ] `enforce_render_order` - Whether to enforce render order (separate from render_order_dependencies)
+  - **Investigation needed**: Determine if this should be in Job Settings
+  - **Complexity**: Boolean, separate from render_order_dependencies
+  - **Priority**: Medium (might be confused with existing render_order_dependencies)
+
+**Implementation Considerations:**
+- [ ] **UI Placement**: Determine optimal location for each parameter (Job Settings, Machine Settings, Extra Settings, or new sections)
+- [ ] **User Experience**: Assess whether these parameters are commonly needed by users
+- [ ] **Auto-detection**: Consider which parameters can be auto-detected vs. require user input
+- [ ] **Complexity**: Evaluate UI complexity vs. benefit for advanced features
+- [ ] **Documentation**: Ensure proper tooltips and help text for advanced parameters
+
 ### Phase 2: Extend Settings View UI (Priority: High)
 Extend the existing `SettingsView` to include the missing job settings.
 
