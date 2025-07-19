@@ -32,7 +32,6 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from ..widget_change_tracker import WidgetChangeTracker
 from ....common.logging import setup_logging
 
 logger = setup_logging('nk2dl.gui.panel.models.settings_model')
@@ -89,6 +88,11 @@ class SettingsModel(QtCore.QObject):
             'separate_jobs': config.get('submission.write_nodes_as_separate_jobs', False),
             'render_order_dependencies': config.get('submission.render_order_dependencies', False),
             'views_separate_jobs': False,  # UI-specific setting
+            # New job settings from nuke.submission
+            'render_settings_from_metadata': config.get('submission.render_settings_from_metadata', False),
+            'submit_suspended': config.get('submission.submit_suspended', False),
+            'job_dependencies': config.get('submission.job_dependencies', None),
+            'continue_on_error': config.get('submission.continue_on_error', False),
         }
         
         # Machine Settings defaults from config system
@@ -114,6 +118,32 @@ class SettingsModel(QtCore.QObject):
             'job_name': config.get('submission.job_name_template', '{batch} / {write} / {file}'),
             'comment': config.get('submission.comment_template', ''),
             'department': config.get('submission.department', ''),
+            # Build job parameters
+            'submit_script_as_auxiliary_file': config.get('submission.submit_script_as_auxiliary_file', None),
+            'submission_is_build_job': config.get('submission.submission_is_build_job', False),
+            'build_job_name': config.get('submission.build_job_name', None),
+            'pre_build_job_script': config.get('submission.pre_build_job_script', None),
+            'post_build_job_script': config.get('submission.post_build_job_script', None),
+            'build_job_as_auxiliary_file': config.get('submission.build_job_as_auxiliary_file', None),
+            'delete_build_job_script': config.get('submission.delete_build_job_script', None),
+            # Script copying parameters
+            'copy_script': config.get('submission.copy_script', None),
+            'copy_script_path': config.get('submission.copy_script_path', None),
+            'submit_copied_script': config.get('submission.submit_copied_script', None),
+            # ScriptJob parameters
+            'script_job_script_path': config.get('submission.script_job_script_path', None),
+            # Job info parameters
+            'extra_info': config.get('submission.extra_info', None),
+            'on_job_complete': config.get('submission.on_job_complete', None),
+            'pre_job_script': config.get('submission.pre_job_script', None),
+            'post_job_script': config.get('submission.post_job_script', None),
+            'pre_task_script': config.get('submission.pre_task_script', None),
+            'post_task_script': config.get('submission.post_task_script', None),
+            # Environment variables parameters
+            'use_current_environment': config.get('submission.use_current_environment', False),
+            'environment_keys': config.get('submission.environment_keys', None),
+            'environment': config.get('submission.environment', None),
+            'omit_environment_keys': config.get('submission.omit_environment_keys', None),
         }
     
     # Job Settings methods
@@ -363,6 +393,23 @@ class SettingsModel(QtCore.QObject):
         if frames and not self._is_valid_frame_range(frames):
             errors.append("Invalid frame range format")
         
+        # Validate new job settings
+        # Validate job dependencies format
+        job_dependencies = self._job_settings.get('job_dependencies', None)
+        if job_dependencies and not self._is_valid_job_dependencies(job_dependencies):
+            errors.append("Job dependencies must be comma or space separated job IDs")
+        
+        # Validate boolean settings
+        boolean_job_settings = [
+            'render_settings_from_metadata',
+            'submit_suspended', 
+            'continue_on_error'
+        ]
+        for setting in boolean_job_settings:
+            value = self._job_settings.get(setting, False)
+            if not isinstance(value, bool):
+                errors.append(f"{setting} must be a boolean value")
+        
         return len(errors) == 0, errors
     
     def validate_machine_settings(self):
@@ -412,6 +459,112 @@ class SettingsModel(QtCore.QObject):
             errors.append("Machine limit must be between 0 and 999")
         
         return len(errors) == 0, errors
+    
+    def validate_extra_settings(self):
+        """Validate all extra settings.
+        
+        Returns:
+            tuple: (is_valid, error_messages_list)
+        """
+        errors = []
+        
+        # Validate boolean settings
+        boolean_extra_settings = [
+            'submit_script_as_auxiliary_file',
+            'submission_is_build_job',
+            'build_job_as_auxiliary_file',
+            'delete_build_job_script',
+            'copy_script',
+            'submit_copied_script',
+            'use_current_environment'
+        ]
+        for setting in boolean_extra_settings:
+            value = self._extra_settings.get(setting, None)
+            if value is not None and not isinstance(value, bool):
+                errors.append(f"{setting} must be a boolean value")
+        
+        # Validate string settings
+        string_extra_settings = [
+            'build_job_name',
+            'script_job_script_path',
+            'on_job_complete'
+        ]
+        for setting in string_extra_settings:
+            value = self._extra_settings.get(setting, None)
+            if value is not None and not isinstance(value, str):
+                errors.append(f"{setting} must be a string value")
+        
+        # Validate list settings
+        list_extra_settings = [
+            'extra_info',
+            'environment_keys',
+            'omit_environment_keys'
+        ]
+        for setting in list_extra_settings:
+            value = self._extra_settings.get(setting, None)
+            if value is not None and not isinstance(value, list):
+                errors.append(f"{setting} must be a list value")
+        
+        # Validate dict settings
+        dict_extra_settings = ['environment']
+        for setting in dict_extra_settings:
+            value = self._extra_settings.get(setting, None)
+            if value is not None and not isinstance(value, dict):
+                errors.append(f"{setting} must be a dictionary value")
+        
+        # Validate script path settings
+        script_path_settings = [
+            'pre_build_job_script',
+            'post_build_job_script',
+            'copy_script_path',
+            'pre_job_script',
+            'post_job_script',
+            'pre_task_script',
+            'post_task_script'
+        ]
+        for setting in script_path_settings:
+            value = self._extra_settings.get(setting, None)
+            if value is not None:
+                if isinstance(value, str) and not self._is_valid_script_path(value):
+                    errors.append(f"{setting} must be a valid script path")
+                elif isinstance(value, list) and not all(self._is_valid_script_path(v) for v in value if isinstance(v, str)):
+                    errors.append(f"{setting} must contain valid script paths")
+        
+        return len(errors) == 0, errors
+    
+    def _is_valid_job_dependencies(self, job_dependencies):
+        """Validate job dependencies format.
+        
+        Args:
+            job_dependencies (str): Job dependencies string
+            
+        Returns:
+            bool: True if format appears valid
+        """
+        if not job_dependencies.strip():
+            return True  # Empty is valid
+        
+        # Basic pattern check for comma or space separated job IDs
+        import re
+        pattern = r'^[\d\s,]+$'
+        return bool(re.match(pattern, job_dependencies.strip()))
+    
+    def _is_valid_script_path(self, script_path):
+        """Validate script path format.
+        
+        Args:
+            script_path (str): Script path string
+            
+        Returns:
+            bool: True if format appears valid
+        """
+        if not script_path.strip():
+            return True  # Empty is valid
+        
+        # Basic validation - should not contain invalid characters
+        import re
+        invalid_chars = r'[<>:"|?*]'
+        return not re.search(invalid_chars, script_path)
     
     def _is_valid_frame_range(self, frame_range):
         """Basic validation for frame range format.
