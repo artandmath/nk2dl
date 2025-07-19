@@ -252,6 +252,30 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         job_main_layout.addLayout(checkboxes_row)
         
+        # Job dependencies row (positioned after checkboxes, before divider)
+        job_deps_row = QtWidgets.QHBoxLayout()
+        job_deps_row.setSpacing(10)
+        
+        job_deps_label = QtWidgets.QLabel("Job Dependencies")
+        job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_deps_row.addWidget(job_deps_label)
+        
+        self.job_dependencies_edit = HighlightableLineEdit()
+        self.job_dependencies_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
+        self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
+        job_deps_row.addWidget(self.job_dependencies_edit, 1)  # Add stretch factor to fill remaining space
+        
+        # Add browse button for job dependencies
+        self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
+        self.job_deps_browse_btn.setFixedWidth(60)
+        self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
+        job_deps_row.addWidget(self.job_deps_browse_btn)
+        
+        job_deps_row.addStretch()
+        
+        job_main_layout.addLayout(job_deps_row)
+        
         # Divider
         divider = QtWidgets.QFrame()
         divider.setFrameShape(QtWidgets.QFrame.HLine)
@@ -311,30 +335,6 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         job_org_row3.addStretch()
         
         job_main_layout.addLayout(job_org_row3)
-        
-        # Job dependencies row (moved to be last before divider)
-        job_deps_row = QtWidgets.QHBoxLayout()
-        job_deps_row.setSpacing(10)
-        
-        job_deps_label = QtWidgets.QLabel("Job Dependencies")
-        job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_deps_row.addWidget(job_deps_label)
-        
-        self.job_dependencies_edit = HighlightableLineEdit()
-        self.job_dependencies_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
-        self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
-        job_deps_row.addWidget(self.job_dependencies_edit, 1)  # Add stretch factor to fill remaining space
-        
-        # Add browse button for job dependencies
-        self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
-        self.job_deps_browse_btn.setFixedWidth(60)
-        self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
-        job_deps_row.addWidget(self.job_deps_browse_btn)
-        
-        job_deps_row.addStretch()
-        
-        job_main_layout.addLayout(job_deps_row)
         
         job_layout.addLayout(job_main_layout)
         job_layout.addStretch()
