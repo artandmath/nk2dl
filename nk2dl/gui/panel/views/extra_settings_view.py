@@ -309,8 +309,11 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         """Handle resize to make settings responsive."""
         panel_width = event.size().width()
         
+        # Calculate available width accounting for margins (same as SettingsView)
+        available_width = panel_width - 60  # Account for margins and padding
+        
         # Use the same breakpoint as Job and Machine settings
-        if panel_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
+        if available_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
             if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom)
                 self.content_layout.setSpacing(20)  # More spacing when stacked vertically
