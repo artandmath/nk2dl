@@ -144,7 +144,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         # Add browse button for job dependencies
         self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
-        self.job_deps_browse_btn.setFixedWidth(60)
+        self.job_deps_browse_btn.setFixedWidth(Sizes.BUTTON_WIDTH)
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
         job_info_layout.addWidget(self.job_deps_browse_btn, 4, 2)
         
