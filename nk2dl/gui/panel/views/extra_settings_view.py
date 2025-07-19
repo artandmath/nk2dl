@@ -100,21 +100,21 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.setContentsMargins(8, 8, 8, 8)  # Reduced top margin
         job_info_group.setLayout(job_info_layout)
         
-        job_name_label = QtWidgets.QLabel("Job name")
-        job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(job_name_label, 0, 0)
-        self.job_name_edit = HighlightableLineEdit()
-        self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
-        job_info_layout.addWidget(self.job_name_edit, 0, 1, 1, 2)
-        
         comment_label = QtWidgets.QLabel("Comment")
         comment_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         comment_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(comment_label, 1, 0)
+        job_info_layout.addWidget(comment_label, 0, 0)
         self.comment_edit = HighlightableLineEdit()
         self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
-        job_info_layout.addWidget(self.comment_edit, 1, 1, 1, 2)
+        job_info_layout.addWidget(self.comment_edit, 0, 1, 1, 2)
+        
+        job_name_label = QtWidgets.QLabel("Job name")
+        job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(job_name_label, 1, 0)
+        self.job_name_edit = HighlightableLineEdit()
+        self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
+        job_info_layout.addWidget(self.job_name_edit, 1, 1, 1, 2)
         
         department_label = QtWidgets.QLabel("Department")
         department_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -125,7 +125,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(self.department_edit, 2, 1, 1, 2)
         
         # Extra Info (moved from Job Info section)
-        extra_info_label = QtWidgets.QLabel("Extra info")
+        extra_info_label = QtWidgets.QLabel("Extra info(s)")
         extra_info_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         extra_info_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(extra_info_label, 3, 0)
@@ -188,7 +188,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         plugin_checkboxes_row.addWidget(self.reload_plugin_check)
         
-        self.render_settings_from_metadata_check = HighlightableCheckBox("Render settings from metadata")
+        self.render_settings_from_metadata_check = HighlightableCheckBox("Settings from metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
         plugin_checkboxes_row.addWidget(self.render_settings_from_metadata_check)
         
@@ -211,7 +211,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label4 = QtWidgets.QLabel("")
         empty_label4.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         submit_auxiliary_row.addWidget(empty_label4)
-        self.submit_script_as_auxiliary_check = HighlightableCheckBox("Submit script as auxiliary")
+        self.submit_script_as_auxiliary_check = HighlightableCheckBox("Submit nukescript as auxiliary file with job")
         self.submit_script_as_auxiliary_check.setToolTip("Whether to submit the script as an auxiliary file.")
         submit_auxiliary_row.addWidget(self.submit_script_as_auxiliary_check)
         submit_auxiliary_row.addStretch()
@@ -230,7 +230,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Add some spacing between the two checkboxes
         copy_script_row.addSpacing(20)
         
-        self.submit_copied_script_check = HighlightableCheckBox("Submit copied script")
+        self.submit_copied_script_check = HighlightableCheckBox("Submit copied script as auxiliary file")
         self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
         copy_script_row.addWidget(self.submit_copied_script_check)
         copy_script_row.addStretch()
@@ -239,7 +239,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Copy script path
         copy_script_path_row = QtWidgets.QHBoxLayout()
         copy_script_path_row.setSpacing(10)
-        copy_script_path_label = QtWidgets.QLabel("Copy script path")
+        copy_script_path_label = QtWidgets.QLabel("Copy script path(s)")
         copy_script_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         copy_script_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         copy_script_path_row.addWidget(copy_script_path_label)
@@ -295,7 +295,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label7 = QtWidgets.QLabel("")
         empty_label7.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         submission_build_row.addWidget(empty_label7)
-        self.submission_is_build_job_check = HighlightableCheckBox("Submission is build job")
+        self.submission_is_build_job_check = HighlightableCheckBox("Submit as build job")
         self.submission_is_build_job_check.setToolTip("Whether this submission is a build job.")
         submission_build_row.addWidget(self.submission_is_build_job_check)
         
@@ -505,8 +505,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     def _connect_signals(self):
         """Connect UI signals to model updates."""
         # Job Information signals
-        self.job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_name', t))
         self.comment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('comment', t))
+        self.job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_name', t))
         self.department_edit.textChanged.connect(lambda t: self._on_user_changed_setting('department', t))
         self.extra_info_edit.textChanged.connect(lambda t: self._on_user_changed_setting('extra_info', t))
         self.job_dependencies_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_dependencies', t))
@@ -613,8 +613,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             extra_settings = self.settings_model.get_all_extra_settings()
             
             # Job Information
-            self.job_name_edit.setText(extra_settings.get('job_name', ''))
             self.comment_edit.setText(extra_settings.get('comment', ''))
+            self.job_name_edit.setText(extra_settings.get('job_name', ''))
             self.department_edit.setText(extra_settings.get('department', ''))
             self.extra_info_edit.setText(str(extra_settings.get('extra_info', '{}')))
             self.job_dependencies_edit.setText(extra_settings.get('job_dependencies', ''))
@@ -669,8 +669,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     def _block_signals(self, block):
         """Block or unblock signals for all UI controls."""
         # Job Information controls
-        self.job_name_edit.blockSignals(block)
         self.comment_edit.blockSignals(block)
+        self.job_name_edit.blockSignals(block)
         self.department_edit.blockSignals(block)
         self.job_dependencies_edit.blockSignals(block)
         
@@ -738,8 +738,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             
             # Set object names for extra settings controls - MUST match control names passed to apply_panel_config
             # Job Information
-            self.job_name_edit.setObjectName("job_name")
             self.comment_edit.setObjectName("comment")
+            self.job_name_edit.setObjectName("job_name")
             self.department_edit.setObjectName("department")
             self.job_dependencies_edit.setObjectName("job_dependencies")
             
@@ -780,8 +780,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             
             # Apply configuration to extra settings controls
             # Job Information
-            apply_panel_config(self.job_name_edit, "job_name")
             apply_panel_config(self.comment_edit, "comment")
+            apply_panel_config(self.job_name_edit, "job_name")
             apply_panel_config(self.department_edit, "department")
             apply_panel_config(self.job_dependencies_edit, "job_dependencies")
             
@@ -826,8 +826,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     def _register_widgets_for_visual_indication(self):
         """Register all widgets for visual indication based on storage state."""
         # Job Information widgets
-        self.register_widget_for_visual_indication(self.job_name_edit, 'job_name')
         self.register_widget_for_visual_indication(self.comment_edit, 'comment')
+        self.register_widget_for_visual_indication(self.job_name_edit, 'job_name')
         self.register_widget_for_visual_indication(self.department_edit, 'department')
         self.register_widget_for_visual_indication(self.job_dependencies_edit, 'job_dependencies')
         
@@ -878,8 +878,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     def _register_widgets_for_change_tracking(self):
         """Register all widgets for change tracking to detect user vs programmatic changes."""
         # Job Information widgets
-        self.register_widget_for_change_tracking(self.job_name_edit, 'job_name')
         self.register_widget_for_change_tracking(self.comment_edit, 'comment')
+        self.register_widget_for_change_tracking(self.job_name_edit, 'job_name')
         self.register_widget_for_change_tracking(self.department_edit, 'department')
         self.register_widget_for_change_tracking(self.job_dependencies_edit, 'job_dependencies')
         
