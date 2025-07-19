@@ -173,6 +173,10 @@ class Sizes:
     # Row dimensions
     TABLE_ROW_HEIGHT = 24  # Static height for all table rows
     
+    # Tab widget scrolling
+    TAB_WIDGET_SCROLL_THRESHOLD = 400  # Height threshold (px) for enabling tab content scrolling
+    TAB_CONTENT_MIN_HEIGHT = 350  # Minimum height for tab content before scrolling
+    
     # Responsive behavior
     RESPONSIVE_BREAKPOINT = 1250  # Width below which settings stack vertically
     

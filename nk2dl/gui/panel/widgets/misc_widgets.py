@@ -31,7 +31,7 @@ except ImportError:
         except ImportError:
             raise ImportError("Neither PySide6 nor PySide2 is available")
 
-from ..constants import Colors, TableColumns
+from ..constants import Colors, TableColumns, Sizes
 from ....common.logging import setup_logging
 
 # Create a module-specific logger
@@ -344,3 +344,189 @@ class ColumnVisibilityDropdown(QtWidgets.QPushButton):
         self._update_group_checkboxes()
         self._update_all_checkbox()
         self.column_visibility_changed.emit() 
+
+class ScrollableTabWidget(QtWidgets.QTabWidget):
+    """Tab widget that automatically enables scrolling for tab content when height is limited.
+    
+    This widget wraps each tab's content in a QScrollArea when the tab widget height
+    falls below a configurable threshold. This ensures all content remains accessible
+    even in limited vertical space.
+    """
+    
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._scroll_threshold = Sizes.TAB_WIDGET_SCROLL_THRESHOLD
+        self._content_min_height = Sizes.TAB_CONTENT_MIN_HEIGHT
+        self._original_widgets = {}  # Store original widgets before wrapping
+        self._scroll_areas = {}      # Store scroll areas for each tab
+        self._scrolling_enabled = False
+        
+        # Connect resize event to check if scrolling should be enabled
+        self.resizeEvent = self._on_resize_event
+    
+    def addTab(self, widget, label, icon=None):
+        """Override addTab to store original widget and potentially wrap in scroll area."""
+        # Store the original widget
+        tab_index = self.count()
+        self._original_widgets[tab_index] = widget
+        
+        # Check if we need scrolling based on current height
+        if self._should_enable_scrolling():
+            scroll_widget = self._create_scroll_area(widget)
+            self._scroll_areas[tab_index] = scroll_widget
+            super().addTab(scroll_widget, label, icon)
+        else:
+            super().addTab(widget, label, icon)
+        
+        return tab_index
+    
+    def insertTab(self, index, widget, label, icon=None):
+        """Override insertTab to handle scroll areas."""
+        # Store the original widget
+        self._original_widgets[index] = widget
+        
+        # Check if we need scrolling based on current height
+        if self._should_enable_scrolling():
+            scroll_widget = self._create_scroll_area(widget)
+            self._scroll_areas[index] = scroll_widget
+            super().insertTab(index, scroll_widget, label, icon)
+        else:
+            super().insertTab(index, widget, label, icon)
+        
+        return index
+    
+    def removeTab(self, index):
+        """Override removeTab to clean up stored widgets."""
+        # Remove from our tracking dictionaries
+        self._original_widgets.pop(index, None)
+        self._scroll_areas.pop(index, None)
+        
+        # Call parent implementation
+        super().removeTab(index)
+    
+    def widget(self, index):
+        """Override widget to return original widget, not scroll area."""
+        if index in self._original_widgets:
+            return self._original_widgets[index]
+        return super().widget(index)
+    
+    def _should_enable_scrolling(self):
+        """Check if scrolling should be enabled based on current height."""
+        return self.height() < self._scroll_threshold
+    
+    def _create_scroll_area(self, widget):
+        """Create a scroll area wrapper for the given widget."""
+        scroll_area = QtWidgets.QScrollArea()
+        scroll_area.setWidget(widget)
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
+        
+        # Set minimum height to ensure content is accessible
+        scroll_area.setMinimumHeight(self._content_min_height)
+        
+        # Style the scroll area to match the panel theme
+        scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                background-color: #2a2a2a;
+                width: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:vertical {
+                background-color: #555555;
+                border-radius: 6px;
+                min-height: 20px;
+            }
+            QScrollBar::handle:vertical:hover {
+                background-color: #777777;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar:horizontal {
+                background-color: #2a2a2a;
+                height: 12px;
+                border-radius: 6px;
+            }
+            QScrollBar::handle:horizontal {
+                background-color: #555555;
+                border-radius: 6px;
+                min-width: 20px;
+            }
+            QScrollBar::handle:horizontal:hover {
+                background-color: #777777;
+            }
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                width: 0px;
+            }
+        """)
+        
+        return scroll_area
+    
+    def _on_resize_event(self, event):
+        """Handle resize events to enable/disable scrolling as needed."""
+        # Call parent resize event first
+        super().resizeEvent(event)
+        
+        # Check if scrolling state should change
+        should_scroll = self._should_enable_scrolling()
+        
+        if should_scroll != self._scrolling_enabled:
+            self._scrolling_enabled = should_scroll
+            self._update_scrolling_state()
+    
+    def _update_scrolling_state(self):
+        """Update all tabs to use or remove scroll areas based on current state."""
+        # Store current tab index
+        current_index = self.currentIndex()
+        
+        # Remove all tabs temporarily
+        tab_data = []
+        for i in range(self.count()):
+            original_widget = self._original_widgets.get(i, self.widget(i))
+            label = self.tabText(i)
+            icon = self.tabIcon(i)
+            tab_data.append((original_widget, label, icon))
+        
+        # Clear the tab widget
+        self.clear()
+        
+        # Re-add tabs with appropriate wrapping
+        for i, (widget, label, icon) in enumerate(tab_data):
+            if self._scrolling_enabled:
+                scroll_widget = self._create_scroll_area(widget)
+                self._scroll_areas[i] = scroll_widget
+                super().addTab(scroll_widget, label, icon)
+            else:
+                # Remove scroll area if it exists
+                self._scroll_areas.pop(i, None)
+                super().addTab(widget, label, icon)
+            
+            # Store original widget
+            self._original_widgets[i] = widget
+        
+        # Restore current tab
+        if current_index >= 0 and current_index < self.count():
+            self.setCurrentIndex(current_index)
+    
+    def set_scroll_threshold(self, threshold):
+        """Set the height threshold for enabling scrolling."""
+        self._scroll_threshold = threshold
+        self._update_scrolling_state()
+    
+    def set_content_min_height(self, min_height):
+        """Set the minimum height for tab content."""
+        self._content_min_height = min_height
+        self._update_scrolling_state()
+    
+    def get_original_widget(self, index):
+        """Get the original widget for a tab index (not the scroll area wrapper)."""
+        return self._original_widgets.get(index)
+    
+    def is_scrolling_enabled(self):
+        """Check if scrolling is currently enabled."""
+        return self._scrolling_enabled 

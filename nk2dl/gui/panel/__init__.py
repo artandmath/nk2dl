@@ -204,8 +204,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
             
             def _create_tabbed_interface(self):
                 """Create the tabbed interface with all views."""
-                # Create tab widget
-                self.tab_widget = QtWidgets.QTabWidget()
+                # Create scrollable tab widget
+                from .widgets.misc_widgets import ScrollableTabWidget
+                self.tab_widget = ScrollableTabWidget()
                 self.tab_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
                 
                 # Clear main tab widget tooltip to prevent it from showing over content areas
