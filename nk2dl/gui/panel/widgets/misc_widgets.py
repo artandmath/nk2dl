@@ -374,9 +374,17 @@ class ScrollableTabWidget(QtWidgets.QTabWidget):
         if self._should_enable_scrolling():
             scroll_widget = self._create_scroll_area(widget)
             self._scroll_areas[tab_index] = scroll_widget
-            super().addTab(scroll_widget, label, icon)
+            # Handle different PySide versions for addTab signature
+            if PYSIDE_VERSION == "PySide6" and icon is not None:
+                super().addTab(scroll_widget, label, icon)
+            else:
+                super().addTab(scroll_widget, label)
         else:
-            super().addTab(widget, label, icon)
+            # Handle different PySide versions for addTab signature
+            if PYSIDE_VERSION == "PySide6" and icon is not None:
+                super().addTab(widget, label, icon)
+            else:
+                super().addTab(widget, label)
         
         return tab_index
     
@@ -389,9 +397,17 @@ class ScrollableTabWidget(QtWidgets.QTabWidget):
         if self._should_enable_scrolling():
             scroll_widget = self._create_scroll_area(widget)
             self._scroll_areas[index] = scroll_widget
-            super().insertTab(index, scroll_widget, label, icon)
+            # Handle different PySide versions for insertTab signature
+            if PYSIDE_VERSION == "PySide6" and icon is not None:
+                super().insertTab(index, scroll_widget, label, icon)
+            else:
+                super().insertTab(index, scroll_widget, label)
         else:
-            super().insertTab(index, widget, label, icon)
+            # Handle different PySide versions for insertTab signature
+            if PYSIDE_VERSION == "PySide6" and icon is not None:
+                super().insertTab(index, widget, label, icon)
+            else:
+                super().insertTab(index, widget, label)
         
         return index
     
@@ -500,11 +516,19 @@ class ScrollableTabWidget(QtWidgets.QTabWidget):
             if self._scrolling_enabled:
                 scroll_widget = self._create_scroll_area(widget)
                 self._scroll_areas[i] = scroll_widget
-                super().addTab(scroll_widget, label, icon)
+                # Handle different PySide versions for addTab signature
+                if PYSIDE_VERSION == "PySide6" and icon is not None:
+                    super().addTab(scroll_widget, label, icon)
+                else:
+                    super().addTab(scroll_widget, label)
             else:
                 # Remove scroll area if it exists
                 self._scroll_areas.pop(i, None)
-                super().addTab(widget, label, icon)
+                # Handle different PySide versions for addTab signature
+                if PYSIDE_VERSION == "PySide6" and icon is not None:
+                    super().addTab(widget, label, icon)
+                else:
+                    super().addTab(widget, label)
             
             # Store original widget
             self._original_widgets[i] = widget
