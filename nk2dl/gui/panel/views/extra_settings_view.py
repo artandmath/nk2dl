@@ -69,25 +69,25 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Main container with horizontal layout for responsive behavior
         self.content_layout = QtWidgets.QHBoxLayout()  # Start horizontal
         self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)
-        self.content_layout.setContentsMargins(0, 0, 0, Sizes.SETTINGS_BOTTOM_MARGIN)
+        self.content_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 15, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_BOTTOM_MARGIN)
         self.setLayout(self.content_layout)
         
-        # Create left and right column groups
+        # Create left and right column widgets (no group boxes)
         self._create_left_column()
         self._create_right_column()
         
-        # Add groups to layout
-        self.content_layout.addWidget(self.left_column_group, 1)  # Stretch factor 1
-        self.content_layout.addWidget(self.right_column_group, 1)  # Stretch factor 1
+        # Add columns to layout
+        self.content_layout.addWidget(self.left_column_widget, 1)  # Stretch factor 1
+        self.content_layout.addWidget(self.right_column_widget, 1)  # Stretch factor 1
     
     def _create_left_column(self):
         """Create the left column with Job Information and Script Submission sections."""
-        self.left_column_group = QtWidgets.QGroupBox("Job Information & Script Submission")
-        self.left_column_group.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH)
+        self.left_column_widget = QtWidgets.QWidget()
+        self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH)
         left_layout = QtWidgets.QVBoxLayout()
-        left_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 25, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_MARGIN)
+        left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(15)
-        self.left_column_group.setLayout(left_layout)
+        self.left_column_widget.setLayout(left_layout)
         
         # Job Information section
         job_info_group = QtWidgets.QGroupBox("Job Information")
@@ -149,12 +149,12 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     
     def _create_right_column(self):
         """Create the right column with Build Job, Script Job, Job Info, and Environment Variables sections."""
-        self.right_column_group = QtWidgets.QGroupBox("Build Job & Advanced Settings")
-        self.right_column_group.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH)
+        self.right_column_widget = QtWidgets.QWidget()
+        self.right_column_widget.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH)
         right_layout = QtWidgets.QVBoxLayout()
-        right_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 25, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_MARGIN)
+        right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(15)
-        self.right_column_group.setLayout(right_layout)
+        self.right_column_widget.setLayout(right_layout)
         
         # Build Job section
         build_job_group = QtWidgets.QGroupBox("Build Job")
@@ -309,10 +309,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         """Handle resize to make settings responsive."""
         panel_width = event.size().width()
         
-        # Calculate if we have enough space for horizontal layout
-        available_width = panel_width - 60  # Account for margins and group box padding
-        
-        if available_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
+        # Use the same breakpoint as Job and Machine settings
+        if panel_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
             if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom)
                 self.content_layout.setSpacing(20)  # More spacing when stacked vertically

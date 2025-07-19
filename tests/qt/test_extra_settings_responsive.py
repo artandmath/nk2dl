@@ -53,7 +53,8 @@ def main():
         description = QtWidgets.QLabel(
             "This test demonstrates responsive layout in the Extra Settings view. "
             "Resize the window horizontally to see the layout switch between two columns and one column. "
-            "The breakpoint is set to 1250px width."
+            "The breakpoint is set to 1250px width (same as Job/Machine settings). "
+            "Note: Group box containers have been removed - only spacing remains between columns."
         )
         description.setWordWrap(True)
         description.setStyleSheet("margin: 5px 10px; color: #666;")
@@ -125,7 +126,8 @@ def main():
         print("1. Resize the window horizontally to see responsive behavior")
         print("2. Watch the layout info label change between 'Two Columns' and 'One Column'")
         print("3. The breakpoint is at 1250px width (same as Job/Machine settings)")
-        print("4. All Extra Settings sections are now organized in two columns when wide")
+        print("4. Group box containers removed - only spacing between columns")
+        print("5. All Extra Settings sections are now organized in two columns when wide")
         
         # Keep the window alive
         try:
