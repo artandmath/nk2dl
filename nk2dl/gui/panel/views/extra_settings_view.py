@@ -134,22 +134,19 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         plugin_settings_group.setLayout(plugin_settings_layout)
         
         # Use batch mode
-        plugin_settings_layout.addWidget(QtWidgets.QLabel("Use Batch Mode:"), 0, 0)
-        self.use_batch_mode_check = HighlightableCheckBox("")
+        self.use_batch_mode_check = HighlightableCheckBox("Use Batch Mode")
         self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
-        plugin_settings_layout.addWidget(self.use_batch_mode_check, 0, 1)
+        plugin_settings_layout.addWidget(self.use_batch_mode_check, 0, 0, 1, 2)
         
         # Reload plugin between tasks
-        plugin_settings_layout.addWidget(QtWidgets.QLabel("Reload Plugin Between Tasks:"), 1, 0)
-        self.reload_plugin_check = HighlightableCheckBox("")
+        self.reload_plugin_check = HighlightableCheckBox("Reload Plugin Between Tasks")
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
-        plugin_settings_layout.addWidget(self.reload_plugin_check, 1, 1)
+        plugin_settings_layout.addWidget(self.reload_plugin_check, 1, 0, 1, 2)
         
         # Render settings from metadata
-        plugin_settings_layout.addWidget(QtWidgets.QLabel("Render Settings from Metadata:"), 2, 0)
-        self.render_settings_from_metadata_check = HighlightableCheckBox("")
+        self.render_settings_from_metadata_check = HighlightableCheckBox("Render Settings from Metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
-        plugin_settings_layout.addWidget(self.render_settings_from_metadata_check, 2, 1)
+        plugin_settings_layout.addWidget(self.render_settings_from_metadata_check, 2, 0, 1, 2)
         
         left_layout.addWidget(plugin_settings_group)
         
@@ -160,18 +157,14 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_submission_group.setLayout(script_submission_layout)
         
         # Submit script as auxiliary file
-        script_submission_layout.addWidget(QtWidgets.QLabel("Submit Script as Auxiliary:"), 0, 0)
-        self.submit_script_as_auxiliary_combo = HighlightableComboBox()
-        self.submit_script_as_auxiliary_combo.addItems(["Default", "Yes", "No"])
-        self.submit_script_as_auxiliary_combo.setToolTip("Whether to submit the script as an auxiliary file.")
-        script_submission_layout.addWidget(self.submit_script_as_auxiliary_combo, 0, 1)
+        self.submit_script_as_auxiliary_check = HighlightableCheckBox("Submit Script as Auxiliary")
+        self.submit_script_as_auxiliary_check.setToolTip("Whether to submit the script as an auxiliary file.")
+        script_submission_layout.addWidget(self.submit_script_as_auxiliary_check, 0, 0, 1, 2)
         
         # Copy script
-        script_submission_layout.addWidget(QtWidgets.QLabel("Copy Script:"), 1, 0)
-        self.copy_script_combo = HighlightableComboBox()
-        self.copy_script_combo.addItems(["Default", "Yes", "No"])
-        self.copy_script_combo.setToolTip("Whether to copy the script before submission.")
-        script_submission_layout.addWidget(self.copy_script_combo, 1, 1)
+        self.copy_script_check = HighlightableCheckBox("Copy Script")
+        self.copy_script_check.setToolTip("Whether to copy the script before submission.")
+        script_submission_layout.addWidget(self.copy_script_check, 1, 0, 1, 2)
         
         # Copy script path
         script_submission_layout.addWidget(QtWidgets.QLabel("Copy Script Path:"), 2, 0)
@@ -180,11 +173,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_submission_layout.addWidget(self.copy_script_path_edit, 2, 1)
         
         # Submit copied script
-        script_submission_layout.addWidget(QtWidgets.QLabel("Submit Copied Script:"), 3, 0)
-        self.submit_copied_script_combo = HighlightableComboBox()
-        self.submit_copied_script_combo.addItems(["Default", "Yes", "No"])
-        self.submit_copied_script_combo.setToolTip("Whether to submit the copied script instead of the original.")
-        script_submission_layout.addWidget(self.submit_copied_script_combo, 3, 1)
+        self.submit_copied_script_check = HighlightableCheckBox("Submit Copied Script")
+        self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
+        script_submission_layout.addWidget(self.submit_copied_script_check, 3, 0, 1, 2)
         
         left_layout.addWidget(script_submission_group)
     
@@ -205,10 +196,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_group.setLayout(build_job_layout)
         
         # Submission is build job
-        build_job_layout.addWidget(QtWidgets.QLabel("Submission is Build Job:"), 0, 0)
-        self.submission_is_build_job_check = HighlightableCheckBox("")
+        self.submission_is_build_job_check = HighlightableCheckBox("Submission is Build Job")
         self.submission_is_build_job_check.setToolTip("Whether this submission is a build job.")
-        build_job_layout.addWidget(self.submission_is_build_job_check, 0, 1)
+        build_job_layout.addWidget(self.submission_is_build_job_check, 0, 0, 1, 2)
         
         # Build job name
         build_job_layout.addWidget(QtWidgets.QLabel("Build Job Name:"), 1, 0)
@@ -229,18 +219,14 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_layout.addWidget(self.post_build_job_script_edit, 3, 1)
         
         # Build job as auxiliary file
-        build_job_layout.addWidget(QtWidgets.QLabel("Build Job as Auxiliary:"), 4, 0)
-        self.build_job_as_auxiliary_combo = HighlightableComboBox()
-        self.build_job_as_auxiliary_combo.addItems(["Default", "Yes", "No"])
-        self.build_job_as_auxiliary_combo.setToolTip("Whether to submit the build job as an auxiliary file.")
-        build_job_layout.addWidget(self.build_job_as_auxiliary_combo, 4, 1)
+        self.build_job_as_auxiliary_check = HighlightableCheckBox("Build Job as Auxiliary")
+        self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
+        build_job_layout.addWidget(self.build_job_as_auxiliary_check, 4, 0, 1, 2)
         
         # Delete build job script
-        build_job_layout.addWidget(QtWidgets.QLabel("Delete Build Script:"), 5, 0)
-        self.delete_build_job_script_combo = HighlightableComboBox()
-        self.delete_build_job_script_combo.addItems(["Default", "Yes", "No"])
-        self.delete_build_job_script_combo.setToolTip("Whether to delete the build job script after completion.")
-        build_job_layout.addWidget(self.delete_build_job_script_combo, 5, 1)
+        self.delete_build_job_script_check = HighlightableCheckBox("Delete Build Script")
+        self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
+        build_job_layout.addWidget(self.delete_build_job_script_check, 5, 0, 1, 2)
         
         right_layout.addWidget(build_job_group)
         
@@ -309,10 +295,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         env_group.setLayout(env_layout)
         
         # Use current environment
-        env_layout.addWidget(QtWidgets.QLabel("Use Current Environment:"), 0, 0)
-        self.use_current_environment_check = HighlightableCheckBox("")
+        self.use_current_environment_check = HighlightableCheckBox("Use Current Environment")
         self.use_current_environment_check.setToolTip("Whether to use the current environment variables.")
-        env_layout.addWidget(self.use_current_environment_check, 0, 1)
+        env_layout.addWidget(self.use_current_environment_check, 0, 0, 1, 2)
         
         # Environment keys
         env_layout.addWidget(QtWidgets.QLabel("Environment Keys:"), 1, 0)
@@ -374,18 +359,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.render_settings_from_metadata_check.toggled.connect(lambda c: self._on_user_changed_setting('render_settings_from_metadata', c))
         
         # Script Submission signals
-        self.submit_script_as_auxiliary_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('submit_script_as_auxiliary_file', t))
-        self.copy_script_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('copy_script', t))
+        self.submit_script_as_auxiliary_check.toggled.connect(lambda c: self._on_user_changed_setting('submit_script_as_auxiliary_file', c))
+        self.copy_script_check.toggled.connect(lambda c: self._on_user_changed_setting('copy_script', c))
         self.copy_script_path_edit.textChanged.connect(lambda t: self._on_user_changed_setting('copy_script_path', t))
-        self.submit_copied_script_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('submit_copied_script', t))
+        self.submit_copied_script_check.toggled.connect(lambda c: self._on_user_changed_setting('submit_copied_script', c))
         
         # Build Job signals
         self.submission_is_build_job_check.toggled.connect(lambda c: self._on_user_changed_setting('submission_is_build_job', c))
         self.build_job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('build_job_name', t))
         self.pre_build_job_script_edit.textChanged.connect(lambda t: self._on_user_changed_setting('pre_build_job_script', t))
         self.post_build_job_script_edit.textChanged.connect(lambda t: self._on_user_changed_setting('post_build_job_script', t))
-        self.build_job_as_auxiliary_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('build_job_as_auxiliary_file', t))
-        self.delete_build_job_script_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('delete_build_job_script', t))
+        self.build_job_as_auxiliary_check.toggled.connect(lambda c: self._on_user_changed_setting('build_job_as_auxiliary_file', c))
+        self.delete_build_job_script_check.toggled.connect(lambda c: self._on_user_changed_setting('delete_build_job_script', c))
         
         # Script Job signals
         self.script_job_script_path_edit.textChanged.connect(lambda t: self._on_user_changed_setting('script_job_script_path', t))
@@ -469,18 +454,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.render_settings_from_metadata_check.setChecked(extra_settings.get('render_settings_from_metadata', False))
             
             # Script Submission
-            self._set_combo_text(self.submit_script_as_auxiliary_combo, extra_settings.get('submit_script_as_auxiliary_file', 'Default'))
-            self._set_combo_text(self.copy_script_combo, extra_settings.get('copy_script', 'Default'))
+            self.submit_script_as_auxiliary_check.setChecked(extra_settings.get('submit_script_as_auxiliary_file', False))
+            self.copy_script_check.setChecked(extra_settings.get('copy_script', False))
             self.copy_script_path_edit.setText(str(extra_settings.get('copy_script_path', '')))
-            self._set_combo_text(self.submit_copied_script_combo, extra_settings.get('submit_copied_script', 'Default'))
+            self.submit_copied_script_check.setChecked(extra_settings.get('submit_copied_script', False))
             
             # Build Job
             self.submission_is_build_job_check.setChecked(extra_settings.get('submission_is_build_job', False))
             self.build_job_name_edit.setText(str(extra_settings.get('build_job_name', '')))
             self.pre_build_job_script_edit.setText(str(extra_settings.get('pre_build_job_script', '')))
             self.post_build_job_script_edit.setText(str(extra_settings.get('post_build_job_script', '')))
-            self._set_combo_text(self.build_job_as_auxiliary_combo, extra_settings.get('build_job_as_auxiliary_file', 'Default'))
-            self._set_combo_text(self.delete_build_job_script_combo, extra_settings.get('delete_build_job_script', 'Default'))
+            self.build_job_as_auxiliary_check.setChecked(extra_settings.get('build_job_as_auxiliary_file', False))
+            self.delete_build_job_script_check.setChecked(extra_settings.get('delete_build_job_script', False))
             
             # Script Job
             self.script_job_script_path_edit.setText(str(extra_settings.get('script_job_script_path', '')))
@@ -505,15 +490,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
                     # Re-enable change tracking
         self.settings_model.enable_user_change_tracking()
     
-    def _set_combo_text(self, combo, text):
-        """Set combo box text safely, handling missing items."""
-        index = combo.findText(str(text))
-        if index >= 0:
-            combo.setCurrentIndex(index)
-        else:
-            # If text not found, add it temporarily and set it
-            combo.addItem(str(text))
-            combo.setCurrentText(str(text))
+
     
     def _block_signals(self, block):
         """Block or unblock signals for all UI controls."""
@@ -529,18 +506,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.render_settings_from_metadata_check.blockSignals(block)
         
         # Script Submission controls
-        self.submit_script_as_auxiliary_combo.blockSignals(block)
-        self.copy_script_combo.blockSignals(block)
+        self.submit_script_as_auxiliary_check.blockSignals(block)
+        self.copy_script_check.blockSignals(block)
         self.copy_script_path_edit.blockSignals(block)
-        self.submit_copied_script_combo.blockSignals(block)
+        self.submit_copied_script_check.blockSignals(block)
         
         # Build Job controls
         self.submission_is_build_job_check.blockSignals(block)
         self.build_job_name_edit.blockSignals(block)
         self.pre_build_job_script_edit.blockSignals(block)
         self.post_build_job_script_edit.blockSignals(block)
-        self.build_job_as_auxiliary_combo.blockSignals(block)
-        self.delete_build_job_script_combo.blockSignals(block)
+        self.build_job_as_auxiliary_check.blockSignals(block)
+        self.delete_build_job_script_check.blockSignals(block)
         
         # Script Job controls
         self.script_job_script_path_edit.blockSignals(block)
@@ -589,18 +566,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.job_dependencies_edit.setObjectName("job_dependencies")
             
             # Script Submission
-            self.submit_script_as_auxiliary_combo.setObjectName("submit_script_as_auxiliary_file")
-            self.copy_script_combo.setObjectName("copy_script")
+            self.submit_script_as_auxiliary_check.setObjectName("submit_script_as_auxiliary_file")
+            self.copy_script_check.setObjectName("copy_script")
             self.copy_script_path_edit.setObjectName("copy_script_path")
-            self.submit_copied_script_combo.setObjectName("submit_copied_script")
+            self.submit_copied_script_check.setObjectName("submit_copied_script")
             
             # Build Job
             self.submission_is_build_job_check.setObjectName("submission_is_build_job")
             self.build_job_name_edit.setObjectName("build_job_name")
             self.pre_build_job_script_edit.setObjectName("pre_build_job_script")
             self.post_build_job_script_edit.setObjectName("post_build_job_script")
-            self.build_job_as_auxiliary_combo.setObjectName("build_job_as_auxiliary_file")
-            self.delete_build_job_script_combo.setObjectName("delete_build_job_script")
+            self.build_job_as_auxiliary_check.setObjectName("build_job_as_auxiliary_file")
+            self.delete_build_job_script_check.setObjectName("delete_build_job_script")
             
             # Script Job
             self.script_job_script_path_edit.setObjectName("script_job_script_path")
@@ -627,18 +604,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             apply_panel_config(self.job_dependencies_edit, "job_dependencies")
             
             # Script Submission
-            apply_panel_config(self.submit_script_as_auxiliary_combo, "submit_script_as_auxiliary_file")
-            apply_panel_config(self.copy_script_combo, "copy_script")
+            apply_panel_config(self.submit_script_as_auxiliary_check, "submit_script_as_auxiliary_file")
+            apply_panel_config(self.copy_script_check, "copy_script")
             apply_panel_config(self.copy_script_path_edit, "copy_script_path")
-            apply_panel_config(self.submit_copied_script_combo, "submit_copied_script")
+            apply_panel_config(self.submit_copied_script_check, "submit_copied_script")
             
             # Build Job
             apply_panel_config(self.submission_is_build_job_check, "submission_is_build_job")
             apply_panel_config(self.build_job_name_edit, "build_job_name")
             apply_panel_config(self.pre_build_job_script_edit, "pre_build_job_script")
             apply_panel_config(self.post_build_job_script_edit, "post_build_job_script")
-            apply_panel_config(self.build_job_as_auxiliary_combo, "build_job_as_auxiliary_file")
-            apply_panel_config(self.delete_build_job_script_combo, "delete_build_job_script")
+            apply_panel_config(self.build_job_as_auxiliary_check, "build_job_as_auxiliary_file")
+            apply_panel_config(self.delete_build_job_script_check, "delete_build_job_script")
             
             # Script Job
             apply_panel_config(self.script_job_script_path_edit, "script_job_script_path")
@@ -674,18 +651,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_visual_indication(self.render_settings_from_metadata_check, 'render_settings_from_metadata')
         
         # Script Submission widgets
-        self.register_widget_for_visual_indication(self.submit_script_as_auxiliary_combo, 'submit_script_as_auxiliary_file')
-        self.register_widget_for_visual_indication(self.copy_script_combo, 'copy_script')
+        self.register_widget_for_visual_indication(self.submit_script_as_auxiliary_check, 'submit_script_as_auxiliary_file')
+        self.register_widget_for_visual_indication(self.copy_script_check, 'copy_script')
         self.register_widget_for_visual_indication(self.copy_script_path_edit, 'copy_script_path')
-        self.register_widget_for_visual_indication(self.submit_copied_script_combo, 'submit_copied_script')
+        self.register_widget_for_visual_indication(self.submit_copied_script_check, 'submit_copied_script')
         
         # Build Job widgets
         self.register_widget_for_visual_indication(self.submission_is_build_job_check, 'submission_is_build_job')
         self.register_widget_for_visual_indication(self.build_job_name_edit, 'build_job_name')
         self.register_widget_for_visual_indication(self.pre_build_job_script_edit, 'pre_build_job_script')
         self.register_widget_for_visual_indication(self.post_build_job_script_edit, 'post_build_job_script')
-        self.register_widget_for_visual_indication(self.build_job_as_auxiliary_combo, 'build_job_as_auxiliary_file')
-        self.register_widget_for_visual_indication(self.delete_build_job_script_combo, 'delete_build_job_script')
+        self.register_widget_for_visual_indication(self.build_job_as_auxiliary_check, 'build_job_as_auxiliary_file')
+        self.register_widget_for_visual_indication(self.delete_build_job_script_check, 'delete_build_job_script')
         
         # Script Job widgets
         self.register_widget_for_visual_indication(self.script_job_script_path_edit, 'script_job_script_path')
@@ -722,18 +699,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_change_tracking(self.render_settings_from_metadata_check, 'render_settings_from_metadata')
         
         # Script Submission widgets
-        self.register_widget_for_change_tracking(self.submit_script_as_auxiliary_combo, 'submit_script_as_auxiliary_file')
-        self.register_widget_for_change_tracking(self.copy_script_combo, 'copy_script')
+        self.register_widget_for_change_tracking(self.submit_script_as_auxiliary_check, 'submit_script_as_auxiliary_file')
+        self.register_widget_for_change_tracking(self.copy_script_check, 'copy_script')
         self.register_widget_for_change_tracking(self.copy_script_path_edit, 'copy_script_path')
-        self.register_widget_for_change_tracking(self.submit_copied_script_combo, 'submit_copied_script')
+        self.register_widget_for_change_tracking(self.submit_copied_script_check, 'submit_copied_script')
         
         # Build Job widgets
         self.register_widget_for_change_tracking(self.submission_is_build_job_check, 'submission_is_build_job')
         self.register_widget_for_change_tracking(self.build_job_name_edit, 'build_job_name')
         self.register_widget_for_change_tracking(self.pre_build_job_script_edit, 'pre_build_job_script')
         self.register_widget_for_change_tracking(self.post_build_job_script_edit, 'post_build_job_script')
-        self.register_widget_for_change_tracking(self.build_job_as_auxiliary_combo, 'build_job_as_auxiliary_file')
-        self.register_widget_for_change_tracking(self.delete_build_job_script_combo, 'delete_build_job_script')
+        self.register_widget_for_change_tracking(self.build_job_as_auxiliary_check, 'build_job_as_auxiliary_file')
+        self.register_widget_for_change_tracking(self.delete_build_job_script_check, 'delete_build_job_script')
         
         # Script Job widgets
         self.register_widget_for_change_tracking(self.script_job_script_path_edit, 'script_job_script_path')
