@@ -104,7 +104,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(job_name_label, 0, 0)
         self.job_name_edit = HighlightableLineEdit()
         self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
-        job_info_layout.addWidget(self.job_name_edit, 0, 1)
+        job_info_layout.addWidget(self.job_name_edit, 0, 1, 1, 2)
         
         comment_label = QtWidgets.QLabel("Comment")
         comment_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -112,7 +112,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(comment_label, 1, 0)
         self.comment_edit = HighlightableLineEdit()
         self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
-        job_info_layout.addWidget(self.comment_edit, 1, 1)
+        job_info_layout.addWidget(self.comment_edit, 1, 1, 1, 2)
         
         department_label = QtWidgets.QLabel("Department")
         department_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -120,7 +120,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(department_label, 2, 0)
         self.department_edit = HighlightableLineEdit()
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
-        job_info_layout.addWidget(self.department_edit, 2, 1)
+        job_info_layout.addWidget(self.department_edit, 2, 1, 1, 2)
         
         # Extra Info (moved from Job Info section)
         extra_info_label = QtWidgets.QLabel("Extra Info")
@@ -129,7 +129,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(extra_info_label, 3, 0)
         self.extra_info_edit = HighlightableLineEdit()
         self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
-        job_info_layout.addWidget(self.extra_info_edit, 3, 1)
+        job_info_layout.addWidget(self.extra_info_edit, 3, 1, 1, 2)
         
         # Job Dependencies
         job_deps_label = QtWidgets.QLabel("Job Dependencies")
@@ -150,6 +150,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         # Plugin section
         plugin_settings_group = QtWidgets.QGroupBox("Plugin")
+        plugin_settings_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         plugin_settings_layout = QtWidgets.QVBoxLayout()
         plugin_settings_layout.setSpacing(8)
         plugin_settings_group.setLayout(plugin_settings_layout)
@@ -194,6 +195,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         # Script section
         script_submission_group = QtWidgets.QGroupBox("Script")
+        script_submission_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         script_submission_layout = QtWidgets.QVBoxLayout()
         script_submission_layout.setSpacing(8)
         script_submission_group.setLayout(script_submission_layout)
@@ -238,8 +240,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         copy_script_path_row.addWidget(copy_script_path_label)
         self.copy_script_path_edit = HighlightableLineEdit()
         self.copy_script_path_edit.setToolTip("Path where to copy the script.")
-        copy_script_path_row.addWidget(self.copy_script_path_edit)
-        copy_script_path_row.addStretch()
+        copy_script_path_row.addWidget(self.copy_script_path_edit, 1)  # Add stretch factor
         script_submission_layout.addLayout(copy_script_path_row)
         
         left_layout.addWidget(script_submission_group)
@@ -260,7 +261,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_layout.setSpacing(8)
         build_job_group.setLayout(build_job_layout)
         
-        # Submission is build job and Build job as auxiliary in same row
+        # Submission is build job, Build job as auxiliary, and Delete build script in same row
         submission_build_row = QtWidgets.QHBoxLayout()
         submission_build_row.setSpacing(10)
         empty_label7 = QtWidgets.QLabel("")
@@ -270,12 +271,19 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.submission_is_build_job_check.setToolTip("Whether this submission is a build job.")
         submission_build_row.addWidget(self.submission_is_build_job_check)
         
-        # Add some spacing between the two checkboxes
+        # Add some spacing between the checkboxes
         submission_build_row.addSpacing(20)
         
         self.build_job_as_auxiliary_check = HighlightableCheckBox("Build Job as Auxiliary")
         self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
         submission_build_row.addWidget(self.build_job_as_auxiliary_check)
+        
+        # Add some spacing between the checkboxes
+        submission_build_row.addSpacing(20)
+        
+        self.delete_build_job_script_check = HighlightableCheckBox("Delete Build Script")
+        self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
+        submission_build_row.addWidget(self.delete_build_job_script_check)
         submission_build_row.addStretch()
         build_job_layout.addLayout(submission_build_row)
         
@@ -288,8 +296,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_name_row.addWidget(build_job_name_label)
         self.build_job_name_edit = HighlightableLineEdit()
         self.build_job_name_edit.setToolTip("Name for the build job.")
-        build_job_name_row.addWidget(self.build_job_name_edit)
-        build_job_name_row.addStretch()
+        build_job_name_row.addWidget(self.build_job_name_edit, 1)  # Add stretch factor
         build_job_layout.addLayout(build_job_name_row)
         
         # Pre-build job script
@@ -301,8 +308,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         pre_build_script_row.addWidget(pre_build_script_label)
         self.pre_build_job_script_edit = HighlightableLineEdit()
         self.pre_build_job_script_edit.setToolTip("Script to run before the build job.")
-        pre_build_script_row.addWidget(self.pre_build_job_script_edit)
-        pre_build_script_row.addStretch()
+        pre_build_script_row.addWidget(self.pre_build_job_script_edit, 1)  # Add stretch factor
         build_job_layout.addLayout(pre_build_script_row)
         
         # Post-build job script
@@ -314,23 +320,11 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         post_build_script_row.addWidget(post_build_script_label)
         self.post_build_job_script_edit = HighlightableLineEdit()
         self.post_build_job_script_edit.setToolTip("Script to run after the build job.")
-        post_build_script_row.addWidget(self.post_build_job_script_edit)
-        post_build_script_row.addStretch()
+        post_build_script_row.addWidget(self.post_build_job_script_edit, 1)  # Add stretch factor
         build_job_layout.addLayout(post_build_script_row)
         
 
-        
-        # Delete build job script
-        delete_build_row = QtWidgets.QHBoxLayout()
-        delete_build_row.setSpacing(10)
-        empty_label9 = QtWidgets.QLabel("")
-        empty_label9.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        delete_build_row.addWidget(empty_label9)
-        self.delete_build_job_script_check = HighlightableCheckBox("Delete Build Script")
-        self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
-        delete_build_row.addWidget(self.delete_build_job_script_check)
-        delete_build_row.addStretch()
-        build_job_layout.addLayout(delete_build_row)
+
         
         right_layout.addWidget(build_job_group)
         
@@ -349,8 +343,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_job_path_row.addWidget(script_job_path_label)
         self.script_job_script_path_edit = HighlightableLineEdit()
         self.script_job_script_path_edit.setToolTip("Path to the script for script jobs.")
-        script_job_path_row.addWidget(self.script_job_script_path_edit)
-        script_job_path_row.addStretch()
+        script_job_path_row.addWidget(self.script_job_script_path_edit, 1)  # Add stretch factor
         script_job_layout.addLayout(script_job_path_row)
         
         right_layout.addWidget(script_job_group)
@@ -370,8 +363,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         on_job_complete_row.addWidget(on_job_complete_label)
         self.on_job_complete_edit = HighlightableLineEdit()
         self.on_job_complete_edit.setToolTip("Script to run when the job completes.")
-        on_job_complete_row.addWidget(self.on_job_complete_edit)
-        on_job_complete_row.addStretch()
+        on_job_complete_row.addWidget(self.on_job_complete_edit, 1)  # Add stretch factor
         job_info_advanced_layout.addLayout(on_job_complete_row)
         
         # Pre job script
@@ -383,8 +375,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         pre_job_script_row.addWidget(pre_job_script_label)
         self.pre_job_script_edit = HighlightableLineEdit()
         self.pre_job_script_edit.setToolTip("Script to run before the job starts.")
-        pre_job_script_row.addWidget(self.pre_job_script_edit)
-        pre_job_script_row.addStretch()
+        pre_job_script_row.addWidget(self.pre_job_script_edit, 1)  # Add stretch factor
         job_info_advanced_layout.addLayout(pre_job_script_row)
         
         # Post job script
@@ -396,8 +387,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         post_job_script_row.addWidget(post_job_script_label)
         self.post_job_script_edit = HighlightableLineEdit()
         self.post_job_script_edit.setToolTip("Script to run after the job completes.")
-        post_job_script_row.addWidget(self.post_job_script_edit)
-        post_job_script_row.addStretch()
+        post_job_script_row.addWidget(self.post_job_script_edit, 1)  # Add stretch factor
         job_info_advanced_layout.addLayout(post_job_script_row)
         
         # Pre task script
@@ -409,8 +399,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         pre_task_script_row.addWidget(pre_task_script_label)
         self.pre_task_script_edit = HighlightableLineEdit()
         self.pre_task_script_edit.setToolTip("Script to run before each task starts.")
-        pre_task_script_row.addWidget(self.pre_task_script_edit)
-        pre_task_script_row.addStretch()
+        pre_task_script_row.addWidget(self.pre_task_script_edit, 1)  # Add stretch factor
         job_info_advanced_layout.addLayout(pre_task_script_row)
         
         # Post task script
@@ -422,8 +411,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         post_task_script_row.addWidget(post_task_script_label)
         self.post_task_script_edit = HighlightableLineEdit()
         self.post_task_script_edit.setToolTip("Script to run after each task completes.")
-        post_task_script_row.addWidget(self.post_task_script_edit)
-        post_task_script_row.addStretch()
+        post_task_script_row.addWidget(self.post_task_script_edit, 1)  # Add stretch factor
         job_info_advanced_layout.addLayout(post_task_script_row)
         
         right_layout.addWidget(job_info_advanced_group)
@@ -455,8 +443,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         env_keys_row.addWidget(env_keys_label)
         self.environment_keys_edit = HighlightableLineEdit()
         self.environment_keys_edit.setToolTip("Environment variables to include (comma-separated).")
-        env_keys_row.addWidget(self.environment_keys_edit)
-        env_keys_row.addStretch()
+        env_keys_row.addWidget(self.environment_keys_edit, 1)  # Add stretch factor
         env_layout.addLayout(env_keys_row)
         
         # Environment
@@ -468,8 +455,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         environment_row.addWidget(environment_label)
         self.environment_edit = HighlightableLineEdit()
         self.environment_edit.setToolTip("Environment variables as key=value pairs (comma-separated).")
-        environment_row.addWidget(self.environment_edit)
-        environment_row.addStretch()
+        environment_row.addWidget(self.environment_edit, 1)  # Add stretch factor
         env_layout.addLayout(environment_row)
         
         # Omit environment keys
@@ -481,8 +467,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         omit_env_keys_row.addWidget(omit_env_keys_label)
         self.omit_environment_keys_edit = HighlightableLineEdit()
         self.omit_environment_keys_edit.setToolTip("Environment variables to exclude (comma-separated).")
-        omit_env_keys_row.addWidget(self.omit_environment_keys_edit)
-        omit_env_keys_row.addStretch()
+        omit_env_keys_row.addWidget(self.omit_environment_keys_edit, 1)  # Add stretch factor
         env_layout.addLayout(omit_env_keys_row)
         
         right_layout.addWidget(env_group)
