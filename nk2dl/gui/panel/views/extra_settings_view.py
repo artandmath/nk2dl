@@ -248,6 +248,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_submission_layout.addLayout(copy_script_path_row)
         
         left_layout.addWidget(script_submission_group)
+        
+        # Add stretch to push content to top
+        left_layout.addStretch()
     
     def _create_right_column(self):
         """Create the right column with Build Job, Script Job, Job Info, and Environment Variables sections."""
