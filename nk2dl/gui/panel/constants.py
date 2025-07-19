@@ -829,6 +829,12 @@ class SettingsSchema:
             'required': False,
             'category': 'extra'
         },
+        'render_settings_from_metadata': {
+            'type': TYPE_BOOL,
+            'config_key': 'submission.render_settings_from_metadata',
+            'required': False,
+            'category': 'extra'
+        },
         'script_copy_path': {
             'type': TYPE_STRING,
             'config_key': 'submission.script_copy_path',
@@ -1129,6 +1135,7 @@ class DefaultValues:
     EXTRA_DEFAULTS = {
         "batch_mode": False,
         "reload_plugins": False,
+        "render_settings_from_metadata": False,
         "job_name": "",
         "comment": "",
         "department": ""

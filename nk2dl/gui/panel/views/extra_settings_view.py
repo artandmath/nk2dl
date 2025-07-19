@@ -133,6 +133,12 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         plugin_settings_layout.addWidget(self.reload_plugin_check, 1, 1)
         
+        # Render settings from metadata
+        plugin_settings_layout.addWidget(QtWidgets.QLabel("Render Settings from Metadata:"), 2, 0)
+        self.render_settings_from_metadata_check = HighlightableCheckBox("")
+        self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
+        plugin_settings_layout.addWidget(self.render_settings_from_metadata_check, 2, 1)
+        
         left_layout.addWidget(plugin_settings_group)
         
         # Script Submission section
@@ -351,6 +357,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Plugin Settings signals
         self.use_batch_mode_check.toggled.connect(lambda c: self._on_user_changed_setting('batch_mode', c))
         self.reload_plugin_check.toggled.connect(lambda c: self._on_user_changed_setting('reload_plugins', c))
+        self.render_settings_from_metadata_check.toggled.connect(lambda c: self._on_user_changed_setting('render_settings_from_metadata', c))
         
         # Script Submission signals
         self.submit_script_as_auxiliary_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('submit_script_as_auxiliary_file', t))
@@ -437,6 +444,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             # Plugin Settings
             self.use_batch_mode_check.setChecked(extra_settings.get('batch_mode', False))
             self.reload_plugin_check.setChecked(extra_settings.get('reload_plugins', False))
+            self.render_settings_from_metadata_check.setChecked(extra_settings.get('render_settings_from_metadata', False))
             
             # Script Submission
             self._set_combo_text(self.submit_script_as_auxiliary_combo, extra_settings.get('submit_script_as_auxiliary_file', 'Default'))
@@ -495,6 +503,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Plugin Settings controls
         self.use_batch_mode_check.blockSignals(block)
         self.reload_plugin_check.blockSignals(block)
+        self.render_settings_from_metadata_check.blockSignals(block)
         
         # Script Submission controls
         self.submit_script_as_auxiliary_combo.blockSignals(block)
@@ -636,6 +645,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Plugin Settings widgets
         self.register_widget_for_visual_indication(self.use_batch_mode_check, 'batch_mode')
         self.register_widget_for_visual_indication(self.reload_plugin_check, 'reload_plugins')
+        self.register_widget_for_visual_indication(self.render_settings_from_metadata_check, 'render_settings_from_metadata')
         
         # Script Submission widgets
         self.register_widget_for_visual_indication(self.submit_script_as_auxiliary_combo, 'submit_script_as_auxiliary_file')
@@ -682,6 +692,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Plugin Settings widgets
         self.register_widget_for_change_tracking(self.use_batch_mode_check, 'batch_mode')
         self.register_widget_for_change_tracking(self.reload_plugin_check, 'reload_plugins')
+        self.register_widget_for_change_tracking(self.render_settings_from_metadata_check, 'render_settings_from_metadata')
         
         # Script Submission widgets
         self.register_widget_for_change_tracking(self.submit_script_as_auxiliary_combo, 'submit_script_as_auxiliary_file')

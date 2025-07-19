@@ -87,7 +87,6 @@ class SettingsModel(QtCore.QObject):
             'render_order_dependencies': config.get('submission.render_order_dependencies', False),
             'views_separate_jobs': False,  # UI-specific setting
             # New job settings from nuke.submission
-            'render_settings_from_metadata': config.get('submission.render_settings_from_metadata', False),
             'submit_suspended': config.get('submission.submit_suspended', False),
             'job_dependencies': config.get('submission.job_dependencies', None),
             'continue_on_error': config.get('submission.continue_on_error', False),
@@ -145,6 +144,7 @@ class SettingsModel(QtCore.QObject):
             # Plugin settings (moved from job settings)
             'batch_mode': config.get('submission.batch_mode', True),
             'reload_plugins': config.get('submission.reload_plugins', False),
+            'render_settings_from_metadata': config.get('submission.render_settings_from_metadata', False),
         }
     
     # Job Settings methods
