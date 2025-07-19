@@ -94,6 +94,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         # Job section
         job_info_group = QtWidgets.QGroupBox("Job")
+        job_info_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         job_info_layout = QtWidgets.QGridLayout()
         job_info_layout.setSpacing(8)
         job_info_group.setLayout(job_info_layout)
@@ -193,8 +194,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         left_layout.addWidget(plugin_settings_group)
         
-        # Script section
-        script_submission_group = QtWidgets.QGroupBox("Script")
+        # Nukescript section
+        script_submission_group = QtWidgets.QGroupBox("Nukescript")
         script_submission_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         script_submission_layout = QtWidgets.QVBoxLayout()
         script_submission_layout.setSpacing(8)
@@ -348,8 +349,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         right_layout.addWidget(script_job_group)
         
-        # Job Info section
-        job_info_advanced_group = QtWidgets.QGroupBox("Job Info")
+        # Deadline Scripts section
+        job_info_advanced_group = QtWidgets.QGroupBox("Deadline Scripts")
         job_info_advanced_layout = QtWidgets.QVBoxLayout()
         job_info_advanced_layout.setSpacing(8)
         job_info_advanced_group.setLayout(job_info_advanced_layout)
