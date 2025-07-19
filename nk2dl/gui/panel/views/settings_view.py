@@ -54,6 +54,9 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
     layouts based on available width.
     """
     
+    # Signal for layout changes (True for two columns, False for one column)
+    layoutChanged = QtCore.Signal(bool)
+    
     def __init__(self, settings_model, parent=None):
         super().__init__(parent)
         self.settings_model = settings_model
@@ -823,9 +826,6 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             if original_resize:
                 original_resize(event)
         self.resizeEvent = responsive_resize_event
-        
-        # Create signal for layout changes
-        self.layoutChanged = QtCore.Signal(bool)  # True for two columns, False for one column
     
     def _handle_responsive_resize(self, event):
         """Handle resize to make settings responsive."""
