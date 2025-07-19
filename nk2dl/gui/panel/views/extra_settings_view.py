@@ -98,23 +98,35 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.setSpacing(8)
         job_info_group.setLayout(job_info_layout)
         
-        job_info_layout.addWidget(QtWidgets.QLabel("Job Name:"), 0, 0)
+        job_name_label = QtWidgets.QLabel("Job Name")
+        job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(job_name_label, 0, 0)
         self.job_name_edit = HighlightableLineEdit()
         self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
         job_info_layout.addWidget(self.job_name_edit, 0, 1)
         
-        job_info_layout.addWidget(QtWidgets.QLabel("Comment:"), 1, 0)
+        comment_label = QtWidgets.QLabel("Comment")
+        comment_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        comment_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(comment_label, 1, 0)
         self.comment_edit = HighlightableLineEdit()
         self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
         job_info_layout.addWidget(self.comment_edit, 1, 1)
         
-        job_info_layout.addWidget(QtWidgets.QLabel("Department:"), 2, 0)
+        department_label = QtWidgets.QLabel("Department")
+        department_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        department_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(department_label, 2, 0)
         self.department_edit = HighlightableLineEdit()
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 2, 1)
         
         # Job Dependencies
-        job_info_layout.addWidget(QtWidgets.QLabel("Job Dependencies:"), 3, 0)
+        job_deps_label = QtWidgets.QLabel("Job Dependencies")
+        job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(job_deps_label, 3, 0)
         self.job_dependencies_edit = HighlightableLineEdit()
         self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
         job_info_layout.addWidget(self.job_dependencies_edit, 3, 1)
@@ -167,7 +179,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_submission_layout.addWidget(self.copy_script_check, 1, 0, 1, 2)
         
         # Copy script path
-        script_submission_layout.addWidget(QtWidgets.QLabel("Copy Script Path:"), 2, 0)
+        copy_script_path_label = QtWidgets.QLabel("Copy Script Path")
+        copy_script_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        copy_script_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        script_submission_layout.addWidget(copy_script_path_label, 2, 0)
         self.copy_script_path_edit = HighlightableLineEdit()
         self.copy_script_path_edit.setToolTip("Path where to copy the script.")
         script_submission_layout.addWidget(self.copy_script_path_edit, 2, 1)
@@ -201,19 +216,28 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_layout.addWidget(self.submission_is_build_job_check, 0, 0, 1, 2)
         
         # Build job name
-        build_job_layout.addWidget(QtWidgets.QLabel("Build Job Name:"), 1, 0)
+        build_job_name_label = QtWidgets.QLabel("Build Job Name")
+        build_job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        build_job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        build_job_layout.addWidget(build_job_name_label, 1, 0)
         self.build_job_name_edit = HighlightableLineEdit()
         self.build_job_name_edit.setToolTip("Name for the build job.")
         build_job_layout.addWidget(self.build_job_name_edit, 1, 1)
         
         # Pre-build job script
-        build_job_layout.addWidget(QtWidgets.QLabel("Pre-build Script:"), 2, 0)
+        pre_build_script_label = QtWidgets.QLabel("Pre-build Script")
+        pre_build_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        pre_build_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        build_job_layout.addWidget(pre_build_script_label, 2, 0)
         self.pre_build_job_script_edit = HighlightableLineEdit()
         self.pre_build_job_script_edit.setToolTip("Script to run before the build job.")
         build_job_layout.addWidget(self.pre_build_job_script_edit, 2, 1)
         
         # Post-build job script
-        build_job_layout.addWidget(QtWidgets.QLabel("Post-build Script:"), 3, 0)
+        post_build_script_label = QtWidgets.QLabel("Post-build Script")
+        post_build_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        post_build_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        build_job_layout.addWidget(post_build_script_label, 3, 0)
         self.post_build_job_script_edit = HighlightableLineEdit()
         self.post_build_job_script_edit.setToolTip("Script to run after the build job.")
         build_job_layout.addWidget(self.post_build_job_script_edit, 3, 1)
@@ -237,7 +261,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_job_group.setLayout(script_job_layout)
         
         # Script job script path
-        script_job_layout.addWidget(QtWidgets.QLabel("Script Job Path:"), 0, 0)
+        script_job_path_label = QtWidgets.QLabel("Script Job Path")
+        script_job_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        script_job_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        script_job_layout.addWidget(script_job_path_label, 0, 0)
         self.script_job_script_path_edit = HighlightableLineEdit()
         self.script_job_script_path_edit.setToolTip("Path to the script for script jobs.")
         script_job_layout.addWidget(self.script_job_script_path_edit, 0, 1)
@@ -251,37 +278,55 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_advanced_group.setLayout(job_info_advanced_layout)
         
         # Extra info
-        job_info_advanced_layout.addWidget(QtWidgets.QLabel("Extra Info:"), 0, 0)
+        extra_info_label = QtWidgets.QLabel("Extra Info")
+        extra_info_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        extra_info_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_advanced_layout.addWidget(extra_info_label, 0, 0)
         self.extra_info_edit = HighlightableLineEdit()
         self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
         job_info_advanced_layout.addWidget(self.extra_info_edit, 0, 1)
         
         # On job complete
-        job_info_advanced_layout.addWidget(QtWidgets.QLabel("On Job Complete:"), 1, 0)
+        on_job_complete_label = QtWidgets.QLabel("On Job Complete")
+        on_job_complete_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        on_job_complete_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_advanced_layout.addWidget(on_job_complete_label, 1, 0)
         self.on_job_complete_edit = HighlightableLineEdit()
         self.on_job_complete_edit.setToolTip("Script to run when the job completes.")
         job_info_advanced_layout.addWidget(self.on_job_complete_edit, 1, 1)
         
         # Pre job script
-        job_info_advanced_layout.addWidget(QtWidgets.QLabel("Pre Job Script:"), 2, 0)
+        pre_job_script_label = QtWidgets.QLabel("Pre Job Script")
+        pre_job_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        pre_job_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_advanced_layout.addWidget(pre_job_script_label, 2, 0)
         self.pre_job_script_edit = HighlightableLineEdit()
         self.pre_job_script_edit.setToolTip("Script to run before the job starts.")
         job_info_advanced_layout.addWidget(self.pre_job_script_edit, 2, 1)
         
         # Post job script
-        job_info_advanced_layout.addWidget(QtWidgets.QLabel("Post Job Script:"), 3, 0)
+        post_job_script_label = QtWidgets.QLabel("Post Job Script")
+        post_job_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        post_job_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_advanced_layout.addWidget(post_job_script_label, 3, 0)
         self.post_job_script_edit = HighlightableLineEdit()
         self.post_job_script_edit.setToolTip("Script to run after the job completes.")
         job_info_advanced_layout.addWidget(self.post_job_script_edit, 3, 1)
         
         # Pre task script
-        job_info_advanced_layout.addWidget(QtWidgets.QLabel("Pre Task Script:"), 4, 0)
+        pre_task_script_label = QtWidgets.QLabel("Pre Task Script")
+        pre_task_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        pre_task_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_advanced_layout.addWidget(pre_task_script_label, 4, 0)
         self.pre_task_script_edit = HighlightableLineEdit()
         self.pre_task_script_edit.setToolTip("Script to run before each task starts.")
         job_info_advanced_layout.addWidget(self.pre_task_script_edit, 4, 1)
         
         # Post task script
-        job_info_advanced_layout.addWidget(QtWidgets.QLabel("Post Task Script:"), 5, 0)
+        post_task_script_label = QtWidgets.QLabel("Post Task Script")
+        post_task_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        post_task_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_advanced_layout.addWidget(post_task_script_label, 5, 0)
         self.post_task_script_edit = HighlightableLineEdit()
         self.post_task_script_edit.setToolTip("Script to run after each task completes.")
         job_info_advanced_layout.addWidget(self.post_task_script_edit, 5, 1)
@@ -300,19 +345,28 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         env_layout.addWidget(self.use_current_environment_check, 0, 0, 1, 2)
         
         # Environment keys
-        env_layout.addWidget(QtWidgets.QLabel("Environment Keys:"), 1, 0)
+        env_keys_label = QtWidgets.QLabel("Environment Keys")
+        env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        env_layout.addWidget(env_keys_label, 1, 0)
         self.environment_keys_edit = HighlightableLineEdit()
         self.environment_keys_edit.setToolTip("Environment variables to include (comma-separated).")
         env_layout.addWidget(self.environment_keys_edit, 1, 1)
         
         # Environment
-        env_layout.addWidget(QtWidgets.QLabel("Environment:"), 2, 0)
+        environment_label = QtWidgets.QLabel("Environment")
+        environment_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        environment_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        env_layout.addWidget(environment_label, 2, 0)
         self.environment_edit = HighlightableLineEdit()
         self.environment_edit.setToolTip("Environment variables as key=value pairs (comma-separated).")
         env_layout.addWidget(self.environment_edit, 2, 1)
         
         # Omit environment keys
-        env_layout.addWidget(QtWidgets.QLabel("Omit Environment Keys:"), 3, 0)
+        omit_env_keys_label = QtWidgets.QLabel("Omit Environment Keys")
+        omit_env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        omit_env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        env_layout.addWidget(omit_env_keys_label, 3, 0)
         self.omit_environment_keys_edit = HighlightableLineEdit()
         self.omit_environment_keys_edit.setToolTip("Environment variables to exclude (comma-separated).")
         env_layout.addWidget(self.omit_environment_keys_edit, 3, 1)
