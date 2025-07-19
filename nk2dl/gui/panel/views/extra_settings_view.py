@@ -89,7 +89,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH - 50)
         left_layout = QtWidgets.QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(0)
+        left_layout.setSpacing(8)
         self.left_column_widget.setLayout(left_layout)
         
         # Job section
