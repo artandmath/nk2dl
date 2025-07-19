@@ -76,14 +76,17 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self._create_left_column()
         self._create_right_column()
         
-        # Add columns to layout
+        # Add columns to layout with flexible size policies
+        self.left_column_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
+        self.right_column_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.content_layout.addWidget(self.left_column_widget, 1)  # Stretch factor 1
         self.content_layout.addWidget(self.right_column_widget, 1)  # Stretch factor 1
     
     def _create_left_column(self):
         """Create the left column with Job Information and Script Submission sections."""
         self.left_column_widget = QtWidgets.QWidget()
-        self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH)
+        # Use a smaller minimum width to prevent horizontal scrollbar
+        self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH - 50)
         left_layout = QtWidgets.QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(15)
@@ -150,7 +153,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     def _create_right_column(self):
         """Create the right column with Build Job, Script Job, Job Info, and Environment Variables sections."""
         self.right_column_widget = QtWidgets.QWidget()
-        self.right_column_widget.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH)
+        # Use a smaller minimum width to prevent horizontal scrollbar
+        self.right_column_widget.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH - 50)
         right_layout = QtWidgets.QVBoxLayout()
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(15)
@@ -297,8 +301,26 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
     
     def _setup_responsive_behavior(self):
         """Set up responsive behavior controlled by main panel."""
-        # No individual resize handling - will be controlled by main panel
-        pass
+        # Override resize event to detect when we're about to overflow
+        original_resize = self.resizeEvent
+        def responsive_resize_event(event):
+            self._check_for_overflow(event)
+            if original_resize:
+                original_resize(event)
+        self.resizeEvent = responsive_resize_event
+    
+    def _check_for_overflow(self, event):
+        """Check if the view is about to overflow and trigger layout change."""
+        # Only check if we're currently in two-column mode
+        if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
+            panel_width = event.size().width()
+            # Calculate if we have enough space for two columns
+            # Use a more conservative breakpoint to prevent scrollbar
+            available_width = panel_width - 60  # Account for margins and padding
+            
+            # If we're getting close to the breakpoint, force single column
+            if available_width < Sizes.RESPONSIVE_BREAKPOINT + 40:  # 40px buffer
+                self.set_layout_mode(False)
     
     def set_layout_mode(self, is_two_columns: bool):
         """Set the layout mode based on main panel's responsive state.
@@ -311,11 +333,17 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
                 self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)
+                # Set minimum widths for two-column layout
+                self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH - 50)
+                self.right_column_widget.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH - 50)
         else:
             # Set to one column
             if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
                 self.content_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom)
                 self.content_layout.setSpacing(20)  # More spacing when stacked vertically
+                # Remove minimum widths for single-column layout to prevent scrollbar
+                self.left_column_widget.setMinimumWidth(0)
+                self.right_column_widget.setMinimumWidth(0)
     
     def _connect_signals(self):
         """Connect UI signals to model updates."""
