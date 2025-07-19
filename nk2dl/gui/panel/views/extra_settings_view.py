@@ -65,22 +65,40 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self._setup_responsive_behavior()
     
     def _create_ui(self):
-        """Create the extra settings UI components."""
-        # Main container with horizontal layout for responsive behavior
-        self.content_layout = QtWidgets.QHBoxLayout()  # Start horizontal
+        """Create the UI layout."""
+        # Main content layout - vertical to allow stretch to push container to top
+        self.content_layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom)
         self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)
         self.content_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 15, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_BOTTOM_MARGIN)
         self.setLayout(self.content_layout)
         
-        # Create left and right column widgets (no group boxes)
+        # Create container widget for two-column mode height balancing
+        self.two_column_container = QtWidgets.QWidget()
+        self.two_column_container.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
+        self.two_column_layout = QtWidgets.QHBoxLayout()
+        self.two_column_layout.setContentsMargins(0, 0, 0, 0)
+        self.two_column_layout.setSpacing(Sizes.SETTINGS_SPACING)
+        self.two_column_container.setLayout(self.two_column_layout)
+        
+        # Create left and right column widgets
         self._create_left_column()
         self._create_right_column()
         
-        # Add columns to layout with flexible size policies
+        # Add columns to the two-column container
         self.left_column_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
         self.right_column_widget.setSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Preferred)
-        self.content_layout.addWidget(self.left_column_widget, 1)  # Stretch factor 1
-        self.content_layout.addWidget(self.right_column_widget, 1)  # Stretch factor 1
+        self.two_column_layout.addWidget(self.left_column_widget, 1)
+        self.two_column_layout.addWidget(self.right_column_widget, 1)
+        
+        # Initially add the container to the main layout (two-column mode)
+        self.content_layout.addWidget(self.two_column_container)
+        
+        # Add stretch after container to push it to the top
+        self.content_layout.addStretch()
+        
+        # Store references for layout mode switching
+        self.left_layout = self.left_column_widget.layout()
+        self.right_layout = self.right_column_widget.layout()
     
     def _create_left_column(self):
         """Create the left column with Job Information and Script Submission sections."""
@@ -206,6 +224,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         left_layout.addWidget(job_info_group)
         
+        # Add stretch between Job and Nukescript groups (for two-column mode)
+        self.job_nukescript_stretch = left_layout.addStretch()
+        
         # Nukescript section
         script_submission_group = QtWidgets.QGroupBox("Nukescript")
         script_submission_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
@@ -259,6 +280,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         left_layout.addWidget(script_submission_group)
         
+        # Add stretch between Nukescript and Python Script Job groups (for two-column mode)
+        self.nukescript_python_stretch = left_layout.addStretch()
+        
         # Python Script Job section (moved from right column)
         python_script_job_group = QtWidgets.QGroupBox("Python Script Job")
         python_script_job_layout = QtWidgets.QVBoxLayout()
@@ -278,9 +302,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         python_script_job_layout.addLayout(python_script_job_path_row)
         
         left_layout.addWidget(python_script_job_group)
-        
-        # Add stretch to push content to top
-        left_layout.addStretch()
     
     def _create_right_column(self):
         """Create the right column with Build Job, Job Info, and Environment Variables sections."""
@@ -486,7 +507,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         right_layout.addWidget(env_group)
         
-        # Add stretch to push content to top
+        # Add stretch for even distribution in two-column mode
         right_layout.addStretch()
     
     def _setup_responsive_behavior(self):
@@ -501,15 +522,77 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             is_two_columns (bool): True for two columns, False for one column
         """
         if is_two_columns:
-            # Set to two columns
+            # Two-column mode: Use container approach for height balancing
             if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
-                self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
+                # Switch from single-column to two-column mode
+                # Keep vertical layout direction, just change spacing
                 self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)
+                
+                # Remove columns from main layout if they're there
+                for i in range(self.content_layout.count()):
+                    item = self.content_layout.itemAt(i)
+                    if item and item.widget() in [self.left_column_widget, self.right_column_widget]:
+                        self.content_layout.removeItem(item)
+                
+                # Add columns to container
+                self.two_column_layout.addWidget(self.left_column_widget)
+                self.two_column_layout.addWidget(self.right_column_widget)
+                
+                # Add the container to main layout
+                self.content_layout.addWidget(self.two_column_container)
+                
+                # Add stretch after container to push it to the top
+                self.content_layout.addStretch()
+                
+                # Set up height balancing for the container
+                self._setup_height_balancing()
         else:
-            # Set to one column
-            if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
-                self.content_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom)
-                self.content_layout.setSpacing(20)  # More spacing when stacked vertically
+            # Single-column mode: Direct column layout without container
+            if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
+                # Switch from two-column to single-column mode
+                # Keep vertical layout direction, just change spacing
+                self.content_layout.setSpacing(Sizes.SETTINGS_MARGIN)
+                
+                # Remove container from main layout
+                self.content_layout.removeWidget(self.two_column_container)
+                self.two_column_container.setParent(None)
+                
+                # Remove the stretch after container
+                if self.content_layout.count() > 0:
+                    last_item = self.content_layout.itemAt(self.content_layout.count() - 1)
+                    if last_item and last_item.spacerItem():
+                        self.content_layout.removeItem(last_item)
+                
+                # Remove columns from container
+                self.two_column_layout.removeWidget(self.left_column_widget)
+                self.two_column_layout.removeWidget(self.right_column_widget)
+                
+                # Add columns directly to main layout
+                self.content_layout.addWidget(self.left_column_widget)
+                self.content_layout.addWidget(self.right_column_widget)
+                
+                # Remove height balancing
+                self._remove_height_balancing()
+    
+    def _setup_height_balancing(self):
+        """Set up height balancing for two-column mode using container approach."""
+        # Show stretches between groups for even distribution
+        self.job_nukescript_stretch.setVisible(True)
+        self.nukescript_python_stretch.setVisible(True)
+        
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.debug("Height balancing enabled via container approach with stretches")
+    
+    def _remove_height_balancing(self):
+        """Remove height balancing for single-column mode."""
+        # Hide stretches between groups for normal layout
+        self.job_nukescript_stretch.setVisible(False)
+        self.nukescript_python_stretch.setVisible(False)
+        
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.debug("Height balancing disabled for single-column mode")
     
     def _connect_signals(self):
         """Connect UI signals to model updates."""
