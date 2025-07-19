@@ -249,11 +249,31 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         left_layout.addWidget(script_submission_group)
         
+        # Python Script Job section (moved from right column)
+        python_script_job_group = QtWidgets.QGroupBox("Python Script Job")
+        python_script_job_layout = QtWidgets.QVBoxLayout()
+        python_script_job_layout.setSpacing(8)
+        python_script_job_group.setLayout(python_script_job_layout)
+        
+        # Script job script path
+        python_script_job_path_row = QtWidgets.QHBoxLayout()
+        python_script_job_path_row.setSpacing(10)
+        python_script_job_path_label = QtWidgets.QLabel("Script Job Path")
+        python_script_job_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        python_script_job_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        python_script_job_path_row.addWidget(python_script_job_path_label)
+        self.script_job_script_path_edit = HighlightableLineEdit()
+        self.script_job_script_path_edit.setToolTip("Path to the script for script jobs.")
+        python_script_job_path_row.addWidget(self.script_job_script_path_edit, 1)  # Add stretch factor
+        python_script_job_layout.addLayout(python_script_job_path_row)
+        
+        left_layout.addWidget(python_script_job_group)
+        
         # Add stretch to push content to top
         left_layout.addStretch()
     
     def _create_right_column(self):
-        """Create the right column with Build Job, Script Job, Job Info, and Environment Variables sections."""
+        """Create the right column with Build Job, Job Info, and Environment Variables sections."""
         self.right_column_widget = QtWidgets.QWidget()
         # Use a smaller minimum width to prevent horizontal scrollbar
         self.right_column_widget.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH - 50)
@@ -334,26 +354,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
 
         
         right_layout.addWidget(build_job_group)
-        
-        # Script Job section
-        script_job_group = QtWidgets.QGroupBox("Script Job")
-        script_job_layout = QtWidgets.QVBoxLayout()
-        script_job_layout.setSpacing(8)
-        script_job_group.setLayout(script_job_layout)
-        
-        # Script job script path
-        script_job_path_row = QtWidgets.QHBoxLayout()
-        script_job_path_row.setSpacing(10)
-        script_job_path_label = QtWidgets.QLabel("Script Job Path")
-        script_job_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        script_job_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        script_job_path_row.addWidget(script_job_path_label)
-        self.script_job_script_path_edit = HighlightableLineEdit()
-        self.script_job_script_path_edit.setToolTip("Path to the script for script jobs.")
-        script_job_path_row.addWidget(self.script_job_script_path_edit, 1)  # Add stretch factor
-        script_job_layout.addLayout(script_job_path_row)
-        
-        right_layout.addWidget(script_job_group)
         
         # Deadline Scripts section
         job_info_advanced_group = QtWidgets.QGroupBox("Deadline Scripts")
