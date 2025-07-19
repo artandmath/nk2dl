@@ -95,7 +95,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Job section
         job_info_group = QtWidgets.QGroupBox("Job")
         job_info_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        job_info_group.setContentsMargins(0, 0, 0, 0)  # Remove group box margins
         job_info_layout = QtWidgets.QGridLayout()
         job_info_layout.setSpacing(8)
         job_info_layout.setContentsMargins(8, 8, 8, 8)  # Reduced top margin
@@ -154,7 +153,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Plugin section
         plugin_settings_group = QtWidgets.QGroupBox("Plugin")
         plugin_settings_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        plugin_settings_group.setContentsMargins(0, 0, 0, 0)  # Remove group box margins
         plugin_settings_layout = QtWidgets.QVBoxLayout()
         plugin_settings_layout.setSpacing(8)
         plugin_settings_layout.setContentsMargins(8, 8, 8, 8)
@@ -201,7 +199,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Nukescript section
         script_submission_group = QtWidgets.QGroupBox("Nukescript")
         script_submission_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        script_submission_group.setContentsMargins(0, 0, 0, 0)  # Remove group box margins
         script_submission_layout = QtWidgets.QVBoxLayout()
         script_submission_layout.setSpacing(8)
         script_submission_layout.setContentsMargins(8, 8, 8, 8)
