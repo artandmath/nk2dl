@@ -225,6 +225,114 @@ Connect all components and ensure proper functionality.
 - **Visual regression tests** for UI consistency
 - **Cross-version testing** for Nuke compatibility
 
+### PySide/Qt Testing for Nuke Environment
+
+#### Testing Qt Applications in Nuke
+When creating or testing Qt/PySide applications that need to run in Nuke:
+
+**Use Nuke Terminal Mode Instead of Python**
+Replace standard `python script.py` commands with Nuke's terminal GUI mode:
+```powershell
+& 'C:\Program Files\Nuke15.1v1\Nuke15.1.exe' --tg script.py
+```
+
+**When to Use Nuke Terminal Mode**
+- Testing Qt widgets and panels that will be integrated into Nuke
+- Debugging PySide2/PySide6 compatibility issues
+- Testing inheritance systems that depend on Nuke's Qt environment
+- Validating UI behavior in Nuke's specific Qt context
+- Avoiding relative import issues when testing Nuke plugins
+
+#### Nuke Qt Best Practices
+1. **PySide Version Detection**: Always detect Nuke version for correct PySide import:
+   ```python
+   import nuke
+   if nuke.NUKE_VERSION_MAJOR >= 16:
+       from PySide6 import QtWidgets, QtCore, QtGui
+   else:
+       from PySide2 import QtWidgets, QtCore, QtGui
+   ```
+
+2. **Keep Windows Responsive**: In Nuke terminal mode, process Qt events to maintain responsiveness:
+   ```python
+   while True:
+       QtWidgets.QApplication.processEvents()
+       time.sleep(0.1)
+       if not window.isVisible():
+           break
+   ```
+
+3. **Prevent Garbage Collection in tests**: Store global references to prevent Qt widgets from being destroyed:
+   ```python
+   globals()['_widget_reference'] = widget
+   ```
+
+4. **Path Resolution**: When testing from subdirectories, adjust import paths:
+   ```python
+   nk2dl_path = os.path.join(os.path.dirname(__file__), '..', '..', 'nk2dl')
+   #or be very direct:    nk2dl_path = "C:/Users/Daniel/Documents/repo/nk2dl/"
+   sys.path.insert(0, nk2dl_path)
+   ```
+
+#### Nuke Command Line Options
+- `--tg`: Terminal GUI mode (keeps Qt event loop active)
+- `--nc`: No crash reporter
+- `--safe`: Safe mode (minimal plugins)
+
+#### Example Test Structure for UI Components
+```python
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+"""Qt test for Nuke environment."""
+
+import sys
+import os
+import time
+
+# Path setup for Nuke testing
+nk2dl_path = os.path.join(os.path.dirname(__file__), '..', '..', 'nk2dl')
+sys.path.insert(0, nk2dl_path)
+
+# Nuke-compatible PySide imports
+import nuke
+if nuke.NUKE_VERSION_MAJOR >= 16:
+    from PySide6 import QtWidgets, QtCore, QtGui
+else:
+    from PySide2 import QtWidgets, QtCore, QtGui
+
+def main():
+    widget = MyQtWidget()
+    widget.show()
+    
+    # Keep alive for Nuke terminal mode
+    globals()['_test_widget'] = widget
+    
+    try:
+        while True:
+            QtWidgets.QApplication.processEvents()
+            time.sleep(0.001)
+            if not widget.isVisible():
+                break
+    except KeyboardInterrupt:
+        pass
+    
+    return widget
+
+if __name__ == "__main__":
+    main()
+```
+
+#### Testing Commands
+- **Nuke Qt Test**: `& 'C:\Program Files\Nuke15.1v1\Nuke15.1.exe' --tg tests/qt/test_file.py`
+- **Environment Setup**: Run PowerShell environment `C:\Users\Daniel\Documents\repo\nk2dl\.venv\Scripts\Activate-nk2dl.ps1` for YAML support
+- **Launch Time**: Allow up to 180 seconds for Nuke to launch
+
+#### Testing Phases
+- **Phase 2-3**: Test individual UI components in Nuke terminal mode
+- **Phase 4**: Test new widgets (HighlightableTextEdit, KeyValueEditor, CollapsibleGroupBox)
+- **Phase 5**: Test visual polish and responsive design
+- **Phase 6**: Test full integration with existing panel
+
 ## Success Criteria
 
 ### UI Completion

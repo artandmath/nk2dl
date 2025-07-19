@@ -256,7 +256,7 @@ class TableColumns:
     HEADERS = [
         "Render", "Order", "Node", "Filename", "Priority", "ChunkSize", "Frames", 
         "NodesFrames", "TaskTimeout", "AutoTimeout", "RenderMode", 
-        "NukeX", "BatchMode", "ReloadPlugin", "Pool", "SecondaryPool", 
+        "NukeX", "Pool", "SecondaryPool", 
         "Group", "Threads", "MinRam", "MaxRam", "UseGPU", "GPUId", 
         "ConcurrentTasks", "WorkerTaskLimit", "MachineList", "Limits"
     ]
@@ -275,8 +275,6 @@ class TableColumns:
         "AutoTimeout": "Auto Timeout",
         "RenderMode": "Render Mode",
         "NukeX": "Nuke X",
-        "BatchMode": "Batch Mode",
-        "ReloadPlugin": "Reload Plugin",
         "Pool": "Pool",
         "SecondaryPool": "Secondary Pool",
         "Group": "Group",
@@ -296,8 +294,7 @@ class TableColumns:
         "Fixed": ["Render", "Order", "Node", "Filename"],  # Always visible, cannot be hidden
         "Job Settings": [
             "Priority", "ChunkSize", "Frames", "NodesFrames", 
-            "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX", 
-            "BatchMode", "ReloadPlugin"
+            "TaskTimeout", "AutoTimeout", "RenderMode", "NukeX"
         ],
         "Machine Settings": [
             "Pool", "SecondaryPool", "Group", "Threads", 
@@ -319,13 +316,11 @@ class TableColumns:
             8: ["Yes", "No"],                    # AutoTimeout  
             9: ["Full", "Proxy", "Both", "Script"],  # RenderMode
             10: ["Yes", "No"],                   # NukeX
-            11: ["Yes", "No"],                   # BatchMode
-            12: ["Yes", "No"],                   # ReloadPlugin
-            13: Settings.get_pool_options(),     # Pool
-            14: Settings.get_pool_options(),     # SecondaryPool
-            15: Settings.get_group_options(),    # Group
-            19: ["Yes", "No"],                   # UseGPU
-            22: ["Yes", "No"]                    # WorkerTaskLimit
+            11: Settings.get_pool_options(),     # Pool
+            12: Settings.get_pool_options(),     # SecondaryPool
+            13: Settings.get_group_options(),    # Group
+            17: ["Yes", "No"],                   # UseGPU
+            20: ["Yes", "No"]                    # WorkerTaskLimit
         }
     
     # Legacy property for backwards compatibility
@@ -630,13 +625,13 @@ class SettingsSchema:
             'type': TYPE_BOOL,
             'config_key': 'submission.batch_mode',
             'required': False,
-            'category': 'job'
+            'category': 'extra'
         },
         'reload_plugins': {
             'type': TYPE_BOOL,
             'config_key': 'submission.reload_plugins',
             'required': False,
-            'category': 'job'
+            'category': 'extra'
         },
         
         # Machine Settings
@@ -1093,8 +1088,6 @@ class DefaultValues:
         "enable_auto_timeout": False,
         "render_mode": "Full",
         "use_nuke_x": False,
-        "batch_mode": False,
-        "reload_plugins": False,
         "separate_tasks": False,
         "separate_jobs": False,
         "render_order_dependencies": False,
@@ -1134,6 +1127,8 @@ class DefaultValues:
     
     # Extra settings defaults
     EXTRA_DEFAULTS = {
+        "batch_mode": False,
+        "reload_plugins": False,
         "job_name": "",
         "comment": "",
         "department": ""
@@ -1220,9 +1215,7 @@ class HeaderSettingsMapping:
         "TaskTimeout": "task_timeout",
         "AutoTimeout": "enable_auto_timeout",
         "RenderMode": "render_mode",
-        "NukeX": "use_nuke_x",
-        "BatchMode": "batch_mode",
-        "ReloadPlugin": "reload_plugins"
+        "NukeX": "use_nuke_x"
     }
     
     # Machine Settings Relationships  
@@ -1252,8 +1245,7 @@ class HeaderSettingsMapping:
     
     # Boolean columns that should display as Yes/No
     BOOLEAN_COLUMNS = [
-        "NodesFrames", "AutoTimeout", "NukeX", "BatchMode", 
-        "ReloadPlugin", "UseGPU", "WorkerTaskLimit"
+        "NodesFrames", "AutoTimeout", "NukeX", "UseGPU", "WorkerTaskLimit"
     ]
     
     # Numeric columns that should display as strings
@@ -1318,4 +1310,4 @@ class HeaderSettingsMapping:
             return None 
 
     # Machine settings columns (for styling pinned rows) - updated indices (+1 due to Render column)
-    MACHINE_SETTINGS_COLUMNS = [14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25] 
+    MACHINE_SETTINGS_COLUMNS = [12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23] 

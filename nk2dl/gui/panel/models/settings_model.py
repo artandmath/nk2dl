@@ -82,8 +82,6 @@ class SettingsModel(QtCore.QObject):
             'enable_auto_timeout': config.get('submission.enable_auto_timeout', False),
             'render_mode': config.get('submission.render_mode', 'full'),
             'use_nuke_x': config.get('submission.use_nuke_x', False),
-            'batch_mode': config.get('submission.batch_mode', True),
-            'reload_plugins': config.get('submission.reload_plugins', False),
             'separate_tasks': config.get('submission.write_nodes_as_tasks', False),
             'separate_jobs': config.get('submission.write_nodes_as_separate_jobs', False),
             'render_order_dependencies': config.get('submission.render_order_dependencies', False),
@@ -144,6 +142,9 @@ class SettingsModel(QtCore.QObject):
             'environment_keys': config.get('submission.environment_keys', None),
             'environment': config.get('submission.environment', None),
             'omit_environment_keys': config.get('submission.omit_environment_keys', None),
+            # Plugin settings (moved from job settings)
+            'batch_mode': config.get('submission.batch_mode', True),
+            'reload_plugins': config.get('submission.reload_plugins', False),
         }
     
     # Job Settings methods

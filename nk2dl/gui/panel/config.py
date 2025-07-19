@@ -54,7 +54,7 @@ CONTROL_GROUPS = {
     'job_settings': {
         'priority', 'chunk_size', 'frames', 'frame_range', 'use_node_frame_list',
         'task_timeout', 'enable_auto_timeout', 'render_mode', 'render_nukex',
-        'use_batch_mode', 'reload_plugin', 'separate_tasks', 'separate_jobs',
+        'separate_tasks', 'separate_jobs',
         'render_order_dependencies', 'views_separate_jobs'
     },
     'machine_settings': {
@@ -66,7 +66,7 @@ CONTROL_GROUPS = {
         'update', 'all', 'clear', 'selection', 'inside_groups', 'column_dropdown', 'filter'
     },
     'extra_settings': {
-        'job_name', 'comment', 'department'
+        'job_name', 'comment', 'department', 'batch_mode', 'reload_plugins'
     }
 }
 

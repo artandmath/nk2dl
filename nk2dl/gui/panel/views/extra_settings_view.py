@@ -115,6 +115,26 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         left_layout.addWidget(job_info_group)
         
+        # Plugin Settings section
+        plugin_settings_group = QtWidgets.QGroupBox("Plugin Settings")
+        plugin_settings_layout = QtWidgets.QGridLayout()
+        plugin_settings_layout.setSpacing(8)
+        plugin_settings_group.setLayout(plugin_settings_layout)
+        
+        # Use batch mode
+        plugin_settings_layout.addWidget(QtWidgets.QLabel("Use Batch Mode:"), 0, 0)
+        self.use_batch_mode_check = HighlightableCheckBox("")
+        self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
+        plugin_settings_layout.addWidget(self.use_batch_mode_check, 0, 1)
+        
+        # Reload plugin between tasks
+        plugin_settings_layout.addWidget(QtWidgets.QLabel("Reload Plugin Between Tasks:"), 1, 0)
+        self.reload_plugin_check = HighlightableCheckBox("")
+        self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
+        plugin_settings_layout.addWidget(self.reload_plugin_check, 1, 1)
+        
+        left_layout.addWidget(plugin_settings_group)
+        
         # Script Submission section
         script_submission_group = QtWidgets.QGroupBox("Script Submission")
         script_submission_layout = QtWidgets.QGridLayout()
@@ -328,6 +348,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.comment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('comment', t))
         self.department_edit.textChanged.connect(lambda t: self._on_user_changed_setting('department', t))
         
+        # Plugin Settings signals
+        self.use_batch_mode_check.toggled.connect(lambda c: self._on_user_changed_setting('batch_mode', c))
+        self.reload_plugin_check.toggled.connect(lambda c: self._on_user_changed_setting('reload_plugins', c))
+        
         # Script Submission signals
         self.submit_script_as_auxiliary_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('submit_script_as_auxiliary_file', t))
         self.copy_script_combo.currentTextChanged.connect(lambda t: self._on_user_changed_setting('copy_script', t))
@@ -410,6 +434,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.comment_edit.setText(extra_settings.get('comment', ''))
             self.department_edit.setText(extra_settings.get('department', ''))
             
+            # Plugin Settings
+            self.use_batch_mode_check.setChecked(extra_settings.get('batch_mode', False))
+            self.reload_plugin_check.setChecked(extra_settings.get('reload_plugins', False))
+            
             # Script Submission
             self._set_combo_text(self.submit_script_as_auxiliary_combo, extra_settings.get('submit_script_as_auxiliary_file', 'Default'))
             self._set_combo_text(self.copy_script_combo, extra_settings.get('copy_script', 'Default'))
@@ -463,6 +491,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_name_edit.blockSignals(block)
         self.comment_edit.blockSignals(block)
         self.department_edit.blockSignals(block)
+        
+        # Plugin Settings controls
+        self.use_batch_mode_check.blockSignals(block)
+        self.reload_plugin_check.blockSignals(block)
         
         # Script Submission controls
         self.submit_script_as_auxiliary_combo.blockSignals(block)
@@ -601,6 +633,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_visual_indication(self.comment_edit, 'comment')
         self.register_widget_for_visual_indication(self.department_edit, 'department')
         
+        # Plugin Settings widgets
+        self.register_widget_for_visual_indication(self.use_batch_mode_check, 'batch_mode')
+        self.register_widget_for_visual_indication(self.reload_plugin_check, 'reload_plugins')
+        
         # Script Submission widgets
         self.register_widget_for_visual_indication(self.submit_script_as_auxiliary_combo, 'submit_script_as_auxiliary_file')
         self.register_widget_for_visual_indication(self.copy_script_combo, 'copy_script')
@@ -642,6 +678,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_change_tracking(self.job_name_edit, 'job_name')
         self.register_widget_for_change_tracking(self.comment_edit, 'comment')
         self.register_widget_for_change_tracking(self.department_edit, 'department')
+        
+        # Plugin Settings widgets
+        self.register_widget_for_change_tracking(self.use_batch_mode_check, 'batch_mode')
+        self.register_widget_for_change_tracking(self.reload_plugin_check, 'reload_plugins')
         
         # Script Submission widgets
         self.register_widget_for_change_tracking(self.submit_script_as_auxiliary_combo, 'submit_script_as_auxiliary_file')
