@@ -234,6 +234,20 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.render_nukex_check = HighlightableCheckBox("Use Nuke X")
         self.render_nukex_check.setToolTip("If checked, NukeX will be used instead of just Nuke.")
         checkboxes_row.addWidget(self.render_nukex_check)
+        
+        # Add some spacing between checkboxes
+        checkboxes_row.addSpacing(20)
+        
+        self.continue_on_error_check = HighlightableCheckBox("Continue on error")
+        self.continue_on_error_check.setToolTip("Whether to continue rendering on error.")
+        checkboxes_row.addWidget(self.continue_on_error_check)
+        
+        # Add some spacing between checkboxes
+        checkboxes_row.addSpacing(20)
+        
+        self.submit_suspended_check = HighlightableCheckBox("Submit suspended")
+        self.submit_suspended_check.setToolTip("Whether to submit the job suspended.")
+        checkboxes_row.addWidget(self.submit_suspended_check)
         checkboxes_row.addStretch()
         
         job_main_layout.addLayout(checkboxes_row)
@@ -306,7 +320,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         job_main_layout.addWidget(divider2)
         
         # New job settings section
-        # Row 1: Render settings from metadata + Submit suspended
+        # Row 1: Render settings from metadata
         new_job_row1 = QtWidgets.QHBoxLayout()
         new_job_row1.setSpacing(10)
         
@@ -317,33 +331,11 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.render_settings_from_metadata_check = HighlightableCheckBox("Render settings from metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
         new_job_row1.addWidget(self.render_settings_from_metadata_check)
-        
-        # Add some spacing between the two checkboxes
-        new_job_row1.addSpacing(20)
-        
-        self.submit_suspended_check = HighlightableCheckBox("Submit suspended")
-        self.submit_suspended_check.setToolTip("Whether to submit the job suspended.")
-        new_job_row1.addWidget(self.submit_suspended_check)
         new_job_row1.addStretch()
         
         job_main_layout.addLayout(new_job_row1)
         
-        # Row 2: Continue on error
-        new_job_row2 = QtWidgets.QHBoxLayout()
-        new_job_row2.setSpacing(10)
-        
-        empty_label7 = QtWidgets.QLabel("")
-        empty_label7.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        new_job_row2.addWidget(empty_label7)
-        
-        self.continue_on_error_check = HighlightableCheckBox("Continue on error")
-        self.continue_on_error_check.setToolTip("Whether to continue rendering on error.")
-        new_job_row2.addWidget(self.continue_on_error_check)
-        new_job_row2.addStretch()
-        
-        job_main_layout.addLayout(new_job_row2)
-        
-        # Row 3: Job dependencies
+        # Row 2: Job dependencies
         job_deps_row = QtWidgets.QHBoxLayout()
         job_deps_row.setSpacing(10)
         
