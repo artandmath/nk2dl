@@ -89,7 +89,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH - 50)
         left_layout = QtWidgets.QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(8)
+        left_layout.setSpacing(0)
         self.left_column_widget.setLayout(left_layout)
         
         # Job section
@@ -97,6 +97,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         job_info_layout = QtWidgets.QGridLayout()
         job_info_layout.setSpacing(8)
+        job_info_layout.setContentsMargins(8, 8, 8, 8)  # Reduced top margin
         job_info_group.setLayout(job_info_layout)
         
         job_name_label = QtWidgets.QLabel("Job Name")
@@ -154,6 +155,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         plugin_settings_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         plugin_settings_layout = QtWidgets.QVBoxLayout()
         plugin_settings_layout.setSpacing(8)
+        plugin_settings_layout.setContentsMargins(8, 8, 8, 8)
         plugin_settings_group.setLayout(plugin_settings_layout)
         
         # Use batch mode
@@ -199,6 +201,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_submission_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
         script_submission_layout = QtWidgets.QVBoxLayout()
         script_submission_layout.setSpacing(8)
+        script_submission_layout.setContentsMargins(8, 8, 8, 8)
         script_submission_group.setLayout(script_submission_layout)
         
         # Submit script as auxiliary file
