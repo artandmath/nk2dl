@@ -11,63 +11,63 @@ Nuke Panel
 - [ ] Don't highlight blue the frames dialog unless in custom
 - [ ] Populate the remainder of the gui widgets. Add the missing functionality available in nuke.submission.
   - [ ] Job Settings:
-    - [ ] render_settings_from_metadata
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] submit_suspended: bool = False,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] job_dependencies: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] continue_on_error: bool = False,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+    - [x] render_settings_from_metadata
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] submit_suspended: bool = False,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] job_dependencies: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] continue_on_error: bool = False,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
   - [ ] Machine Settings:
-  - [ ] Extra Settings:
-    - [ ] submit_script_as_auxiliary_file: Optional[bool] = None
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] submission_is_build_job: bool = False
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+  - [x] Extra Settings:
+    - [x] submit_script_as_auxiliary_file: Optional[bool] = None
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] submission_is_build_job: bool = False
+        - [x] UI compelete [x] Model complete [ ] Feature complete
      # Build job parameters
-    - [ ] build_job_name: Optional[str] = None 
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] pre_build_job_script: Optional[Union[str, List[str]]] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] post_build_job_script: Optional[Union[str, List[str]]] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] build_job_as_auxiliary_file: Optional[bool] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] delete_build_job_script: Optional[bool] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+    - [x] build_job_name: Optional[str] = None 
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] pre_build_job_script: Optional[Union[str, List[str]]] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] post_build_job_script: Optional[Union[str, List[str]]] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] build_job_as_auxiliary_file: Optional[bool] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] delete_build_job_script: Optional[bool] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
     # Script copying and submission parameters
-    - [ ] copy_script: Optional[bool] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] copy_script_path: Optional[Union[str, List[str], Dict[int, str]]] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] submit_copied_script: Optional[bool] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+    - [x] copy_script: Optional[bool] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] copy_script_path: Optional[Union[str, List[str], Dict[int, str]]] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] submit_copied_script: Optional[bool] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
     # ScriptJob parameters
-    - [ ] script_job_script_path: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+    - [x] script_job_script_path: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
     # Job Info parameters
-    - [ ] extra_info: Optional[List[str]] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] on_job_complete: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] pre_job_script: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] post_job_script: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] pre_task_script: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] post_task_script: Optional[str] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+    - [x] extra_info: Optional[List[str]] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] on_job_complete: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] pre_job_script: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] post_job_script: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] pre_task_script: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] post_task_script: Optional[str] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
     # Environment Variables parameters
-    - [ ] use_current_environment: bool = False,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] environment_keys: Optional[List[str]] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] environment: Optional[Dict[str, str]] = None,
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
-    - [ ] omit_environment_keys: Optional[List[str]] = None):
-        - [ ] UI compelete [ ] Model complete [ ] Feature complete
+    - [x] use_current_environment: bool = False,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] environment_keys: Optional[List[str]] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] environment: Optional[Dict[str, str]] = None,
+        - [x] UI compelete [x] Model complete [ ] Feature complete
+    - [x] omit_environment_keys: Optional[List[str]] = None):
+        - [x] UI compelete [x] Model complete [ ] Feature complete
 
 - [ ] Attached browse buttons to a UI
 - [ ] Fix console font sizing (too small)
