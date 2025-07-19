@@ -60,13 +60,34 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         # Register widgets for change tracking
         self._register_widgets_for_change_tracking()
+        
+        # Set up responsive resize handling
+        self._setup_responsive_behavior()
     
     def _create_ui(self):
         """Create the extra settings UI components."""
-        layout = QtWidgets.QVBoxLayout()
-        layout.setContentsMargins(15, 15, 15, 15)
-        layout.setSpacing(10)
-        self.setLayout(layout)
+        # Main container with horizontal layout for responsive behavior
+        self.content_layout = QtWidgets.QHBoxLayout()  # Start horizontal
+        self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)
+        self.content_layout.setContentsMargins(0, 0, 0, Sizes.SETTINGS_BOTTOM_MARGIN)
+        self.setLayout(self.content_layout)
+        
+        # Create left and right column groups
+        self._create_left_column()
+        self._create_right_column()
+        
+        # Add groups to layout
+        self.content_layout.addWidget(self.left_column_group, 1)  # Stretch factor 1
+        self.content_layout.addWidget(self.right_column_group, 1)  # Stretch factor 1
+    
+    def _create_left_column(self):
+        """Create the left column with Job Information and Script Submission sections."""
+        self.left_column_group = QtWidgets.QGroupBox("Job Information & Script Submission")
+        self.left_column_group.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH)
+        left_layout = QtWidgets.QVBoxLayout()
+        left_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 25, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_MARGIN)
+        left_layout.setSpacing(15)
+        self.left_column_group.setLayout(left_layout)
         
         # Job Information section
         job_info_group = QtWidgets.QGroupBox("Job Information")
@@ -89,7 +110,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 2, 1)
         
-        layout.addWidget(job_info_group)
+        left_layout.addWidget(job_info_group)
         
         # Script Submission section
         script_submission_group = QtWidgets.QGroupBox("Script Submission")
@@ -124,7 +145,16 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.submit_copied_script_combo.setToolTip("Whether to submit the copied script instead of the original.")
         script_submission_layout.addWidget(self.submit_copied_script_combo, 3, 1)
         
-        layout.addWidget(script_submission_group)
+        left_layout.addWidget(script_submission_group)
+    
+    def _create_right_column(self):
+        """Create the right column with Build Job, Script Job, Job Info, and Environment Variables sections."""
+        self.right_column_group = QtWidgets.QGroupBox("Build Job & Advanced Settings")
+        self.right_column_group.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH)
+        right_layout = QtWidgets.QVBoxLayout()
+        right_layout.setContentsMargins(Sizes.SETTINGS_MARGIN, 25, Sizes.SETTINGS_MARGIN, Sizes.SETTINGS_MARGIN)
+        right_layout.setSpacing(15)
+        self.right_column_group.setLayout(right_layout)
         
         # Build Job section
         build_job_group = QtWidgets.QGroupBox("Build Job")
@@ -170,7 +200,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.delete_build_job_script_combo.setToolTip("Whether to delete the build job script after completion.")
         build_job_layout.addWidget(self.delete_build_job_script_combo, 5, 1)
         
-        layout.addWidget(build_job_group)
+        right_layout.addWidget(build_job_group)
         
         # Script Job section
         script_job_group = QtWidgets.QGroupBox("Script Job")
@@ -184,7 +214,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.script_job_script_path_edit.setToolTip("Path to the script for script jobs.")
         script_job_layout.addWidget(self.script_job_script_path_edit, 0, 1)
         
-        layout.addWidget(script_job_group)
+        right_layout.addWidget(script_job_group)
         
         # Job Info section
         job_info_advanced_group = QtWidgets.QGroupBox("Job Info")
@@ -228,7 +258,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_task_script_edit.setToolTip("Script to run after each task completes.")
         job_info_advanced_layout.addWidget(self.post_task_script_edit, 5, 1)
         
-        layout.addWidget(job_info_advanced_group)
+        right_layout.addWidget(job_info_advanced_group)
         
         # Environment Variables section
         env_group = QtWidgets.QGroupBox("Environment Variables")
@@ -260,10 +290,36 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.omit_environment_keys_edit.setToolTip("Environment variables to exclude (comma-separated).")
         env_layout.addWidget(self.omit_environment_keys_edit, 3, 1)
         
-        layout.addWidget(env_group)
+        right_layout.addWidget(env_group)
         
         # Add stretch to push content to top
-        layout.addStretch()
+        right_layout.addStretch()
+    
+    def _setup_responsive_behavior(self):
+        """Set up responsive resize handling."""
+        # Override the resize event for responsive behavior
+        original_resize = self.resizeEvent
+        def responsive_resize_event(event):
+            self._handle_responsive_resize(event)
+            if original_resize:
+                original_resize(event)
+        self.resizeEvent = responsive_resize_event
+    
+    def _handle_responsive_resize(self, event):
+        """Handle resize to make settings responsive."""
+        panel_width = event.size().width()
+        
+        # Calculate if we have enough space for horizontal layout
+        available_width = panel_width - 60  # Account for margins and group box padding
+        
+        if available_width < Sizes.RESPONSIVE_BREAKPOINT:  # Stack vertically when narrow
+            if self.content_layout.direction() == QtWidgets.QBoxLayout.LeftToRight:
+                self.content_layout.setDirection(QtWidgets.QBoxLayout.TopToBottom)
+                self.content_layout.setSpacing(20)  # More spacing when stacked vertically
+        else:  # Side by side when wide enough
+            if self.content_layout.direction() == QtWidgets.QBoxLayout.TopToBottom:
+                self.content_layout.setDirection(QtWidgets.QBoxLayout.LeftToRight)
+                self.content_layout.setSpacing(Sizes.SETTINGS_SPACING)  # Less spacing when side by side
     
     def _connect_signals(self):
         """Connect UI signals to model updates."""
