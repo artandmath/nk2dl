@@ -100,7 +100,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.setContentsMargins(8, 8, 8, 8)  # Reduced top margin
         job_info_group.setLayout(job_info_layout)
         
-        job_name_label = QtWidgets.QLabel("Job Name")
+        job_name_label = QtWidgets.QLabel("Job name")
         job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(job_name_label, 0, 0)
@@ -125,7 +125,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(self.department_edit, 2, 1, 1, 2)
         
         # Extra Info (moved from Job Info section)
-        extra_info_label = QtWidgets.QLabel("Extra Info")
+        extra_info_label = QtWidgets.QLabel("Extra info")
         extra_info_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         extra_info_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(extra_info_label, 3, 0)
@@ -137,12 +137,12 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         profiler_label = QtWidgets.QLabel("")
         profiler_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(profiler_label, 4, 0)
-        self.performance_profiler_check = HighlightableCheckBox("Use Performance Profiler")
+        self.performance_profiler_check = HighlightableCheckBox("Use performance profiler")
         self.performance_profiler_check.setToolTip("Enable performance profiling to generate XML files for analysis.")
         job_info_layout.addWidget(self.performance_profiler_check, 4, 1)
         
         # Performance Profiler Path
-        profiler_path_label = QtWidgets.QLabel("Profiler Path")
+        profiler_path_label = QtWidgets.QLabel("Profiler path")
         profiler_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         profiler_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(profiler_path_label, 5, 0)
@@ -157,7 +157,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.addWidget(self.profiler_path_browse_btn, 5, 2)
         
         # Job Dependencies
-        job_deps_label = QtWidgets.QLabel("Job Dependencies")
+        job_deps_label = QtWidgets.QLabel("Job dependencies")
         job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(job_deps_label, 6, 0)
@@ -180,15 +180,15 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         plugin_checkboxes_row = QtWidgets.QHBoxLayout()
         plugin_checkboxes_row.setSpacing(20)  # Space between checkboxes
         
-        self.use_batch_mode_check = HighlightableCheckBox("Use Batch Mode")
+        self.use_batch_mode_check = HighlightableCheckBox("Use batch mode")
         self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
         plugin_checkboxes_row.addWidget(self.use_batch_mode_check)
         
-        self.reload_plugin_check = HighlightableCheckBox("Reload Plugin Between Tasks")
+        self.reload_plugin_check = HighlightableCheckBox("Reload plugin between tasks")
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         plugin_checkboxes_row.addWidget(self.reload_plugin_check)
         
-        self.render_settings_from_metadata_check = HighlightableCheckBox("Render Settings from Metadata")
+        self.render_settings_from_metadata_check = HighlightableCheckBox("Render settings from metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
         plugin_checkboxes_row.addWidget(self.render_settings_from_metadata_check)
         
@@ -211,7 +211,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label4 = QtWidgets.QLabel("")
         empty_label4.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         submit_auxiliary_row.addWidget(empty_label4)
-        self.submit_script_as_auxiliary_check = HighlightableCheckBox("Submit Script as Auxiliary")
+        self.submit_script_as_auxiliary_check = HighlightableCheckBox("Submit script as auxiliary")
         self.submit_script_as_auxiliary_check.setToolTip("Whether to submit the script as an auxiliary file.")
         submit_auxiliary_row.addWidget(self.submit_script_as_auxiliary_check)
         submit_auxiliary_row.addStretch()
@@ -223,14 +223,14 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label5 = QtWidgets.QLabel("")
         empty_label5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         copy_script_row.addWidget(empty_label5)
-        self.copy_script_check = HighlightableCheckBox("Copy Script")
+        self.copy_script_check = HighlightableCheckBox("Copy script")
         self.copy_script_check.setToolTip("Whether to copy the script before submission.")
         copy_script_row.addWidget(self.copy_script_check)
         
         # Add some spacing between the two checkboxes
         copy_script_row.addSpacing(20)
         
-        self.submit_copied_script_check = HighlightableCheckBox("Submit Copied Script")
+        self.submit_copied_script_check = HighlightableCheckBox("Submit copied script")
         self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
         copy_script_row.addWidget(self.submit_copied_script_check)
         copy_script_row.addStretch()
@@ -239,7 +239,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Copy script path
         copy_script_path_row = QtWidgets.QHBoxLayout()
         copy_script_path_row.setSpacing(10)
-        copy_script_path_label = QtWidgets.QLabel("Copy Script Path")
+        copy_script_path_label = QtWidgets.QLabel("Copy script path")
         copy_script_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         copy_script_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         copy_script_path_row.addWidget(copy_script_path_label)
@@ -259,7 +259,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Script job script path
         python_script_job_path_row = QtWidgets.QHBoxLayout()
         python_script_job_path_row.setSpacing(10)
-        python_script_job_path_label = QtWidgets.QLabel("Script Job Path")
+        python_script_job_path_label = QtWidgets.QLabel("Script job path")
         python_script_job_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         python_script_job_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         python_script_job_path_row.addWidget(python_script_job_path_label)
@@ -295,21 +295,21 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label7 = QtWidgets.QLabel("")
         empty_label7.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         submission_build_row.addWidget(empty_label7)
-        self.submission_is_build_job_check = HighlightableCheckBox("Submission is Build Job")
+        self.submission_is_build_job_check = HighlightableCheckBox("Submission is build job")
         self.submission_is_build_job_check.setToolTip("Whether this submission is a build job.")
         submission_build_row.addWidget(self.submission_is_build_job_check)
         
         # Add some spacing between the checkboxes
         submission_build_row.addSpacing(20)
         
-        self.build_job_as_auxiliary_check = HighlightableCheckBox("Build Job as Auxiliary")
+        self.build_job_as_auxiliary_check = HighlightableCheckBox("Build job as auxiliary")
         self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
         submission_build_row.addWidget(self.build_job_as_auxiliary_check)
         
         # Add some spacing between the checkboxes
         submission_build_row.addSpacing(20)
         
-        self.delete_build_job_script_check = HighlightableCheckBox("Delete Build Script")
+        self.delete_build_job_script_check = HighlightableCheckBox("Delete build script")
         self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
         submission_build_row.addWidget(self.delete_build_job_script_check)
         submission_build_row.addStretch()
@@ -318,7 +318,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Build job name
         build_job_name_row = QtWidgets.QHBoxLayout()
         build_job_name_row.setSpacing(10)
-        build_job_name_label = QtWidgets.QLabel("Build Job Name")
+        build_job_name_label = QtWidgets.QLabel("Build job name")
         build_job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         build_job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         build_job_name_row.addWidget(build_job_name_label)
@@ -330,7 +330,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Pre-build job script
         pre_build_script_row = QtWidgets.QHBoxLayout()
         pre_build_script_row.setSpacing(10)
-        pre_build_script_label = QtWidgets.QLabel("Pre-build Script")
+        pre_build_script_label = QtWidgets.QLabel("Pre-build script")
         pre_build_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         pre_build_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         pre_build_script_row.addWidget(pre_build_script_label)
@@ -342,7 +342,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Post-build job script
         post_build_script_row = QtWidgets.QHBoxLayout()
         post_build_script_row.setSpacing(10)
-        post_build_script_label = QtWidgets.QLabel("Post-build Script")
+        post_build_script_label = QtWidgets.QLabel("Post-build script")
         post_build_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         post_build_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         post_build_script_row.addWidget(post_build_script_label)
@@ -350,9 +350,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_build_job_script_edit.setToolTip("Script to run after the build job.")
         post_build_script_row.addWidget(self.post_build_job_script_edit, 1)  # Add stretch factor
         build_job_layout.addLayout(post_build_script_row)
-        
-
-
         
         right_layout.addWidget(build_job_group)
         
@@ -365,7 +362,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # On job complete
         on_job_complete_row = QtWidgets.QHBoxLayout()
         on_job_complete_row.setSpacing(10)
-        on_job_complete_label = QtWidgets.QLabel("On Job Complete")
+        on_job_complete_label = QtWidgets.QLabel("On job complete")
         on_job_complete_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         on_job_complete_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         on_job_complete_row.addWidget(on_job_complete_label)
@@ -377,7 +374,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Pre job script
         pre_job_script_row = QtWidgets.QHBoxLayout()
         pre_job_script_row.setSpacing(10)
-        pre_job_script_label = QtWidgets.QLabel("Pre Job Script")
+        pre_job_script_label = QtWidgets.QLabel("Pre job script")
         pre_job_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         pre_job_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         pre_job_script_row.addWidget(pre_job_script_label)
@@ -389,7 +386,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Post job script
         post_job_script_row = QtWidgets.QHBoxLayout()
         post_job_script_row.setSpacing(10)
-        post_job_script_label = QtWidgets.QLabel("Post Job Script")
+        post_job_script_label = QtWidgets.QLabel("Post job script")
         post_job_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         post_job_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         post_job_script_row.addWidget(post_job_script_label)
@@ -401,7 +398,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Pre task script
         pre_task_script_row = QtWidgets.QHBoxLayout()
         pre_task_script_row.setSpacing(10)
-        pre_task_script_label = QtWidgets.QLabel("Pre Task Script")
+        pre_task_script_label = QtWidgets.QLabel("Pre task script")
         pre_task_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         pre_task_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         pre_task_script_row.addWidget(pre_task_script_label)
@@ -413,7 +410,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Post task script
         post_task_script_row = QtWidgets.QHBoxLayout()
         post_task_script_row.setSpacing(10)
-        post_task_script_label = QtWidgets.QLabel("Post Task Script")
+        post_task_script_label = QtWidgets.QLabel("Post task script")
         post_task_script_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         post_task_script_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         post_task_script_row.addWidget(post_task_script_label)
@@ -436,7 +433,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label10 = QtWidgets.QLabel("")
         empty_label10.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         use_current_env_row.addWidget(empty_label10)
-        self.use_current_environment_check = HighlightableCheckBox("Use Current Environment")
+        self.use_current_environment_check = HighlightableCheckBox("Use current environment")
         self.use_current_environment_check.setToolTip("Whether to use the current environment variables.")
         use_current_env_row.addWidget(self.use_current_environment_check)
         use_current_env_row.addStretch()
@@ -469,7 +466,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Omit environment keys
         omit_env_keys_row = QtWidgets.QHBoxLayout()
         omit_env_keys_row.setSpacing(10)
-        omit_env_keys_label = QtWidgets.QLabel("Omit Keys")
+        omit_env_keys_label = QtWidgets.QLabel("Omit keys")
         omit_env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         omit_env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         omit_env_keys_row.addWidget(omit_env_keys_label)
