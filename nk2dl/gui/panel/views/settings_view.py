@@ -312,11 +312,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         job_main_layout.addLayout(job_org_row3)
         
-
-        
-
-        
-        # Row 2: Job dependencies
+        # Job dependencies row (moved to be last before divider)
         job_deps_row = QtWidgets.QHBoxLayout()
         job_deps_row.setSpacing(10)
         
