@@ -108,73 +108,82 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
         job_info_layout.addWidget(self.comment_edit, 0, 1, 1, 2)
         
+        # Batch name
+        batch_name_label = QtWidgets.QLabel("Batch name")
+        batch_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        batch_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(batch_name_label, 1, 0)
+        self.batch_name_edit = HighlightableLineEdit()
+        self.batch_name_edit.setToolTip("Batch name template for grouping related jobs. Can include tokens like {scriptname}.")
+        job_info_layout.addWidget(self.batch_name_edit, 1, 1, 1, 2)
+        
         job_name_label = QtWidgets.QLabel("Job name")
         job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         job_name_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(job_name_label, 1, 0)
+        job_info_layout.addWidget(job_name_label, 2, 0)
         self.job_name_edit = HighlightableLineEdit()
         self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
-        job_info_layout.addWidget(self.job_name_edit, 1, 1, 1, 2)
+        job_info_layout.addWidget(self.job_name_edit, 2, 1, 1, 2)
         
         department_label = QtWidgets.QLabel("Department")
         department_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         department_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(department_label, 2, 0)
+        job_info_layout.addWidget(department_label, 3, 0)
         self.department_edit = HighlightableLineEdit()
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
-        job_info_layout.addWidget(self.department_edit, 2, 1, 1, 2)
+        job_info_layout.addWidget(self.department_edit, 3, 1, 1, 2)
         
         # Extra Info (moved from Job Info section)
         extra_info_label = QtWidgets.QLabel("Extra info(s)")
         extra_info_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         extra_info_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(extra_info_label, 3, 0)
+        job_info_layout.addWidget(extra_info_label, 4, 0)
         self.extra_info_edit = HighlightableLineEdit()
         self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
-        job_info_layout.addWidget(self.extra_info_edit, 3, 1, 1, 2)
+        job_info_layout.addWidget(self.extra_info_edit, 4, 1, 1, 2)
         
         # Performance Profiler
         profiler_label = QtWidgets.QLabel("")
         profiler_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(profiler_label, 4, 0)
+        job_info_layout.addWidget(profiler_label, 5, 0)
         self.performance_profiler_check = HighlightableCheckBox("Use performance profiler")
         self.performance_profiler_check.setToolTip("Enable performance profiling to generate XML files for analysis.")
-        job_info_layout.addWidget(self.performance_profiler_check, 4, 1)
+        job_info_layout.addWidget(self.performance_profiler_check, 5, 1)
         
         # Performance Profiler Path
         profiler_path_label = QtWidgets.QLabel("Profiler path")
         profiler_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         profiler_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(profiler_path_label, 5, 0)
+        job_info_layout.addWidget(profiler_path_label, 6, 0)
         self.performance_profiler_path_edit = HighlightableLineEdit()
         self.performance_profiler_path_edit.setToolTip("Directory where performance profile XML files will be saved.")
-        job_info_layout.addWidget(self.performance_profiler_path_edit, 5, 1)
+        job_info_layout.addWidget(self.performance_profiler_path_edit, 6, 1)
         
         # Add browse button for profiler path
         self.profiler_path_browse_btn = QtWidgets.QPushButton("Browse")
         self.profiler_path_browse_btn.setFixedWidth(Sizes.BUTTON_WIDTH)
         self.profiler_path_browse_btn.setToolTip("Browse for profiler output directory")
-        job_info_layout.addWidget(self.profiler_path_browse_btn, 5, 2)
+        job_info_layout.addWidget(self.profiler_path_browse_btn, 6, 2)
         
         # Job Dependencies
         job_deps_label = QtWidgets.QLabel("Job dependencies")
         job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(job_deps_label, 6, 0)
+        job_info_layout.addWidget(job_deps_label, 7, 0)
         self.job_dependencies_edit = HighlightableLineEdit()
         self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
-        job_info_layout.addWidget(self.job_dependencies_edit, 6, 1)
+        job_info_layout.addWidget(self.job_dependencies_edit, 7, 1)
         
         # Add browse button for job dependencies
         self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
         self.job_deps_browse_btn.setFixedWidth(Sizes.BUTTON_WIDTH)
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
-        job_info_layout.addWidget(self.job_deps_browse_btn, 6, 2)
+        job_info_layout.addWidget(self.job_deps_browse_btn, 7, 2)
         
         # Plugin checkboxes (moved from Plugin section) - all on one row
         plugin_label = QtWidgets.QLabel("")
         plugin_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(plugin_label, 7, 0)
+        job_info_layout.addWidget(plugin_label, 8, 0)
         
         # Create horizontal layout for the three checkboxes
         plugin_checkboxes_row = QtWidgets.QHBoxLayout()
@@ -193,7 +202,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         plugin_checkboxes_row.addWidget(self.render_settings_from_metadata_check)
         
         plugin_checkboxes_row.addStretch()  # Push checkboxes to the left
-        job_info_layout.addLayout(plugin_checkboxes_row, 7, 1)
+        job_info_layout.addLayout(plugin_checkboxes_row, 8, 1)
         
         left_layout.addWidget(job_info_group)
         
@@ -506,6 +515,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         """Connect UI signals to model updates."""
         # Job Information signals
         self.comment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('comment', t))
+        self.batch_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('batch_name', t))
         self.job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_name', t))
         self.department_edit.textChanged.connect(lambda t: self._on_user_changed_setting('department', t))
         self.extra_info_edit.textChanged.connect(lambda t: self._on_user_changed_setting('extra_info', t))
@@ -614,6 +624,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             
             # Job Information
             self.comment_edit.setText(extra_settings.get('comment', ''))
+            self.batch_name_edit.setText(extra_settings.get('batch_name', ''))
             self.job_name_edit.setText(extra_settings.get('job_name', ''))
             self.department_edit.setText(extra_settings.get('department', ''))
             self.extra_info_edit.setText(str(extra_settings.get('extra_info', '{}')))
@@ -670,6 +681,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         """Block or unblock signals for all UI controls."""
         # Job Information controls
         self.comment_edit.blockSignals(block)
+        self.batch_name_edit.blockSignals(block)
         self.job_name_edit.blockSignals(block)
         self.department_edit.blockSignals(block)
         self.job_dependencies_edit.blockSignals(block)
@@ -739,6 +751,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             # Set object names for extra settings controls - MUST match control names passed to apply_panel_config
             # Job Information
             self.comment_edit.setObjectName("comment")
+            self.batch_name_edit.setObjectName("batch_name")
             self.job_name_edit.setObjectName("job_name")
             self.department_edit.setObjectName("department")
             self.job_dependencies_edit.setObjectName("job_dependencies")
@@ -781,6 +794,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             # Apply configuration to extra settings controls
             # Job Information
             apply_panel_config(self.comment_edit, "comment")
+            apply_panel_config(self.batch_name_edit, "batch_name")
             apply_panel_config(self.job_name_edit, "job_name")
             apply_panel_config(self.department_edit, "department")
             apply_panel_config(self.job_dependencies_edit, "job_dependencies")
@@ -827,6 +841,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         """Register all widgets for visual indication based on storage state."""
         # Job Information widgets
         self.register_widget_for_visual_indication(self.comment_edit, 'comment')
+        self.register_widget_for_visual_indication(self.batch_name_edit, 'batch_name')
         self.register_widget_for_visual_indication(self.job_name_edit, 'job_name')
         self.register_widget_for_visual_indication(self.department_edit, 'department')
         self.register_widget_for_visual_indication(self.job_dependencies_edit, 'job_dependencies')
@@ -879,6 +894,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         """Register all widgets for change tracking to detect user vs programmatic changes."""
         # Job Information widgets
         self.register_widget_for_change_tracking(self.comment_edit, 'comment')
+        self.register_widget_for_change_tracking(self.batch_name_edit, 'batch_name')
         self.register_widget_for_change_tracking(self.job_name_edit, 'job_name')
         self.register_widget_for_change_tracking(self.department_edit, 'department')
         self.register_widget_for_change_tracking(self.job_dependencies_edit, 'job_dependencies')
