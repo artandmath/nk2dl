@@ -133,25 +133,48 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
         job_info_layout.addWidget(self.extra_info_edit, 3, 1, 1, 2)
         
+        # Performance Profiler
+        profiler_label = QtWidgets.QLabel("")
+        profiler_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(profiler_label, 4, 0)
+        self.performance_profiler_check = HighlightableCheckBox("Use Performance Profiler")
+        self.performance_profiler_check.setToolTip("Enable performance profiling to generate XML files for analysis.")
+        job_info_layout.addWidget(self.performance_profiler_check, 4, 1)
+        
+        # Performance Profiler Path
+        profiler_path_label = QtWidgets.QLabel("Profiler Path")
+        profiler_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        profiler_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(profiler_path_label, 5, 0)
+        self.performance_profiler_path_edit = HighlightableLineEdit()
+        self.performance_profiler_path_edit.setToolTip("Directory where performance profile XML files will be saved.")
+        job_info_layout.addWidget(self.performance_profiler_path_edit, 5, 1)
+        
+        # Add browse button for profiler path
+        self.profiler_path_browse_btn = QtWidgets.QPushButton("Browse")
+        self.profiler_path_browse_btn.setFixedWidth(Sizes.BUTTON_WIDTH)
+        self.profiler_path_browse_btn.setToolTip("Browse for profiler output directory")
+        job_info_layout.addWidget(self.profiler_path_browse_btn, 5, 2)
+        
         # Job Dependencies
         job_deps_label = QtWidgets.QLabel("Job Dependencies")
         job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(job_deps_label, 4, 0)
+        job_info_layout.addWidget(job_deps_label, 6, 0)
         self.job_dependencies_edit = HighlightableLineEdit()
         self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
-        job_info_layout.addWidget(self.job_dependencies_edit, 4, 1)
+        job_info_layout.addWidget(self.job_dependencies_edit, 6, 1)
         
         # Add browse button for job dependencies
         self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
         self.job_deps_browse_btn.setFixedWidth(Sizes.BUTTON_WIDTH)
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
-        job_info_layout.addWidget(self.job_deps_browse_btn, 4, 2)
+        job_info_layout.addWidget(self.job_deps_browse_btn, 6, 2)
         
         # Plugin checkboxes (moved from Plugin section) - all on one row
         plugin_label = QtWidgets.QLabel("")
         plugin_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(plugin_label, 5, 0)
+        job_info_layout.addWidget(plugin_label, 7, 0)
         
         # Create horizontal layout for the three checkboxes
         plugin_checkboxes_row = QtWidgets.QHBoxLayout()
@@ -170,7 +193,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         plugin_checkboxes_row.addWidget(self.render_settings_from_metadata_check)
         
         plugin_checkboxes_row.addStretch()  # Push checkboxes to the left
-        job_info_layout.addLayout(plugin_checkboxes_row, 5, 1)
+        job_info_layout.addLayout(plugin_checkboxes_row, 7, 1)
         
         left_layout.addWidget(job_info_group)
         
@@ -492,6 +515,11 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_dependencies_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_dependencies', t))
         self.job_deps_browse_btn.clicked.connect(self._on_job_deps_browse_clicked)
         
+        # Performance Profiler signals
+        self.performance_profiler_check.toggled.connect(lambda c: self._on_user_changed_setting('performance_profiler', c))
+        self.performance_profiler_path_edit.textChanged.connect(lambda t: self._on_user_changed_setting('performance_profiler_path', t))
+        self.profiler_path_browse_btn.clicked.connect(self._on_profiler_path_browse_clicked)
+        
         # Plugin Settings signals
         self.use_batch_mode_check.toggled.connect(lambda c: self._on_user_changed_setting('batch_mode', c))
         self.reload_plugin_check.toggled.connect(lambda c: self._on_user_changed_setting('reload_plugins', c))
@@ -536,6 +564,13 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
         logger.info("Job dependencies browse functionality not yet implemented")
+    
+    def _on_profiler_path_browse_clicked(self):
+        """Handle profiler path browse button click."""
+        # TODO: Implement profiler path browsing functionality
+        from nk2dl.common.logging import setup_logging
+        logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
+        logger.info("Profiler path browse functionality not yet implemented")
     
     def _on_user_changed_setting(self, param_name, value):
         """Handle user changes to extra settings with tracking.
@@ -587,6 +622,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.extra_info_edit.setText(str(extra_settings.get('extra_info', '{}')))
             self.job_dependencies_edit.setText(extra_settings.get('job_dependencies', ''))
             
+            # Performance Profiler
+            self.performance_profiler_check.setChecked(extra_settings.get('performance_profiler', False))
+            self.performance_profiler_path_edit.setText(str(extra_settings.get('performance_profiler_path', '')))
+            
             # Plugin Settings
             self.use_batch_mode_check.setChecked(extra_settings.get('batch_mode', False))
             self.reload_plugin_check.setChecked(extra_settings.get('reload_plugins', False))
@@ -637,6 +676,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.comment_edit.blockSignals(block)
         self.department_edit.blockSignals(block)
         self.job_dependencies_edit.blockSignals(block)
+        
+        # Performance Profiler controls
+        self.performance_profiler_check.blockSignals(block)
+        self.performance_profiler_path_edit.blockSignals(block)
         
         # Plugin Settings controls
         self.use_batch_mode_check.blockSignals(block)
@@ -703,6 +746,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.department_edit.setObjectName("department")
             self.job_dependencies_edit.setObjectName("job_dependencies")
             
+            # Performance Profiler
+            self.performance_profiler_check.setObjectName("performance_profiler")
+            self.performance_profiler_path_edit.setObjectName("performance_profiler_path")
+            
             # Script Submission
             self.submit_script_as_auxiliary_check.setObjectName("submit_script_as_auxiliary_file")
             self.copy_script_check.setObjectName("copy_script")
@@ -740,6 +787,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             apply_panel_config(self.comment_edit, "comment")
             apply_panel_config(self.department_edit, "department")
             apply_panel_config(self.job_dependencies_edit, "job_dependencies")
+            
+            # Performance Profiler
+            apply_panel_config(self.performance_profiler_check, "performance_profiler")
+            apply_panel_config(self.performance_profiler_path_edit, "performance_profiler_path")
             
             # Script Submission
             apply_panel_config(self.submit_script_as_auxiliary_check, "submit_script_as_auxiliary_file")
@@ -782,6 +833,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_visual_indication(self.comment_edit, 'comment')
         self.register_widget_for_visual_indication(self.department_edit, 'department')
         self.register_widget_for_visual_indication(self.job_dependencies_edit, 'job_dependencies')
+        
+        # Performance Profiler widgets
+        self.register_widget_for_visual_indication(self.performance_profiler_check, 'performance_profiler')
+        self.register_widget_for_visual_indication(self.performance_profiler_path_edit, 'performance_profiler_path')
         
         # Plugin Settings widgets
         self.register_widget_for_visual_indication(self.use_batch_mode_check, 'batch_mode')
@@ -830,6 +885,10 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_change_tracking(self.comment_edit, 'comment')
         self.register_widget_for_change_tracking(self.department_edit, 'department')
         self.register_widget_for_change_tracking(self.job_dependencies_edit, 'job_dependencies')
+        
+        # Performance Profiler widgets
+        self.register_widget_for_change_tracking(self.performance_profiler_check, 'performance_profiler')
+        self.register_widget_for_change_tracking(self.performance_profiler_path_edit, 'performance_profiler_path')
         
         # Plugin Settings widgets
         self.register_widget_for_change_tracking(self.use_batch_mode_check, 'batch_mode')
