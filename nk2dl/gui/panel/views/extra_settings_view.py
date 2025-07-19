@@ -89,7 +89,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.left_column_widget.setMinimumWidth(Sizes.JOB_SETTINGS_MIN_WIDTH - 50)
         left_layout = QtWidgets.QVBoxLayout()
         left_layout.setContentsMargins(0, 0, 0, 0)
-        left_layout.setSpacing(15)
+        left_layout.setSpacing(8)
         self.left_column_widget.setLayout(left_layout)
         
         # Job section
@@ -122,25 +122,34 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 2, 1)
         
+        # Extra Info (moved from Job Info section)
+        extra_info_label = QtWidgets.QLabel("Extra Info")
+        extra_info_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        extra_info_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(extra_info_label, 3, 0)
+        self.extra_info_edit = HighlightableLineEdit()
+        self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
+        job_info_layout.addWidget(self.extra_info_edit, 3, 1)
+        
         # Job Dependencies
         job_deps_label = QtWidgets.QLabel("Job Dependencies")
         job_deps_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         job_deps_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(job_deps_label, 3, 0)
+        job_info_layout.addWidget(job_deps_label, 4, 0)
         self.job_dependencies_edit = HighlightableLineEdit()
         self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
-        job_info_layout.addWidget(self.job_dependencies_edit, 3, 1)
+        job_info_layout.addWidget(self.job_dependencies_edit, 4, 1)
         
         # Add browse button for job dependencies
         self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
         self.job_deps_browse_btn.setFixedWidth(60)
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
-        job_info_layout.addWidget(self.job_deps_browse_btn, 3, 2)
+        job_info_layout.addWidget(self.job_deps_browse_btn, 4, 2)
         
         left_layout.addWidget(job_info_group)
         
-        # Plugin Settings section
-        plugin_settings_group = QtWidgets.QGroupBox("Plugin Settings")
+        # Plugin section
+        plugin_settings_group = QtWidgets.QGroupBox("Plugin")
         plugin_settings_layout = QtWidgets.QVBoxLayout()
         plugin_settings_layout.setSpacing(8)
         plugin_settings_group.setLayout(plugin_settings_layout)
@@ -183,8 +192,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         left_layout.addWidget(plugin_settings_group)
         
-        # Script Submission section
-        script_submission_group = QtWidgets.QGroupBox("Script Submission")
+        # Script section
+        script_submission_group = QtWidgets.QGroupBox("Script")
         script_submission_layout = QtWidgets.QVBoxLayout()
         script_submission_layout.setSpacing(8)
         script_submission_group.setLayout(script_submission_layout)
@@ -201,7 +210,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         submit_auxiliary_row.addStretch()
         script_submission_layout.addLayout(submit_auxiliary_row)
         
-        # Copy script
+        # Copy script and Submit copied script in same row
         copy_script_row = QtWidgets.QHBoxLayout()
         copy_script_row.setSpacing(10)
         empty_label5 = QtWidgets.QLabel("")
@@ -210,6 +219,13 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.copy_script_check = HighlightableCheckBox("Copy Script")
         self.copy_script_check.setToolTip("Whether to copy the script before submission.")
         copy_script_row.addWidget(self.copy_script_check)
+        
+        # Add some spacing between the two checkboxes
+        copy_script_row.addSpacing(20)
+        
+        self.submit_copied_script_check = HighlightableCheckBox("Submit Copied Script")
+        self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
+        copy_script_row.addWidget(self.submit_copied_script_check)
         copy_script_row.addStretch()
         script_submission_layout.addLayout(copy_script_row)
         
@@ -226,18 +242,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         copy_script_path_row.addStretch()
         script_submission_layout.addLayout(copy_script_path_row)
         
-        # Submit copied script
-        submit_copied_row = QtWidgets.QHBoxLayout()
-        submit_copied_row.setSpacing(10)
-        empty_label6 = QtWidgets.QLabel("")
-        empty_label6.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        submit_copied_row.addWidget(empty_label6)
-        self.submit_copied_script_check = HighlightableCheckBox("Submit Copied Script")
-        self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
-        submit_copied_row.addWidget(self.submit_copied_script_check)
-        submit_copied_row.addStretch()
-        script_submission_layout.addLayout(submit_copied_row)
-        
         left_layout.addWidget(script_submission_group)
     
     def _create_right_column(self):
@@ -247,7 +251,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.right_column_widget.setMinimumWidth(Sizes.MACHINE_SETTINGS_MIN_WIDTH - 50)
         right_layout = QtWidgets.QVBoxLayout()
         right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(15)
+        right_layout.setSpacing(8)
         self.right_column_widget.setLayout(right_layout)
         
         # Build Job section
@@ -256,7 +260,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_layout.setSpacing(8)
         build_job_group.setLayout(build_job_layout)
         
-        # Submission is build job
+        # Submission is build job and Build job as auxiliary in same row
         submission_build_row = QtWidgets.QHBoxLayout()
         submission_build_row.setSpacing(10)
         empty_label7 = QtWidgets.QLabel("")
@@ -265,6 +269,13 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.submission_is_build_job_check = HighlightableCheckBox("Submission is Build Job")
         self.submission_is_build_job_check.setToolTip("Whether this submission is a build job.")
         submission_build_row.addWidget(self.submission_is_build_job_check)
+        
+        # Add some spacing between the two checkboxes
+        submission_build_row.addSpacing(20)
+        
+        self.build_job_as_auxiliary_check = HighlightableCheckBox("Build Job as Auxiliary")
+        self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
+        submission_build_row.addWidget(self.build_job_as_auxiliary_check)
         submission_build_row.addStretch()
         build_job_layout.addLayout(submission_build_row)
         
@@ -307,17 +318,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         post_build_script_row.addStretch()
         build_job_layout.addLayout(post_build_script_row)
         
-        # Build job as auxiliary file
-        build_auxiliary_row = QtWidgets.QHBoxLayout()
-        build_auxiliary_row.setSpacing(10)
-        empty_label8 = QtWidgets.QLabel("")
-        empty_label8.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        build_auxiliary_row.addWidget(empty_label8)
-        self.build_job_as_auxiliary_check = HighlightableCheckBox("Build Job as Auxiliary")
-        self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
-        build_auxiliary_row.addWidget(self.build_job_as_auxiliary_check)
-        build_auxiliary_row.addStretch()
-        build_job_layout.addLayout(build_auxiliary_row)
+
         
         # Delete build job script
         delete_build_row = QtWidgets.QHBoxLayout()
@@ -359,19 +360,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_advanced_layout = QtWidgets.QVBoxLayout()
         job_info_advanced_layout.setSpacing(8)
         job_info_advanced_group.setLayout(job_info_advanced_layout)
-        
-        # Extra info
-        extra_info_row = QtWidgets.QHBoxLayout()
-        extra_info_row.setSpacing(10)
-        extra_info_label = QtWidgets.QLabel("Extra Info")
-        extra_info_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        extra_info_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        extra_info_row.addWidget(extra_info_label)
-        self.extra_info_edit = HighlightableLineEdit()
-        self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
-        extra_info_row.addWidget(self.extra_info_edit)
-        extra_info_row.addStretch()
-        job_info_advanced_layout.addLayout(extra_info_row)
         
         # On job complete
         on_job_complete_row = QtWidgets.QHBoxLayout()
@@ -461,7 +449,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Environment keys
         env_keys_row = QtWidgets.QHBoxLayout()
         env_keys_row.setSpacing(10)
-        env_keys_label = QtWidgets.QLabel("Environment Keys")
+        env_keys_label = QtWidgets.QLabel("Keys")
         env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         env_keys_row.addWidget(env_keys_label)
@@ -487,7 +475,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Omit environment keys
         omit_env_keys_row = QtWidgets.QHBoxLayout()
         omit_env_keys_row.setSpacing(10)
-        omit_env_keys_label = QtWidgets.QLabel("Omit Environment Keys")
+        omit_env_keys_label = QtWidgets.QLabel("Omit Keys")
         omit_env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         omit_env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         omit_env_keys_row.addWidget(omit_env_keys_label)
@@ -530,6 +518,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_name_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_name', t))
         self.comment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('comment', t))
         self.department_edit.textChanged.connect(lambda t: self._on_user_changed_setting('department', t))
+        self.extra_info_edit.textChanged.connect(lambda t: self._on_user_changed_setting('extra_info', t))
         self.job_dependencies_edit.textChanged.connect(lambda t: self._on_user_changed_setting('job_dependencies', t))
         self.job_deps_browse_btn.clicked.connect(self._on_job_deps_browse_clicked)
         
@@ -556,7 +545,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.script_job_script_path_edit.textChanged.connect(lambda t: self._on_user_changed_setting('script_job_script_path', t))
         
         # Job Info signals
-        self.extra_info_edit.textChanged.connect(lambda t: self._on_user_changed_setting('extra_info', t))
         self.on_job_complete_edit.textChanged.connect(lambda t: self._on_user_changed_setting('on_job_complete', t))
         self.pre_job_script_edit.textChanged.connect(lambda t: self._on_user_changed_setting('pre_job_script', t))
         self.post_job_script_edit.textChanged.connect(lambda t: self._on_user_changed_setting('post_job_script', t))
@@ -626,6 +614,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.job_name_edit.setText(extra_settings.get('job_name', ''))
             self.comment_edit.setText(extra_settings.get('comment', ''))
             self.department_edit.setText(extra_settings.get('department', ''))
+            self.extra_info_edit.setText(str(extra_settings.get('extra_info', '{}')))
             self.job_dependencies_edit.setText(extra_settings.get('job_dependencies', ''))
             
             # Plugin Settings
@@ -651,7 +640,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.script_job_script_path_edit.setText(str(extra_settings.get('script_job_script_path', '')))
             
             # Job Info
-            self.extra_info_edit.setText(str(extra_settings.get('extra_info', '')))
             self.on_job_complete_edit.setText(str(extra_settings.get('on_job_complete', '')))
             self.pre_job_script_edit.setText(str(extra_settings.get('pre_job_script', '')))
             self.post_job_script_edit.setText(str(extra_settings.get('post_job_script', '')))
