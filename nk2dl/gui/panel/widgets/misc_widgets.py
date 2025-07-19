@@ -427,8 +427,47 @@ class ScrollableTabWidget(QtWidgets.QTabWidget):
         return super().widget(index)
     
     def _should_enable_scrolling(self):
-        """Check if scrolling should be enabled based on current height."""
-        return self.height() < self._scroll_threshold
+        """Check if scrolling should be enabled based on current height or panel scroll state."""
+        # Check if our height is below threshold
+        height_check = self.height() < self._scroll_threshold
+        
+        # Check if we're in a scrollable panel (Nuke's panel system)
+        panel_scroll_check = self._is_in_scrollable_panel()
+        
+        # Enable scrolling if either condition is true
+        return height_check or panel_scroll_check
+    
+    def _is_in_scrollable_panel(self):
+        """Check if this widget is inside a scrollable panel (Nuke's panel system)."""
+        try:
+            # Walk up the parent hierarchy to find if we're in a scroll area
+            parent = self.parent()
+            while parent:
+                # Check if parent is a scroll area
+                if isinstance(parent, QtWidgets.QScrollArea):
+                    return True
+                
+                # Check if parent has scroll bars enabled
+                if hasattr(parent, 'verticalScrollBarPolicy'):
+                    if parent.verticalScrollBarPolicy() != QtCore.Qt.ScrollBarAlwaysOff:
+                        # Check if scroll bar is actually visible
+                        scroll_bar = parent.verticalScrollBar()
+                        if scroll_bar and scroll_bar.isVisible():
+                            return True
+                
+                # Check if parent is a scrollable widget
+                if hasattr(parent, 'verticalScrollBar'):
+                    scroll_bar = parent.verticalScrollBar()
+                    if scroll_bar and scroll_bar.isVisible():
+                        return True
+                
+                parent = parent.parent()
+            
+            return False
+            
+        except Exception:
+            # If any error occurs during parent traversal, assume not scrollable
+            return False
     
     def _create_scroll_area(self, widget):
         """Create a scroll area wrapper for the given widget."""
@@ -553,4 +592,16 @@ class ScrollableTabWidget(QtWidgets.QTabWidget):
     
     def is_scrolling_enabled(self):
         """Check if scrolling is currently enabled."""
-        return self._scrolling_enabled 
+        return self._scrolling_enabled
+    
+    def force_enable_scrolling(self):
+        """Force enable scrolling for all tabs (for testing/debugging)."""
+        if not self._scrolling_enabled:
+            self._scrolling_enabled = True
+            self._update_scrolling_state()
+    
+    def force_disable_scrolling(self):
+        """Force disable scrolling for all tabs (for testing/debugging)."""
+        if self._scrolling_enabled:
+            self._scrolling_enabled = False
+            self._update_scrolling_state() 
