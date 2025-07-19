@@ -148,53 +148,32 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
         job_info_layout.addWidget(self.job_deps_browse_btn, 4, 2)
         
-        left_layout.addWidget(job_info_group)
-        
-        # Plugin section
-        plugin_settings_group = QtWidgets.QGroupBox("Plugin")
-        plugin_settings_group.setSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
-        plugin_settings_layout = QtWidgets.QVBoxLayout()
-        plugin_settings_layout.setSpacing(8)
-        plugin_settings_layout.setContentsMargins(8, 8, 8, 8)
-        plugin_settings_group.setLayout(plugin_settings_layout)
-        
+        # Plugin checkboxes (moved from Plugin section)
         # Use batch mode
-        batch_mode_row = QtWidgets.QHBoxLayout()
-        batch_mode_row.setSpacing(10)
-        empty_label1 = QtWidgets.QLabel("")
-        empty_label1.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        batch_mode_row.addWidget(empty_label1)
+        batch_mode_label = QtWidgets.QLabel("")
+        batch_mode_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(batch_mode_label, 5, 0)
         self.use_batch_mode_check = HighlightableCheckBox("Use Batch Mode")
         self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
-        batch_mode_row.addWidget(self.use_batch_mode_check)
-        batch_mode_row.addStretch()
-        plugin_settings_layout.addLayout(batch_mode_row)
+        job_info_layout.addWidget(self.use_batch_mode_check, 5, 1)
         
         # Reload plugin between tasks
-        reload_plugin_row = QtWidgets.QHBoxLayout()
-        reload_plugin_row.setSpacing(10)
-        empty_label2 = QtWidgets.QLabel("")
-        empty_label2.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        reload_plugin_row.addWidget(empty_label2)
+        reload_plugin_label = QtWidgets.QLabel("")
+        reload_plugin_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(reload_plugin_label, 6, 0)
         self.reload_plugin_check = HighlightableCheckBox("Reload Plugin Between Tasks")
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
-        reload_plugin_row.addWidget(self.reload_plugin_check)
-        reload_plugin_row.addStretch()
-        plugin_settings_layout.addLayout(reload_plugin_row)
+        job_info_layout.addWidget(self.reload_plugin_check, 6, 1)
         
         # Render settings from metadata
-        render_metadata_row = QtWidgets.QHBoxLayout()
-        render_metadata_row.setSpacing(10)
-        empty_label3 = QtWidgets.QLabel("")
-        empty_label3.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        render_metadata_row.addWidget(empty_label3)
+        render_metadata_label = QtWidgets.QLabel("")
+        render_metadata_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(render_metadata_label, 7, 0)
         self.render_settings_from_metadata_check = HighlightableCheckBox("Render Settings from Metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
-        render_metadata_row.addWidget(self.render_settings_from_metadata_check)
-        render_metadata_row.addStretch()
-        plugin_settings_layout.addLayout(render_metadata_row)
+        job_info_layout.addWidget(self.render_settings_from_metadata_check, 7, 1)
         
-        left_layout.addWidget(plugin_settings_group)
+        left_layout.addWidget(job_info_group)
         
         # Nukescript section
         script_submission_group = QtWidgets.QGroupBox("Nukescript")
