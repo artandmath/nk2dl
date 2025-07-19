@@ -1,29 +1,54 @@
-- [X] Build Job features
-    - [X] Check for pre/post script in the same location as the running file
-    - [X] Fall back to submitted
-- [ ] Support other kinds of writes: deepwrites, writegeo, precomp?
-- [ ] Meta data upstream overrides
-- [ ] Meta data config override
-- [x] Implement ScriptJob feature
-- [X] Simplify tokens
-- [X] Reduce instances of name/path down to path: copyscript, job_build, others
-- [ ] Create an installer for cli
-- [ ] Realign feature set on CLI to NukeSubmission class
-        Missing CLI Arguments to Add:
-        [x] --UseParser - Flag to use parser instead of Nuke API
-        [x] --SortWritesAlphabetically - Flag to sort write nodes alphabetically
-        [x] --ScriptJob
-        [x] --ScriptJopName
-        [X] --CopyScript - Flag to enable script copying
-        [X] --CopyScriptPath - Full file path template for copied script (includes directory and filename, supports multiple paths)
-        [X] --SubmitCopiedScript - Flag to submit copied script instead of original
-        [X] --SubmitScriptAsAuxFile - Flag to submit script as auxiliary file (correcting existing implementation)
-        [x] --BuildJob - Flag to submit as a build job
-        [x] --BuildJobScriptPath - Path for build job script
-        --Environment - Environment variables to include
-        Parameter Type Handling to Improve:
-            Add support for write node configuration dictionaries in CLI
-            Add better support for graph scope variable formats
-            Fix handle_submit Function:
-            Update to properly handle the list of job dictionaries returned from submit_nuke_script
-            Based on this analysis, the CLI module needs to be updated to be fully compatible with the current submission.py functionality.
+Core
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+
+Nuke Panel
+- [ ] Have the panel always open up in same pane. Preferably the viewer
+- [ ] Don't highlight blue the frames dialog unless in custom
+- [ ] Populate the remaineder of the gui widgets
+  - [ ] Job Settings:
+  - [ ] Machine Settings:
+  - [ ] Extra Settings:
+- [ ] Attached browse buttons to a UI
+- [ ] Fix console font sizing (too small)
+- [ ] Set internal console log level separate to external console log level
+- [ ] Feature: metadata colouring in the node table
+- [ ] Feature: stored cell value colouring in the node table (currently bolded)
+- [ ] Feature: click node in table to jump ot node in graph
+- [ ] Feature: node renaming from node table
+- [ ] Feature: node re-ordering from node table
+- [ ] Bug: lock the node filename
+- [ ] Bug: adjust the columns dropdown menu indicator to look the same as nuke default indicator
+- [ ] Bug: adjust the cell heading sort indicators to look the same as nuke default indicator
+- [ ] Bug: right click to set settings to default should work anywhere in the panels
+- [ ] Feature: right click to set to default should indicate what the deafult will be
+- [ ] Feature: add "Extra Settings" wdigets to the node table
+- [ ] Remove "group" from tooltips
+- [ ] Implement the "Inside griups" feature to find write nodes inside groups
+- [ ] Add an auto update option to the update button to update the cell table preriodically or when the panel becomes frontmost.
+- [ ] Work on GSV feature
+
+General
+- [ ] Review what is a debug message and what is info.
+- [ ] Logger always to stderr
+- [ ] Use stout for any output that can be used by other software
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+
+CLI
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
+- [ ] 
