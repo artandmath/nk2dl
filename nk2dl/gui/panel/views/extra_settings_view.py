@@ -148,30 +148,29 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
         job_info_layout.addWidget(self.job_deps_browse_btn, 4, 2)
         
-        # Plugin checkboxes (moved from Plugin section)
-        # Use batch mode
-        batch_mode_label = QtWidgets.QLabel("")
-        batch_mode_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(batch_mode_label, 5, 0)
+        # Plugin checkboxes (moved from Plugin section) - all on one row
+        plugin_label = QtWidgets.QLabel("")
+        plugin_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(plugin_label, 5, 0)
+        
+        # Create horizontal layout for the three checkboxes
+        plugin_checkboxes_row = QtWidgets.QHBoxLayout()
+        plugin_checkboxes_row.setSpacing(20)  # Space between checkboxes
+        
         self.use_batch_mode_check = HighlightableCheckBox("Use Batch Mode")
         self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
-        job_info_layout.addWidget(self.use_batch_mode_check, 5, 1)
+        plugin_checkboxes_row.addWidget(self.use_batch_mode_check)
         
-        # Reload plugin between tasks
-        reload_plugin_label = QtWidgets.QLabel("")
-        reload_plugin_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(reload_plugin_label, 6, 0)
         self.reload_plugin_check = HighlightableCheckBox("Reload Plugin Between Tasks")
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
-        job_info_layout.addWidget(self.reload_plugin_check, 6, 1)
+        plugin_checkboxes_row.addWidget(self.reload_plugin_check)
         
-        # Render settings from metadata
-        render_metadata_label = QtWidgets.QLabel("")
-        render_metadata_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        job_info_layout.addWidget(render_metadata_label, 7, 0)
         self.render_settings_from_metadata_check = HighlightableCheckBox("Render Settings from Metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
-        job_info_layout.addWidget(self.render_settings_from_metadata_check, 7, 1)
+        plugin_checkboxes_row.addWidget(self.render_settings_from_metadata_check)
+        
+        plugin_checkboxes_row.addStretch()  # Push checkboxes to the left
+        job_info_layout.addLayout(plugin_checkboxes_row, 5, 1)
         
         left_layout.addWidget(job_info_group)
         
