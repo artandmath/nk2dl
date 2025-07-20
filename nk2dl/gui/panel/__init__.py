@@ -239,6 +239,9 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 self.layout().addWidget(self.settings_view)
                 self.layout().addWidget(self.tab_widget)
                 
+                # Add extra padding between tab widget and bottom controls (render button)
+                self.layout().addSpacing(8)
+                
                 # Set stretch factors
                 self.layout().setStretchFactor(self.settings_view, 0)  # Settings don't stretch
                 self.layout().setStretchFactor(self.tab_widget, 1)     # Table area stretches
