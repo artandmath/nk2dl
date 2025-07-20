@@ -258,6 +258,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         empty_label5 = QtWidgets.QLabel("")
         empty_label5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         backup_script_row.addWidget(empty_label5)
+
         self.copy_script_check = HighlightableCheckBox("Create copy(s) of nukescript")
         self.copy_script_check.setToolTip("Whether to copy the script before submission.")
         backup_script_row.addWidget(self.copy_script_check)
@@ -337,7 +338,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Add some spacing between the checkboxes
         submission_build_row.addSpacing(20)
         
-        self.build_job_as_auxiliary_check = HighlightableCheckBox("Submit build script as auxiliary file")
+        self.build_job_as_auxiliary_check = HighlightableCheckBox("Submit build script as auxiliary file with job")
         self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
         submission_build_row.addWidget(self.build_job_as_auxiliary_check)
         submission_build_row.addStretch()
@@ -393,6 +394,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         right_layout.addWidget(build_job_group)
         
+        # Add stretch between Build Job and Deadline Scripts groups (for two-column mode)
+        self.build_job_deadline_stretch = right_layout.addStretch()
+
         # Deadline Scripts section
         job_info_advanced_group = QtWidgets.QGroupBox("Deadline Scripts")
         job_info_advanced_layout = QtWidgets.QVBoxLayout()
@@ -461,6 +465,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         right_layout.addWidget(job_info_advanced_group)
         
+        # Add stretch between Deadline Scripts and Environment Variables groups (for two-column mode)
+        self.deadline_env_stretch = right_layout.addStretch()
+
         # Environment Variables section
         env_group = QtWidgets.QGroupBox("Environment Variables")
         env_layout = QtWidgets.QVBoxLayout()
@@ -505,8 +512,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         
         right_layout.addWidget(env_group)
         
-        # Add stretch for even distribution in two-column mode
-        right_layout.addStretch()
     
     def _setup_responsive_behavior(self):
         """Set up responsive behavior controlled by main panel."""
@@ -577,6 +582,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Show stretches between groups for even distribution
         self.job_nukescript_stretch.setVisible(True)
         self.nukescript_python_stretch.setVisible(True)
+        self.build_job_deadline_stretch.setVisible(True)
+        self.deadline_env_stretch.setVisible(True)
         
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
@@ -587,6 +594,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Hide stretches between groups for normal layout
         self.job_nukescript_stretch.setVisible(False)
         self.nukescript_python_stretch.setVisible(False)
+        self.build_job_deadline_stretch.setVisible(False)
+        self.deadline_env_stretch.setVisible(False)
         
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
