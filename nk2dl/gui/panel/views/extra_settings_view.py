@@ -198,12 +198,12 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_deps_browse_btn.setToolTip("Browse for job dependencies")
         job_info_layout.addWidget(self.job_deps_browse_btn, 7, 2)
         
-        # Plugin checkboxes (moved from Plugin section) - all on one row
+        # Plugin checkboxes (moved from Plugin section) - first two on one row
         plugin_label = QtWidgets.QLabel("")
         plugin_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(plugin_label, 8, 0)
         
-        # Create horizontal layout for the three checkboxes
+        # Create horizontal layout for the first two checkboxes
         plugin_checkboxes_row = QtWidgets.QHBoxLayout()
         plugin_checkboxes_row.setSpacing(20)  # Space between checkboxes
         
@@ -215,12 +215,17 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         plugin_checkboxes_row.addWidget(self.reload_plugin_check)
         
-        self.render_settings_from_metadata_check = HighlightableCheckBox("Settings from metadata")
-        self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
-        plugin_checkboxes_row.addWidget(self.render_settings_from_metadata_check)
-        
         plugin_checkboxes_row.addStretch()  # Push checkboxes to the left
         job_info_layout.addLayout(plugin_checkboxes_row, 8, 1)
+        
+        # Settings from metadata on its own row
+        settings_metadata_label = QtWidgets.QLabel("")
+        settings_metadata_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        job_info_layout.addWidget(settings_metadata_label, 9, 0)
+        
+        self.render_settings_from_metadata_check = HighlightableCheckBox("Job settings from metadata")
+        self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
+        job_info_layout.addWidget(self.render_settings_from_metadata_check, 9, 1)
         
         left_layout.addWidget(job_info_group)
         
@@ -235,7 +240,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         script_submission_layout.setContentsMargins(8, 8, 8, 8)
         script_submission_group.setLayout(script_submission_layout)
         
-        # Submit script as auxiliary file
+        # Submit nukescript as auxiliary file with job
         submit_auxiliary_row = QtWidgets.QHBoxLayout()
         submit_auxiliary_row.setSpacing(10)
         empty_label4 = QtWidgets.QLabel("")
@@ -247,36 +252,36 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         submit_auxiliary_row.addStretch()
         script_submission_layout.addLayout(submit_auxiliary_row)
         
-        # Copy script and Submit copied script in same row
-        copy_script_row = QtWidgets.QHBoxLayout()
-        copy_script_row.setSpacing(10)
+        # Backup script and Submit backup script in same row
+        backup_script_row = QtWidgets.QHBoxLayout()
+        backup_script_row.setSpacing(10)
         empty_label5 = QtWidgets.QLabel("")
         empty_label5.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        copy_script_row.addWidget(empty_label5)
-        self.copy_script_check = HighlightableCheckBox("Copy nukescript")
+        backup_script_row.addWidget(empty_label5)
+        self.copy_script_check = HighlightableCheckBox("Create copy(s) of nukescript")
         self.copy_script_check.setToolTip("Whether to copy the script before submission.")
-        copy_script_row.addWidget(self.copy_script_check)
+        backup_script_row.addWidget(self.copy_script_check)
         
         # Add some spacing between the two checkboxes
-        copy_script_row.addSpacing(20)
+        backup_script_row.addSpacing(20)
         
-        self.submit_copied_script_check = HighlightableCheckBox("Submit copied script as auxiliary file")
+        self.submit_copied_script_check = HighlightableCheckBox("Render from copied nukescript")
         self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
-        copy_script_row.addWidget(self.submit_copied_script_check)
-        copy_script_row.addStretch()
-        script_submission_layout.addLayout(copy_script_row)
+        backup_script_row.addWidget(self.submit_copied_script_check)
+        backup_script_row.addStretch()
+        script_submission_layout.addLayout(backup_script_row)
         
-        # Copy script path
-        copy_script_path_row = QtWidgets.QHBoxLayout()
-        copy_script_path_row.setSpacing(10)
-        copy_script_path_label = QtWidgets.QLabel("Copy to path(s)")
-        copy_script_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        copy_script_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        copy_script_path_row.addWidget(copy_script_path_label)
+        # Backup script path
+        backup_script_path_row = QtWidgets.QHBoxLayout()
+        backup_script_path_row.setSpacing(10)
+        backup_script_path_label = QtWidgets.QLabel("Copy path(s)")
+        backup_script_path_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        backup_script_path_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        backup_script_path_row.addWidget(backup_script_path_label)
         self.copy_script_path_edit = HighlightableLineEdit()
         self.copy_script_path_edit.setToolTip("Path where to copy the script.")
-        copy_script_path_row.addWidget(self.copy_script_path_edit, 1)  # Add stretch factor
-        script_submission_layout.addLayout(copy_script_path_row)
+        backup_script_path_row.addWidget(self.copy_script_path_edit, 1)  # Add stretch factor
+        script_submission_layout.addLayout(backup_script_path_row)
         
         left_layout.addWidget(script_submission_group)
         
@@ -319,7 +324,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         build_job_layout.setSpacing(8)
         build_job_group.setLayout(build_job_layout)
         
-        # Submission is build job, Build job as auxiliary, and Delete build script in same row
+        # Submission is build job and Build job as auxiliary in same row
         submission_build_row = QtWidgets.QHBoxLayout()
         submission_build_row.setSpacing(10)
         empty_label7 = QtWidgets.QLabel("")
@@ -332,16 +337,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Add some spacing between the checkboxes
         submission_build_row.addSpacing(20)
         
-        self.build_job_as_auxiliary_check = HighlightableCheckBox("Build job as auxiliary")
+        self.build_job_as_auxiliary_check = HighlightableCheckBox("Submit build script as auxiliary file")
         self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
         submission_build_row.addWidget(self.build_job_as_auxiliary_check)
-        
-        # Add some spacing between the checkboxes
-        submission_build_row.addSpacing(20)
-        
-        self.delete_build_job_script_check = HighlightableCheckBox("Delete build script")
-        self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
-        submission_build_row.addWidget(self.delete_build_job_script_check)
         submission_build_row.addStretch()
         build_job_layout.addLayout(submission_build_row)
         
@@ -380,6 +378,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_build_job_script_edit.setToolTip("Script to run after the build job.")
         post_build_script_row.addWidget(self.post_build_job_script_edit, 1)  # Add stretch factor
         build_job_layout.addLayout(post_build_script_row)
+        
+        # Delete build script on completion
+        delete_build_script_row = QtWidgets.QHBoxLayout()
+        delete_build_script_row.setSpacing(10)
+        empty_label8 = QtWidgets.QLabel("")
+        empty_label8.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        delete_build_script_row.addWidget(empty_label8)
+        self.delete_build_job_script_check = HighlightableCheckBox("Delete build script on completion of build job")
+        self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
+        delete_build_script_row.addWidget(self.delete_build_job_script_check)
+        delete_build_script_row.addStretch()
+        build_job_layout.addLayout(delete_build_script_row)
         
         right_layout.addWidget(build_job_group)
         
@@ -469,13 +479,13 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         use_current_env_row.addStretch()
         env_layout.addLayout(use_current_env_row)
         
-        # Environment keys
+        # Environment keys (dynamic label based on use_current_environment)
         env_keys_row = QtWidgets.QHBoxLayout()
         env_keys_row.setSpacing(10)
-        env_keys_label = QtWidgets.QLabel("Keys")
-        env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        env_keys_row.addWidget(env_keys_label)
+        self.env_keys_label = QtWidgets.QLabel("Keys")
+        self.env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
+        self.env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
+        env_keys_row.addWidget(self.env_keys_label)
         self.environment_keys_edit = HighlightableLineEdit()
         self.environment_keys_edit.setToolTip("Environment variables to include (comma-separated).")
         env_keys_row.addWidget(self.environment_keys_edit, 1)  # Add stretch factor
@@ -484,7 +494,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         # Environment
         environment_row = QtWidgets.QHBoxLayout()
         environment_row.setSpacing(10)
-        environment_label = QtWidgets.QLabel("Environment")
+        environment_label = QtWidgets.QLabel("Add environment")
         environment_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         environment_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         environment_row.addWidget(environment_label)
@@ -492,18 +502,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.environment_edit.setToolTip("Environment variables as key=value pairs (comma-separated).")
         environment_row.addWidget(self.environment_edit, 1)  # Add stretch factor
         env_layout.addLayout(environment_row)
-        
-        # Omit environment keys
-        omit_env_keys_row = QtWidgets.QHBoxLayout()
-        omit_env_keys_row.setSpacing(10)
-        omit_env_keys_label = QtWidgets.QLabel("Omit keys")
-        omit_env_keys_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
-        omit_env_keys_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
-        omit_env_keys_row.addWidget(omit_env_keys_label)
-        self.omit_environment_keys_edit = HighlightableLineEdit()
-        self.omit_environment_keys_edit.setToolTip("Environment variables to exclude (comma-separated).")
-        omit_env_keys_row.addWidget(self.omit_environment_keys_edit, 1)  # Add stretch factor
-        env_layout.addLayout(omit_env_keys_row)
         
         right_layout.addWidget(env_group)
         
@@ -640,10 +638,9 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_task_script_edit.textChanged.connect(lambda t: self._on_user_changed_setting('post_task_script', t))
         
         # Environment Variables signals
-        self.use_current_environment_check.toggled.connect(lambda c: self._on_user_changed_setting('use_current_environment', c))
-        self.environment_keys_edit.textChanged.connect(lambda t: self._on_user_changed_setting('environment_keys', t))
+        self.use_current_environment_check.toggled.connect(self._on_use_current_environment_changed)
+        self.environment_keys_edit.textChanged.connect(self._on_environment_keys_changed)
         self.environment_edit.textChanged.connect(lambda t: self._on_user_changed_setting('environment', t))
-        self.omit_environment_keys_edit.textChanged.connect(lambda t: self._on_user_changed_setting('omit_environment_keys', t))
         
         # Model change signals
         self.settings_model.extraSettingsChanged.connect(self._on_extra_settings_changed)
@@ -661,6 +658,37 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
         logger.info("Profiler path browse functionality not yet implemented")
+    
+    def _on_use_current_environment_changed(self, checked):
+        """Handle use current environment checkbox change.
+        
+        Args:
+            checked (bool): Whether the checkbox is checked
+        """
+        # Update the model
+        self._on_user_changed_setting('use_current_environment', checked)
+        
+        # Update the label and tooltip based on the checkbox state
+        if checked:
+            self.env_keys_label.setText("Omit keys")
+            self.environment_keys_edit.setToolTip("Environment variables to exclude (comma-separated).")
+        else:
+            self.env_keys_label.setText("Keys")
+            self.environment_keys_edit.setToolTip("Environment variables to include (comma-separated).")
+    
+    def _on_environment_keys_changed(self, text):
+        """Handle environment keys text change.
+        
+        Args:
+            text (str): The new text value
+        """
+        # Determine which setting to update based on the checkbox state
+        if self.use_current_environment_check.isChecked():
+            # When "Use current environment" is checked, this field represents omit_environment_keys
+            self._on_user_changed_setting('omit_environment_keys', text)
+        else:
+            # When "Use current environment" is unchecked, this field represents environment_keys
+            self._on_user_changed_setting('environment_keys', text)
     
     def _on_user_changed_setting(self, param_name, value):
         """Handle user changes to extra settings with tracking.
@@ -706,16 +734,16 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             extra_settings = self.settings_model.get_all_extra_settings()
             
             # Job Information
-            self.comment_edit.setText(extra_settings.get('comment', ''))
-            self.batch_name_edit.setText(extra_settings.get('batch_name', ''))
-            self.job_name_edit.setText(extra_settings.get('job_name', ''))
-            self.department_edit.setText(extra_settings.get('department', ''))
+            self.comment_edit.setText(extra_settings.get('comment') or '')
+            self.batch_name_edit.setText(extra_settings.get('batch_name') or '')
+            self.job_name_edit.setText(extra_settings.get('job_name') or '')
+            self.department_edit.setText(extra_settings.get('department') or '')
             self.extra_info_edit.setText(str(extra_settings.get('extra_info', '{}')))
-            self.job_dependencies_edit.setText(extra_settings.get('job_dependencies', ''))
+            self.job_dependencies_edit.setText(extra_settings.get('job_dependencies') or '')
             
             # Performance Profiler
             self.performance_profiler_check.setChecked(extra_settings.get('performance_profiler', False))
-            self.performance_profiler_path_edit.setText(str(extra_settings.get('performance_profiler_path', '')))
+            self.performance_profiler_path_edit.setText(extra_settings.get('performance_profiler_path') or '')
             
             # Plugin Settings
             self.use_batch_mode_check.setChecked(extra_settings.get('batch_mode', False))
@@ -725,32 +753,43 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             # Script Submission
             self.submit_script_as_auxiliary_check.setChecked(extra_settings.get('submit_script_as_auxiliary_file', False))
             self.copy_script_check.setChecked(extra_settings.get('copy_script', False))
-            self.copy_script_path_edit.setText(str(extra_settings.get('copy_script_path', '')))
+            self.copy_script_path_edit.setText(extra_settings.get('copy_script_path') or '')
             self.submit_copied_script_check.setChecked(extra_settings.get('submit_copied_script', False))
             
             # Build Job
             self.submission_is_build_job_check.setChecked(extra_settings.get('submission_is_build_job', False))
-            self.build_job_name_edit.setText(str(extra_settings.get('build_job_name', '')))
-            self.pre_build_job_script_edit.setText(str(extra_settings.get('pre_build_job_script', '')))
-            self.post_build_job_script_edit.setText(str(extra_settings.get('post_build_job_script', '')))
+            self.build_job_name_edit.setText(extra_settings.get('build_job_name') or '')
+            self.pre_build_job_script_edit.setText(extra_settings.get('pre_build_job_script') or '')
+            self.post_build_job_script_edit.setText(extra_settings.get('post_build_job_script') or '')
             self.build_job_as_auxiliary_check.setChecked(extra_settings.get('build_job_as_auxiliary_file', False))
             self.delete_build_job_script_check.setChecked(extra_settings.get('delete_build_job_script', False))
             
             # Script Job
-            self.script_job_script_path_edit.setText(str(extra_settings.get('script_job_script_path', '')))
+            self.script_job_script_path_edit.setText(extra_settings.get('script_job_script_path') or '')
             
             # Job Info
-            self.on_job_complete_edit.setText(str(extra_settings.get('on_job_complete', '')))
-            self.pre_job_script_edit.setText(str(extra_settings.get('pre_job_script', '')))
-            self.post_job_script_edit.setText(str(extra_settings.get('post_job_script', '')))
-            self.pre_task_script_edit.setText(str(extra_settings.get('pre_task_script', '')))
-            self.post_task_script_edit.setText(str(extra_settings.get('post_task_script', '')))
+            self.on_job_complete_edit.setText(extra_settings.get('on_job_complete') or '')
+            self.pre_job_script_edit.setText(extra_settings.get('pre_job_script') or '')
+            self.post_job_script_edit.setText(extra_settings.get('post_job_script') or '')
+            self.pre_task_script_edit.setText(extra_settings.get('pre_task_script') or '')
+            self.post_task_script_edit.setText(extra_settings.get('post_task_script') or '')
             
             # Environment Variables
             self.use_current_environment_check.setChecked(extra_settings.get('use_current_environment', False))
-            self.environment_keys_edit.setText(str(extra_settings.get('environment_keys', '')))
-            self.environment_edit.setText(str(extra_settings.get('environment', '')))
-            self.omit_environment_keys_edit.setText(str(extra_settings.get('omit_environment_keys', '')))
+            
+            # Set the appropriate value based on the checkbox state
+            if extra_settings.get('use_current_environment', False):
+                # When "Use current environment" is checked, show omit_environment_keys value
+                self.environment_keys_edit.setText(extra_settings.get('omit_environment_keys') or '')
+                self.env_keys_label.setText("Omit keys")
+                self.environment_keys_edit.setToolTip("Environment variables to exclude (comma-separated).")
+            else:
+                # When "Use current environment" is unchecked, show environment_keys value
+                self.environment_keys_edit.setText(extra_settings.get('environment_keys') or '')
+                self.env_keys_label.setText("Keys")
+                self.environment_keys_edit.setToolTip("Environment variables to include (comma-separated).")
+            
+            self.environment_edit.setText(extra_settings.get('environment') or '')
         finally:
             # Re-enable signals
             self._block_signals(False)
@@ -807,7 +846,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.use_current_environment_check.blockSignals(block)
         self.environment_keys_edit.blockSignals(block)
         self.environment_edit.blockSignals(block)
-        self.omit_environment_keys_edit.blockSignals(block)
     
     def _on_extra_settings_changed(self):
         """Handle extra settings changes from the model."""
@@ -872,7 +910,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             self.use_current_environment_check.setObjectName("use_current_environment")
             self.environment_keys_edit.setObjectName("environment_keys")
             self.environment_edit.setObjectName("environment")
-            self.omit_environment_keys_edit.setObjectName("omit_environment_keys")
             
             # Apply configuration to extra settings controls
             # Job Information
@@ -915,7 +952,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             apply_panel_config(self.use_current_environment_check, "use_current_environment")
             apply_panel_config(self.environment_keys_edit, "environment_keys")
             apply_panel_config(self.environment_edit, "environment")
-            apply_panel_config(self.omit_environment_keys_edit, "omit_environment_keys")
             
         except Exception as e:
             logger.error(f"Error applying configuration to ExtraSettingsView: {e}")
@@ -967,7 +1003,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_visual_indication(self.use_current_environment_check, 'use_current_environment')
         self.register_widget_for_visual_indication(self.environment_keys_edit, 'environment_keys')
         self.register_widget_for_visual_indication(self.environment_edit, 'environment')
-        self.register_widget_for_visual_indication(self.omit_environment_keys_edit, 'omit_environment_keys')
         
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
@@ -1020,7 +1055,6 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.register_widget_for_change_tracking(self.use_current_environment_check, 'use_current_environment')
         self.register_widget_for_change_tracking(self.environment_keys_edit, 'environment_keys')
         self.register_widget_for_change_tracking(self.environment_edit, 'environment')
-        self.register_widget_for_change_tracking(self.omit_environment_keys_edit, 'omit_environment_keys')
         
         from nk2dl.common.logging import setup_logging
         logger = setup_logging('nk2dl.gui.panel.views.extra_settings_view')
