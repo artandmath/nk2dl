@@ -90,9 +90,17 @@ class StorageVisualIndicationManager:
                 # Check if this parameter has a user-changed stored value
                 is_stored = self._is_parameter_stored(param_name, user_changed_settings)
                 
+                # Determine if widget is editable
+                editable = True
+                if hasattr(widget, 'isEnabled'):
+                    editable = widget.isEnabled()
+                
                 # Update widget highlight state
                 if self.widget_states[widget_id] != is_stored:
-                    widget.set_highlighted(is_stored)
+                    if is_stored and editable:
+                        widget.set_highlighted(True)
+                    else:
+                        widget.set_highlighted(False)
                     self.widget_states[widget_id] = is_stored
                     updated_count += 1
                     
