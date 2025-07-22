@@ -992,6 +992,9 @@ class NukeSubmission:
         # Get all nodes of the specified types
         all_write_nodes = []
         for node_type in filter_types:
+            # TODO: This is a hack to get all write nodes recursively. Recursion is slow.
+            #       We should add recursive option to submission.py because writes in a group is an edge case
+            #       Some studios wrap their writes in groups rather than create new write classes.
             all_nodes = nuke.allNodes(recurseGroups=True)
             for node in all_nodes:
                 if node.Class() == node_type:
@@ -3712,6 +3715,7 @@ class NukeSubmission:
             
 
 def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
+
     """Submit a Nuke script to Deadline.
     
     Args:
