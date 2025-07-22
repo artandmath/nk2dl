@@ -968,12 +968,22 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
                 control_config = config.get(f"panel.{control_name}", {})
                 editable = control_config.get("editable", True)
                 if not editable:
-                    palette = label.palette()
-                    palette.setColor(QtGui.QPalette.All, QtGui.QPalette.WindowText, QtCore.Qt.black)
-                    palette.setColor(QtGui.QPalette.All, QtGui.QPalette.Mid, QtCore.Qt.transparent)
-                    label.setPalette(palette)
+                    # Label: black text, transparent shadow
+                    label_palette = label.palette()
+                    label_palette.setColor(QtGui.QPalette.All, QtGui.QPalette.WindowText, QtCore.Qt.black)
+                    label_palette.setColor(QtGui.QPalette.All, QtGui.QPalette.Mid, QtCore.Qt.transparent)
+                    label.setPalette(label_palette)
+                    # Widget: black text
+                    widget_palette = widget.palette()
+                    widget_palette.setColor(QtGui.QPalette.All, QtGui.QPalette.Text, QtCore.Qt.black)
+                    widget.setPalette(widget_palette)
                 else:
                     label.setPalette(label.style().standardPalette())
+                    widget.setPalette(widget.style().standardPalette())
+                widget.setEnabled(editable)
+                # Ensure correct highlight is applied
+                if hasattr(self, 'storage_visual_indication'):
+                    self.storage_visual_indication.refresh_widget(id(widget))
             apply_panel_config(self.priority_spin, "priority")
             # If priority is not editable, set label text color to black
             # This block is now redundant as it's handled by the loop above
