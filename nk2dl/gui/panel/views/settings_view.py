@@ -112,13 +112,14 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         priority_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         priority_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         priority_chunk_row.addWidget(priority_label)
-        
         self.priority_spin = HighlightableSpinBox()
         self.priority_spin.setMinimum(0)
         self.priority_spin.setMaximum(100)
         self.priority_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.priority_spin.setToolTip("A job can have a numeric priority ranging from 0 to 100, where 0 is the lowest priority.")
-
+        self.label_widget_map = {}
+        self.label_widget_map["priority"] = (priority_label, self.priority_spin)
+        
         priority_chunk_row.addWidget(self.priority_spin)
         
         chunk_label = QtWidgets.QLabel("Chunk")
@@ -129,7 +130,8 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.chunk_size_spin.setMinimum(1)
         self.chunk_size_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.chunk_size_spin.setToolTip("This is the number of frames that will be rendered at a time for each job task.")
-
+        self.label_widget_map["chunk_size"] = (chunk_label, self.chunk_size_spin)
+        
         priority_chunk_row.addWidget(self.chunk_size_spin)
         priority_chunk_row.addStretch()
         
@@ -153,11 +155,13 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         combo_width = max_width + 30
         self.frames_combo.setFixedWidth(combo_width)
         self.frames_combo.setToolTip("Select the Global, Input, or Custom frame list mode.")
+        self.label_widget_map["frames"] = (frames_label, self.frames_combo)
         frames_row.addWidget(self.frames_combo)
         
         self.frame_range_edit = HighlightableLineEdit()
         self.frame_range_edit.setMinimumWidth(Sizes.LINE_EDIT_MIN_WIDTH)
         self.frame_range_edit.setToolTip("If Custom frame list mode is selected, this is the list of frames to render.")
+        self.label_widget_map["frame_range"] = (frames_label, self.frame_range_edit)
         frames_row.addWidget(self.frame_range_edit, 1)  # Add stretch factor to fill remaining space
         frames_row.addStretch()
         
@@ -173,6 +177,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.use_node_frame_list_check = HighlightableCheckBox("Use node's frame list")
         self.use_node_frame_list_check.setToolTip("If submitting each write node as a separate job, enable this to pull the frame range from the write node, instead of using the global frame range.")
+        self.label_widget_map["use_node_frame_list"] = (empty_label1, self.use_node_frame_list_check)
         node_frame_list_row.addWidget(self.use_node_frame_list_check)
         node_frame_list_row.addStretch()
         
@@ -192,6 +197,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.task_timeout_spin.setMaximum(999)
         self.task_timeout_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.task_timeout_spin.setToolTip("The number of minutes a Worker has to render a task for this job before it requeues it. Specify 0 for no limit.")
+        self.label_widget_map["task_timeout"] = (timeout_label, self.task_timeout_spin)
         timeout_row.addWidget(self.task_timeout_spin)
         
         minutes_label = QtWidgets.QLabel("minutes")
@@ -200,6 +206,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.enable_auto_timeout_check = HighlightableCheckBox("Enable auto task timeout")
         self.enable_auto_timeout_check.setToolTip("If the Auto Task Timeout is properly configured in the Repository Options, then enabling this will allow a task timeout to be automatically calculated based on the render times of previous frames for the job.")
+        self.label_widget_map["enable_auto_timeout"] = (minutes_label, self.enable_auto_timeout_check)
         timeout_row.addWidget(self.enable_auto_timeout_check)
         timeout_row.addStretch()
         
@@ -218,6 +225,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.render_mode_combo.addItems(["Full", "Proxy", "Both", "Script"])
         self.render_mode_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.render_mode_combo.setToolTip("The mode to render with.")
+        self.label_widget_map["render_mode"] = (render_mode_label, self.render_mode_combo)
         render_mode_row.addWidget(self.render_mode_combo)
         render_mode_row.addStretch()
         
@@ -233,6 +241,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.render_nukex_check = HighlightableCheckBox("Use Nuke X")
         self.render_nukex_check.setToolTip("If checked, NukeX will be used instead of just Nuke.")
+        self.label_widget_map["render_nukex"] = (empty_label2, self.render_nukex_check)
         checkboxes_row.addWidget(self.render_nukex_check)
         
         # Add some spacing between checkboxes
@@ -240,6 +249,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.continue_on_error_check = HighlightableCheckBox("Continue on error")
         self.continue_on_error_check.setToolTip("Whether to continue rendering on error.")
+        self.label_widget_map["continue_on_error"] = (empty_label2, self.continue_on_error_check)
         checkboxes_row.addWidget(self.continue_on_error_check)
         
         # Add some spacing between checkboxes
@@ -247,6 +257,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.submit_suspended_check = HighlightableCheckBox("Submit suspended")
         self.submit_suspended_check.setToolTip("Whether to submit the job suspended.")
+        self.label_widget_map["submit_suspended"] = (empty_label2, self.submit_suspended_check)
         checkboxes_row.addWidget(self.submit_suspended_check)
         checkboxes_row.addStretch()
         
@@ -270,6 +281,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.separate_jobs_check = HighlightableCheckBox("Write nodes as separate jobs")
         self.separate_jobs_check.setToolTip("Enable to submit each write node to Deadline as a separate job.")
+        self.label_widget_map["separate_jobs"] = (empty_label3, self.separate_jobs_check)
         job_org_row1.addWidget(self.separate_jobs_check)
         
         # Add some spacing between the two checkboxes
@@ -277,6 +289,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.views_separate_jobs_check = HighlightableCheckBox("Views as separate jobs")
         self.views_separate_jobs_check.setToolTip("Choose the view(s) you wish to render. This is optional.")
+        self.label_widget_map["views_separate_jobs"] = (empty_label3, self.views_separate_jobs_check)
         job_org_row1.addWidget(self.views_separate_jobs_check)
         job_org_row1.addStretch()
         
@@ -292,6 +305,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.render_order_dependencies_check = HighlightableCheckBox("Render order dependencies")
         self.render_order_dependencies_check.setToolTip("Enable job dependencies based on render order. This automatically enables 'Write nodes as separate jobs'.")
+        self.label_widget_map["render_order_dependencies"] = (empty_label4, self.render_order_dependencies_check)
         job_org_row2.addWidget(self.render_order_dependencies_check)
         job_org_row2.addStretch()
         
@@ -307,6 +321,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         
         self.separate_tasks_check = HighlightableCheckBox("Write nodes as separate tasks for the same job")
         self.separate_tasks_check.setToolTip("Enable to submit a job to Deadline where each task for the job represents a different write node, and all frames for that write node are rendered by its corresponding task.")
+        self.label_widget_map["separate_tasks"] = (empty_label5, self.separate_tasks_check)
         job_org_row3.addWidget(self.separate_tasks_check)
         job_org_row3.addStretch()
         
@@ -341,6 +356,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.pool_combo.addItems(Settings.get_pool_options())
         self.pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.pool_combo.setToolTip("The pool that your job will be submitted to.")
+        self.label_widget_map["pool"] = (pool_label, self.pool_combo)
         pool_group_row.addWidget(self.pool_combo)
         
         secondary_pool_label = QtWidgets.QLabel("Secondary Pool")
@@ -351,6 +367,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.secondary_pool_combo.addItems([""] + Settings.get_pool_options())
         self.secondary_pool_combo.setFixedWidth(Sizes.COMBO_WIDTH)
         self.secondary_pool_combo.setToolTip("The secondary pool lets you specify a Pool to use if the primary Pool does not have any available Workers.")
+        self.label_widget_map["secondary_pool"] = (secondary_pool_label, self.secondary_pool_combo)
         pool_group_row.addWidget(self.secondary_pool_combo)
         
         group_label = QtWidgets.QLabel("Group")
@@ -361,6 +378,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.group_combo.addItems(Settings.get_group_options())
         self.group_combo.setFixedWidth(120)
         self.group_combo.setToolTip("The group that your job will be submitted to.")
+        self.label_widget_map["group"] = (group_label, self.group_combo)
         pool_group_row.addWidget(self.group_combo)
         pool_group_row.addStretch()
         
@@ -380,6 +398,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.threads_spin.setMaximum(64)
         self.threads_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.threads_spin.setToolTip("The number of threads to use for rendering. Set to 0 to have Nuke automatically determine the optimal thread count.")
+        self.label_widget_map["threads"] = (threads_label, self.threads_spin)
         threads_row.addWidget(self.threads_spin)
         threads_row.addStretch()
         
@@ -399,6 +418,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.min_ram_spin.setMaximum(64)
         self.min_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.min_ram_spin.setToolTip("The minimum RAM usage (in GB) to be used for rendering. Set to 0 to not enforce a minimum amount of RAM.")
+        self.label_widget_map["min_ram"] = (min_ram_label, self.min_ram_spin)
         ram_row.addWidget(self.min_ram_spin)
         
         self.max_ram_spin = HighlightableSpinBox()
@@ -406,6 +426,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.max_ram_spin.setMaximum(512)
         self.max_ram_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.max_ram_spin.setToolTip("The maximum RAM usage (in GB) to be used for rendering. Set to 0 to not enforce a maximum amount of RAM.")
+        self.label_widget_map["max_ram"] = (min_ram_label, self.max_ram_spin)
         ram_row.addWidget(self.max_ram_spin)
         
         max_ram_label = QtWidgets.QLabel("Max RAM (GB)")
@@ -429,10 +450,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.gpu_override_spin.setMaximum(16)
         self.gpu_override_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.gpu_override_spin.setToolTip("The GPU to use when rendering.")
+        self.label_widget_map["gpu_override"] = (gpu_device_label, self.gpu_override_spin)
         gpu_row.addWidget(self.gpu_override_spin)
         
         self.use_gpu_check = HighlightableCheckBox("Use GPU")
         self.use_gpu_check.setToolTip("If Nuke should also use the GPU for rendering.")
+        self.label_widget_map["use_gpu"] = (gpu_device_label, self.use_gpu_check)
         gpu_row.addWidget(self.use_gpu_check)
         gpu_row.addStretch()
         
@@ -452,10 +475,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.concurrent_tasks_spin.setMaximum(64)
         self.concurrent_tasks_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.concurrent_tasks_spin.setToolTip("The number of tasks that can render concurrently on a single Worker. This is useful if the rendering application only uses one thread to render and your Workers have multiple CPUs.")
+        self.label_widget_map["concurrent_tasks"] = (concurrent_label, self.concurrent_tasks_spin)
         concurrent_row.addWidget(self.concurrent_tasks_spin)
         
         self.limit_tasks_check = HighlightableCheckBox("Limit tasks to worker's task limit")
         self.limit_tasks_check.setToolTip("If you limit the tasks to a Worker's task limit, then by default, the Worker won't dequeue more tasks then it has CPUs. This task limit can be overridden for individual Workers by an administrator.")
+        self.label_widget_map["limit_worker_tasks"] = (concurrent_label, self.limit_tasks_check)
         concurrent_row.addWidget(self.limit_tasks_check)
         concurrent_row.addStretch()
         
@@ -475,10 +500,12 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.machine_limit_spin.setMaximum(999)
         self.machine_limit_spin.setFixedWidth(Sizes.SPINBOX_WIDTH)
         self.machine_limit_spin.setToolTip("Use the Machine Limit to specify the maximum number of machines that can render your job at one time. Specify 0 for no limit.")
+        self.label_widget_map["machine_limit"] = (machine_limit_label, self.machine_limit_spin)
         limit_row.addWidget(self.machine_limit_spin)
         
         self.machine_deny_list_check = HighlightableCheckBox("Machine list is a deny list")
         self.machine_deny_list_check.setToolTip("You can force the job to render on specific machines by using an allow list, or you can avoid specific machines by using a deny list.")
+        self.label_widget_map["machine_deny_list"] = (machine_limit_label, self.machine_deny_list_check)
         limit_row.addWidget(self.machine_deny_list_check)
         limit_row.addStretch()
         
@@ -496,6 +523,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.machine_list_edit = HighlightableLineEdit()
         self.machine_list_edit.setMinimumWidth(300)
         self.machine_list_edit.setToolTip("The list of machines on the deny list or allow list.")
+        self.label_widget_map["machine_list"] = (machine_list_label, self.machine_list_edit)
         machine_list_row.addWidget(self.machine_list_edit)
         
         self.machine_list_browse_btn = QtWidgets.QPushButton("Browse")
@@ -516,6 +544,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.limits_edit = HighlightableLineEdit()
         self.limits_edit.setMinimumWidth(300)
         self.limits_edit.setToolTip("The Limits that your job requires.")
+        self.label_widget_map["limit_groups"] = (limits_label, self.limits_edit)
         limits_row.addWidget(self.limits_edit)
         
         self.limits_browse_btn = QtWidgets.QPushButton("Browse")
@@ -932,7 +961,26 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             self.limits_edit.setObjectName("limits")
             
             # Apply configuration to job settings controls
+            for control_name, (label, widget) in self.label_widget_map.items():
+                widget.setObjectName(control_name)
+                apply_panel_config(widget, control_name)
+                from nk2dl.common.config import config
+                control_config = config.get(f"panel.{control_name}", {})
+                editable = control_config.get("editable", True)
+                if not editable:
+                    palette = label.palette()
+                    palette.setColor(label.foregroundRole(), QtCore.Qt.black)
+                    label.setPalette(palette)
             apply_panel_config(self.priority_spin, "priority")
+            # If priority is not editable, set label text color to black
+            # This block is now redundant as it's handled by the loop above
+            # from nk2dl.common.config import config
+            # control_config = config.get("panel.priority", {})
+            # editable = control_config.get("editable", True)
+            # if not editable and hasattr(self, "priority_label"):
+            #     palette = self.priority_label.palette()
+            #     palette.setColor(self.priority_label.foregroundRole(), QtCore.Qt.black)
+            #     self.priority_label.setPalette(palette)
             apply_panel_config(self.chunk_size_spin, "chunk_size")
             apply_panel_config(self.frames_combo, "frames")
             apply_panel_config(self.frame_range_edit, "frame_range")

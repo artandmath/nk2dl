@@ -118,6 +118,8 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         job_info_layout.setContentsMargins(8, 8, 8, 8)  # Reduced top margin
         job_info_group.setLayout(job_info_layout)
         
+        self.label_widget_map = {}
+        # Job section
         comment_label = QtWidgets.QLabel("Comment")
         comment_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
         comment_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
@@ -125,6 +127,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.comment_edit = HighlightableLineEdit()
         self.comment_edit.setToolTip("A simple description of your job. This is optional and can be left blank.")
         job_info_layout.addWidget(self.comment_edit, 0, 1, 1, 2)
+        self.label_widget_map["comment"] = (comment_label, self.comment_edit)
         
         # Batch name
         batch_name_label = QtWidgets.QLabel("Batch name")
@@ -134,6 +137,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.batch_name_edit = HighlightableLineEdit()
         self.batch_name_edit.setToolTip("Batch name template for grouping related jobs. Can include tokens like {scriptname}.")
         job_info_layout.addWidget(self.batch_name_edit, 1, 1, 1, 2)
+        self.label_widget_map["batch_name"] = (batch_name_label, self.batch_name_edit)
         
         job_name_label = QtWidgets.QLabel("Job name")
         job_name_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -142,6 +146,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_name_edit = HighlightableLineEdit()
         self.job_name_edit.setToolTip("The name of your job. This is optional, and if left blank, it will default to 'Untitled'.")
         job_info_layout.addWidget(self.job_name_edit, 2, 1, 1, 2)
+        self.label_widget_map["job_name"] = (job_name_label, self.job_name_edit)
         
         department_label = QtWidgets.QLabel("Department")
         department_label.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignVCenter)
@@ -150,6 +155,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.department_edit = HighlightableLineEdit()
         self.department_edit.setToolTip("The department you belong to. This is optional and can be left blank.")
         job_info_layout.addWidget(self.department_edit, 3, 1, 1, 2)
+        self.label_widget_map["department"] = (department_label, self.department_edit)
         
         # Extra Info (moved from Job Info section)
         extra_info_label = QtWidgets.QLabel("Extra info(s)")
@@ -159,6 +165,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.extra_info_edit = HighlightableLineEdit()
         self.extra_info_edit.setToolTip("Additional information for the job (comma-separated).")
         job_info_layout.addWidget(self.extra_info_edit, 4, 1, 1, 2)
+        self.label_widget_map["extra_info"] = (extra_info_label, self.extra_info_edit)
         
         # Performance Profiler
         profiler_label = QtWidgets.QLabel("")
@@ -167,6 +174,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.performance_profiler_check = HighlightableCheckBox("Use performance profiler")
         self.performance_profiler_check.setToolTip("Enable performance profiling to generate XML files for analysis.")
         job_info_layout.addWidget(self.performance_profiler_check, 5, 1)
+        self.label_widget_map["performance_profiler"] = (profiler_label, self.performance_profiler_check)
         
         # Performance Profiler Path
         profiler_path_label = QtWidgets.QLabel("Profiler path")
@@ -176,6 +184,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.performance_profiler_path_edit = HighlightableLineEdit()
         self.performance_profiler_path_edit.setToolTip("Directory where performance profile XML files will be saved.")
         job_info_layout.addWidget(self.performance_profiler_path_edit, 6, 1)
+        self.label_widget_map["performance_profiler_path"] = (profiler_path_label, self.performance_profiler_path_edit)
         
         # Add browse button for profiler path
         self.profiler_path_browse_btn = QtWidgets.QPushButton("Browse")
@@ -191,6 +200,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.job_dependencies_edit = HighlightableLineEdit()
         self.job_dependencies_edit.setToolTip("Comma or space separated list of job IDs that this job depends on.")
         job_info_layout.addWidget(self.job_dependencies_edit, 7, 1)
+        self.label_widget_map["job_dependencies"] = (job_deps_label, self.job_dependencies_edit)
         
         # Add browse button for job dependencies
         self.job_deps_browse_btn = QtWidgets.QPushButton("Browse")
@@ -210,10 +220,12 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.use_batch_mode_check = HighlightableCheckBox("Use batch mode")
         self.use_batch_mode_check.setToolTip("This uses the Nuke plugin's Batch Mode. It keeps the Nuke script loaded in memory between frames, which reduces the overhead of rendering the job.")
         plugin_checkboxes_row.addWidget(self.use_batch_mode_check)
+        self.label_widget_map["batch_mode"] = (plugin_label, self.use_batch_mode_check)
         
         self.reload_plugin_check = HighlightableCheckBox("Reload plugin between tasks")
         self.reload_plugin_check.setToolTip("If checked, Nuke will force all memory to be released before starting the next task, but this can increase the overhead time between tasks.")
         plugin_checkboxes_row.addWidget(self.reload_plugin_check)
+        self.label_widget_map["reload_plugins"] = (plugin_label, self.reload_plugin_check)
         
         plugin_checkboxes_row.addStretch()  # Push checkboxes to the left
         job_info_layout.addLayout(plugin_checkboxes_row, 8, 1)
@@ -222,10 +234,12 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         settings_metadata_label = QtWidgets.QLabel("")
         settings_metadata_label.setMinimumWidth(Sizes.SETTINGS_LABEL_WIDTH)
         job_info_layout.addWidget(settings_metadata_label, 9, 0)
+        self.label_widget_map["render_settings_from_metadata"] = (settings_metadata_label, None) # No widget for this label
         
         self.render_settings_from_metadata_check = HighlightableCheckBox("Job settings from metadata")
         self.render_settings_from_metadata_check.setToolTip("Whether to extract submission settings from write node metadata.")
         job_info_layout.addWidget(self.render_settings_from_metadata_check, 9, 1)
+        self.label_widget_map["render_settings_from_metadata"] = (settings_metadata_label, self.render_settings_from_metadata_check)
         
         left_layout.addWidget(job_info_group)
         
@@ -249,6 +263,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.submit_script_as_auxiliary_check = HighlightableCheckBox("Submit nukescript as auxiliary file with job")
         self.submit_script_as_auxiliary_check.setToolTip("Whether to submit the script as an auxiliary file.")
         submit_auxiliary_row.addWidget(self.submit_script_as_auxiliary_check)
+        self.label_widget_map["submit_script_as_auxiliary_file"] = (empty_label4, self.submit_script_as_auxiliary_check)
         submit_auxiliary_row.addStretch()
         script_submission_layout.addLayout(submit_auxiliary_row)
         
@@ -262,6 +277,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.copy_script_check = HighlightableCheckBox("Create copy(s) of nukescript")
         self.copy_script_check.setToolTip("Whether to copy the script before submission.")
         backup_script_row.addWidget(self.copy_script_check)
+        self.label_widget_map["copy_script"] = (empty_label5, self.copy_script_check)
         
         # Add some spacing between the two checkboxes
         backup_script_row.addSpacing(20)
@@ -269,6 +285,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.submit_copied_script_check = HighlightableCheckBox("Render from copied nukescript")
         self.submit_copied_script_check.setToolTip("Whether to submit the copied script instead of the original.")
         backup_script_row.addWidget(self.submit_copied_script_check)
+        self.label_widget_map["submit_copied_script"] = (empty_label5, self.submit_copied_script_check)
         backup_script_row.addStretch()
         script_submission_layout.addLayout(backup_script_row)
         
@@ -282,6 +299,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.copy_script_path_edit = HighlightableLineEdit()
         self.copy_script_path_edit.setToolTip("Path where to copy the script.")
         backup_script_path_row.addWidget(self.copy_script_path_edit, 1)  # Add stretch factor
+        self.label_widget_map["copy_script_path"] = (backup_script_path_label, self.copy_script_path_edit)
         script_submission_layout.addLayout(backup_script_path_row)
         
         left_layout.addWidget(script_submission_group)
@@ -305,6 +323,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.script_job_script_path_edit = HighlightableLineEdit()
         self.script_job_script_path_edit.setToolTip("Path to the script for script jobs.")
         python_script_job_path_row.addWidget(self.script_job_script_path_edit, 1)  # Add stretch factor
+        self.label_widget_map["script_job_script_path"] = (python_script_job_path_label, self.script_job_script_path_edit)
         python_script_job_layout.addLayout(python_script_job_path_row)
         
         left_layout.addWidget(python_script_job_group)
@@ -334,6 +353,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.submission_is_build_job_check = HighlightableCheckBox("Submit as build job")
         self.submission_is_build_job_check.setToolTip("Whether this submission is a build job.")
         submission_build_row.addWidget(self.submission_is_build_job_check)
+        self.label_widget_map["submission_is_build_job"] = (empty_label7, self.submission_is_build_job_check)
         
         # Add some spacing between the checkboxes
         submission_build_row.addSpacing(20)
@@ -341,6 +361,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.build_job_as_auxiliary_check = HighlightableCheckBox("Submit build script as auxiliary file with job")
         self.build_job_as_auxiliary_check.setToolTip("Whether to submit the build job as an auxiliary file.")
         submission_build_row.addWidget(self.build_job_as_auxiliary_check)
+        self.label_widget_map["build_job_as_auxiliary_file"] = (empty_label7, self.build_job_as_auxiliary_check)
         submission_build_row.addStretch()
         build_job_layout.addLayout(submission_build_row)
         
@@ -354,6 +375,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.build_job_name_edit = HighlightableLineEdit()
         self.build_job_name_edit.setToolTip("Name for the build job.")
         build_job_name_row.addWidget(self.build_job_name_edit, 1)  # Add stretch factor
+        self.label_widget_map["build_job_name"] = (build_job_name_label, self.build_job_name_edit)
         build_job_layout.addLayout(build_job_name_row)
         
         # Pre-build job script
@@ -366,6 +388,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.pre_build_job_script_edit = HighlightableLineEdit()
         self.pre_build_job_script_edit.setToolTip("Script to run before the build job.")
         pre_build_script_row.addWidget(self.pre_build_job_script_edit, 1)  # Add stretch factor
+        self.label_widget_map["pre_build_job_script"] = (pre_build_script_label, self.pre_build_job_script_edit)
         build_job_layout.addLayout(pre_build_script_row)
         
         # Post-build job script
@@ -378,6 +401,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_build_job_script_edit = HighlightableLineEdit()
         self.post_build_job_script_edit.setToolTip("Script to run after the build job.")
         post_build_script_row.addWidget(self.post_build_job_script_edit, 1)  # Add stretch factor
+        self.label_widget_map["post_build_job_script"] = (post_build_script_label, self.post_build_job_script_edit)
         build_job_layout.addLayout(post_build_script_row)
         
         # Delete build script on completion
@@ -389,6 +413,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.delete_build_job_script_check = HighlightableCheckBox("Delete build script on completion of build job")
         self.delete_build_job_script_check.setToolTip("Whether to delete the build job script after completion.")
         delete_build_script_row.addWidget(self.delete_build_job_script_check)
+        self.label_widget_map["delete_build_job_script"] = (empty_label8, self.delete_build_job_script_check)
         delete_build_script_row.addStretch()
         build_job_layout.addLayout(delete_build_script_row)
         
@@ -413,6 +438,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.on_job_complete_edit = HighlightableLineEdit()
         self.on_job_complete_edit.setToolTip("Script to run when the job completes.")
         on_job_complete_row.addWidget(self.on_job_complete_edit, 1)  # Add stretch factor
+        self.label_widget_map["on_job_complete"] = (on_job_complete_label, self.on_job_complete_edit)
         job_info_advanced_layout.addLayout(on_job_complete_row)
         
         # Pre job script
@@ -425,6 +451,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.pre_job_script_edit = HighlightableLineEdit()
         self.pre_job_script_edit.setToolTip("Script to run before the job starts.")
         pre_job_script_row.addWidget(self.pre_job_script_edit, 1)  # Add stretch factor
+        self.label_widget_map["pre_job_script"] = (pre_job_script_label, self.pre_job_script_edit)
         job_info_advanced_layout.addLayout(pre_job_script_row)
         
         # Post job script
@@ -437,6 +464,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_job_script_edit = HighlightableLineEdit()
         self.post_job_script_edit.setToolTip("Script to run after the job completes.")
         post_job_script_row.addWidget(self.post_job_script_edit, 1)  # Add stretch factor
+        self.label_widget_map["post_job_script"] = (post_job_script_label, self.post_job_script_edit)
         job_info_advanced_layout.addLayout(post_job_script_row)
         
         # Pre task script
@@ -449,6 +477,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.pre_task_script_edit = HighlightableLineEdit()
         self.pre_task_script_edit.setToolTip("Script to run before each task starts.")
         pre_task_script_row.addWidget(self.pre_task_script_edit, 1)  # Add stretch factor
+        self.label_widget_map["pre_task_script"] = (pre_task_script_label, self.pre_task_script_edit)
         job_info_advanced_layout.addLayout(pre_task_script_row)
         
         # Post task script
@@ -461,6 +490,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.post_task_script_edit = HighlightableLineEdit()
         self.post_task_script_edit.setToolTip("Script to run after each task completes.")
         post_task_script_row.addWidget(self.post_task_script_edit, 1)  # Add stretch factor
+        self.label_widget_map["post_task_script"] = (post_task_script_label, self.post_task_script_edit)
         job_info_advanced_layout.addLayout(post_task_script_row)
         
         right_layout.addWidget(job_info_advanced_group)
@@ -483,6 +513,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.use_current_environment_check = HighlightableCheckBox("Use current environment")
         self.use_current_environment_check.setToolTip("Whether to use the current environment variables.")
         use_current_env_row.addWidget(self.use_current_environment_check)
+        self.label_widget_map["use_current_environment"] = (empty_label10, self.use_current_environment_check)
         use_current_env_row.addStretch()
         env_layout.addLayout(use_current_env_row)
         
@@ -496,6 +527,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.environment_keys_edit = HighlightableLineEdit()
         self.environment_keys_edit.setToolTip("Environment variables to include (comma-separated).")
         env_keys_row.addWidget(self.environment_keys_edit, 1)  # Add stretch factor
+        self.label_widget_map["environment_keys"] = (self.env_keys_label, self.environment_keys_edit)
         env_layout.addLayout(env_keys_row)
         
         # Environment
@@ -508,6 +540,7 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
         self.environment_edit = HighlightableLineEdit()
         self.environment_edit.setToolTip("Environment variables as key=value pairs (comma-separated).")
         environment_row.addWidget(self.environment_edit, 1)  # Add stretch factor
+        self.label_widget_map["environment"] = (environment_label, self.environment_edit)
         env_layout.addLayout(environment_row)
         
         right_layout.addWidget(env_group)
@@ -961,6 +994,18 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
             apply_panel_config(self.use_current_environment_check, "use_current_environment")
             apply_panel_config(self.environment_keys_edit, "environment_keys")
             apply_panel_config(self.environment_edit, "environment")
+            
+            # Apply configuration to all widgets based on their editable status
+            for control_name, (label, widget) in self.label_widget_map.items():
+                widget.setObjectName(control_name)
+                apply_panel_config(widget, control_name)
+                from nk2dl.common.config import config
+                control_config = config.get(f"panel.{control_name}", {})
+                editable = control_config.get("editable", True)
+                if not editable:
+                    palette = label.palette()
+                    palette.setColor(label.foregroundRole(), QtCore.Qt.black)
+                    label.setPalette(palette)
             
         except Exception as e:
             logger.error(f"Error applying configuration to ExtraSettingsView: {e}")
