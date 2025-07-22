@@ -550,30 +550,30 @@ class NodeDataWorker(QtCore.QObject):
             logger.debug(f"Total nodes in script: {len(all_nodes)}")
             
             for node in all_nodes:
-                logger.debug(f"Checking node: {node.name()} (class: {node.Class()})")
+                logger.debug(f"Checking node: {node.fullName()} (class: {node.Class()})")
                 
                 if node.Class() in write_node_types:
-                    logger.debug(f"Node {node.name()} is a write node type")
+                    logger.debug(f"Node {node.fullName()} is a write node type")
                     
                     # Check if node is disabled
                     disabled = False
                     try:
                         disabled = node['disable'].value()
-                        logger.debug(f"Node {node.name()}: disabled = {disabled}")
+                        logger.debug(f"Node {node.fullName()}: disabled = {disabled}")
                     except Exception as e:
-                        logger.debug(f"Node {node.name()}: no disable knob or error checking: {e}")
+                        logger.debug(f"Node {node.fullName()}: no disable knob or error checking: {e}")
                         pass  # Some nodes might not have disable knob
                     
                     if not disabled:
                         node_info = {
                             'node': node,
-                            'name': node.name(),
+                            'name': node.fullName(),
                             'class': node.Class()
                         }
                         write_nodes_data.append(node_info)
-                        logger.debug(f"Added enabled write node: {node.name()} (class: {node.Class()})")
+                        logger.debug(f"Added enabled write node: {node.fullName()} (class: {node.Class()})")
                     else:
-                        logger.debug(f"Skipped disabled write node: {node.name()}")
+                        logger.debug(f"Skipped disabled write node: {node.fullName()}")
             
             logger.debug(f"Found {len(write_nodes_data)} enabled write nodes")
             return write_nodes_data
@@ -645,12 +645,12 @@ class NodeDataWorker(QtCore.QObject):
             from pathlib import Path
             filename = Path(pretty_path).name
             
-            logger.debug(f"Node {node.name()}: file_path={file_path}, pretty_path={pretty_path}, filename={filename}")
+            logger.debug(f"Node {node.fullName()}: file_path={file_path}, pretty_path={pretty_path}, filename={filename}")
             
             return filename
             
         except Exception as e:
-            logger.debug(f"Error getting filename for node {node.name()}: {e}")
+            logger.debug(f"Error getting filename for node {node.fullName()}: {e}")
             return f"Error: {str(e)}"
     
     def _get_render_order(self, node) -> str:
@@ -674,16 +674,16 @@ class NodeDataWorker(QtCore.QObject):
             if render_order_knob is not None:
                 # Knob exists, get its value
                 render_order = render_order_knob.value()
-                logger.debug(f"Node {node.name()}: render order = {render_order}")
+                logger.debug(f"Node {node.fullName()}: render order = {render_order}")
                 return str(int(render_order))
             
             # No render_order knob found, use default of 0
             # This matches the behavior in the submission code
-            logger.debug(f"Node {node.name()}: no render_order knob found, using default 0")
+            logger.debug(f"Node {node.fullName()}: no render_order knob found, using default 0")
             return "0"
             
         except Exception as e:
-            logger.debug(f"Error getting render order for node {node.name()}: {e}")
+            logger.debug(f"Error getting render order for node {node.fullName()}: {e}")
             return "0"  # Fallback to order 0
     
 

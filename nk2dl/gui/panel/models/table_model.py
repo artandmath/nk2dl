@@ -701,7 +701,7 @@ class TableDataModel(QtCore.QObject):
             # Find the node
             node = None
             for n in nuke.allNodes():
-                if n.name() == node_name:
+                if n.fullName() == node_name:
                     node = n
                     break
             

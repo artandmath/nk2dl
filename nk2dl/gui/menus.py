@@ -138,15 +138,23 @@ def submit_selected_writes_to_deadline():
         logger.warning(f"Could not save script: {e}")
 
     # Get selected nodes
-    selected_nodes = nuke.selectedNodes('Write') + nuke.selectedNodes('DeepWrite')
+    selected_nodes = nuke.selectedNodes()
+    selected_groups = nuke.selectedNodes('Group')
+    for group in selected_groups:
+        selected_nodes.extend(nuke.allNodes(group=group, recurseGroups=True))
     
-    if not selected_nodes:
+    selected_writes = []
+    for node in selected_nodes:
+        if node.Class() == 'Write' or node.Class() == 'DeepWrite':
+            selected_writes.append(node)
+
+    if not selected_writes:
         nuke.message("No nodes selected. Please select at least one Write or DeepWrite node.")
         return False
     
     write_node_names = []
-    for node in selected_nodes:
-        write_node_names.append(node.name())
+    for node in selected_writes:
+        write_node_names.append(node.fullName())
 
     try:
         from ..nuke import submit_nuke_script
@@ -156,6 +164,7 @@ def submit_selected_writes_to_deadline():
             script_is_open=True,
             frames="input",
             render_order_dependencies=True,
+            write_nodes_as_separate_jobs=True,   
             write_nodes=write_node_names,
             render_settings_from_metadata=True
         )

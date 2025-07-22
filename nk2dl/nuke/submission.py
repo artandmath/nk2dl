@@ -992,8 +992,11 @@ class NukeSubmission:
         # Get all nodes of the specified types
         all_write_nodes = []
         for node_type in filter_types:
-            all_write_nodes.extend(nuke.allNodes(node_type))
-            
+            all_nodes = nuke.allNodes(recurseGroups=True)
+            for node in all_nodes:
+                if node.Class() == node_type:
+                    all_write_nodes.append(node)
+        
         return all_write_nodes
 
     def _get_node_pretty_path(self, node, gsv_combination=None) -> str:
@@ -2186,7 +2189,7 @@ class NukeSubmission:
             logger.debug(f"Found {len(all_write_nodes)} Write nodes in nukescript: {nuke.root().name()}")
             
             for node in all_write_nodes:
-                node_name = node.name()
+                node_name = node.fullName()
                 logger.debug(f"Processing write node: {node_name}")
                 
                 # Get render order, default to 0
@@ -2574,7 +2577,7 @@ class NukeSubmission:
                 enabled_write_nodes = []
                 for node in self._all_write_nodes():
                     if not node['disable'].value():
-                        enabled_write_nodes.append(node.name())
+                        enabled_write_nodes.append(node.fullName())
                 
                 if enabled_write_nodes:
                     self.write_nodes = enabled_write_nodes

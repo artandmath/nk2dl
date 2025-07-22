@@ -1065,7 +1065,7 @@ class NodeSettingsView(QtWidgets.QWidget):
             try:
                 import nuke
                 selected_nodes = nuke.selectedNodes()
-                selected_node_names = {node.name() for node in selected_nodes}
+                selected_node_names = {node.fullName() for node in selected_nodes}
                 qt_logger.debug(f"Found {len(selected_node_names)} selected nodes: {list(selected_node_names)}")
             except Exception as e:
                 qt_logger.error(f"Error getting selected nodes: {e}")
