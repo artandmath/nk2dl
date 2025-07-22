@@ -969,8 +969,11 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
                 editable = control_config.get("editable", True)
                 if not editable:
                     palette = label.palette()
-                    palette.setColor(label.foregroundRole(), QtCore.Qt.black)
+                    palette.setColor(QtGui.QPalette.All, QtGui.QPalette.WindowText, QtCore.Qt.black)
+                    palette.setColor(QtGui.QPalette.All, QtGui.QPalette.Mid, QtCore.Qt.transparent)
                     label.setPalette(palette)
+                else:
+                    label.setPalette(label.style().standardPalette())
             apply_panel_config(self.priority_spin, "priority")
             # If priority is not editable, set label text color to black
             # This block is now redundant as it's handled by the loop above

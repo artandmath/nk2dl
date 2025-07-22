@@ -1004,8 +1004,11 @@ class ExtraSettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin,
                 editable = control_config.get("editable", True)
                 if not editable:
                     palette = label.palette()
-                    palette.setColor(label.foregroundRole(), QtCore.Qt.black)
+                    palette.setColor(QtGui.QPalette.All, QtGui.QPalette.WindowText, QtCore.Qt.black)
+                    palette.setColor(QtGui.QPalette.All, QtGui.QPalette.Mid, QtCore.Qt.transparent)
                     label.setPalette(palette)
+                else:
+                    label.setPalette(label.style().standardPalette())
             
         except Exception as e:
             logger.error(f"Error applying configuration to ExtraSettingsView: {e}")
