@@ -47,10 +47,9 @@ class HighlightableCheckBox(QtWidgets.QCheckBox):
         self.highlight_color = QtGui.QColor(highlight_color)
         self.is_highlighted = False
         self.original_palette = self.palette()
-        
         # Don't enable auto fill background - let it be transparent
         self.setAutoFillBackground(False)
-        
+    
     def set_highlight_color(self, color):
         """Set the highlight color for this widget.
         
@@ -67,23 +66,30 @@ class HighlightableCheckBox(QtWidgets.QCheckBox):
         Args:
             highlighted (bool): True to highlight, False to remove highlight
         """
-        if self.is_highlighted != highlighted:
-            self.is_highlighted = highlighted
-            if highlighted:
-                self._apply_highlight()
-            else:
-                self._remove_highlight()
+        self.is_highlighted = highlighted
+        if highlighted:
+            self._apply_highlight()
+        else:
+            self._remove_highlight()
     
     def _apply_highlight(self):
         """Apply the highlight using palette background."""
         palette = self.palette()
-        # Only set Base color (for the checkbox indicator), not Window (for the whole widget)
-        palette.setColor(QtGui.QPalette.Base, self.highlight_color)
+        if not self.isEnabled():
+            from ..constants import Colors
+            palette.setColor(QtGui.QPalette.Base, QtGui.QColor(Colors.WIDGET_HIGHLIGHT_DISABLED_CHECKBOX_COLOR))
+        else:
+            palette.setColor(QtGui.QPalette.Base, self.highlight_color)
         self.setPalette(palette)
     
     def _remove_highlight(self):
         """Remove the highlight by restoring original palette."""
         self.setPalette(self.original_palette)
+    
+    def setEnabled(self, enabled):
+        super().setEnabled(enabled)
+        if self.is_highlighted:
+            self._apply_highlight()
 
 
 class HighlightableSpinBox(QtWidgets.QSpinBox):
@@ -132,6 +138,11 @@ class HighlightableSpinBox(QtWidgets.QSpinBox):
         """Remove the highlight by restoring original palette."""
         self.setPalette(self.original_palette)
 
+    def setEnabled(self, enabled):
+        super().setEnabled(enabled)
+        if self.is_highlighted:
+            self._apply_highlight()
+
 
 class HighlightableComboBox(QtWidgets.QComboBox):
     """A combo box widget that can display a highlight color when it has stored values."""
@@ -166,9 +177,13 @@ class HighlightableComboBox(QtWidgets.QComboBox):
     
     def _apply_highlight(self):
         """Apply the highlight styling to the widget."""
+        color = self.highlight_color
+        if not self.isEnabled():
+            from ..constants import Colors
+            color = Colors.WIDGET_HIGHLIGHT_DISABLED_COLOR
         highlight_style = f"""
             QComboBox {{
-                background-color: {self.highlight_color};
+                background-color: {color};
             }}
         """
         combined_style = self.original_stylesheet + highlight_style
@@ -177,6 +192,11 @@ class HighlightableComboBox(QtWidgets.QComboBox):
     def _remove_highlight(self):
         """Remove the highlight styling from the widget."""
         self.setStyleSheet(self.original_stylesheet)
+
+    def setEnabled(self, enabled):
+        super().setEnabled(enabled)
+        if self.is_highlighted:
+            self._apply_highlight()
 
 
 class HighlightableLineEdit(QtWidgets.QLineEdit):
@@ -212,9 +232,13 @@ class HighlightableLineEdit(QtWidgets.QLineEdit):
     
     def _apply_highlight(self):
         """Apply the highlight styling to the widget."""
+        color = self.highlight_color
+        if not self.isEnabled():
+            from ..constants import Colors
+            color = Colors.WIDGET_HIGHLIGHT_DISABLED_COLOR
         highlight_style = f"""
             QLineEdit {{
-                background-color: {self.highlight_color};
+                background-color: {color};
             }}
         """
         combined_style = self.original_stylesheet + highlight_style
@@ -222,4 +246,9 @@ class HighlightableLineEdit(QtWidgets.QLineEdit):
     
     def _remove_highlight(self):
         """Remove the highlight styling from the widget."""
-        self.setStyleSheet(self.original_stylesheet) 
+        self.setStyleSheet(self.original_stylesheet)
+
+    def setEnabled(self, enabled):
+        super().setEnabled(enabled)
+        if self.is_highlighted:
+            self._apply_highlight() 

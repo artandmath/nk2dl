@@ -209,6 +209,8 @@ class Colors:
     
     # Widget highlight colors
     WIDGET_HIGHLIGHT_COLOR = "#547699"   # Light blue for highlighting stored values
+    WIDGET_HIGHLIGHT_DISABLED_COLOR = "rgba(84, 118, 153, 64)"  # 25% opacity blue for disabled highlighted widgets
+    WIDGET_HIGHLIGHT_DISABLED_CHECKBOX_COLOR = "#455563"  # Solid blue-grey for disabled highlighted checkboxes
     
     # Pinned row styling (using same colors as settings panels)
     PINNED_JOB_BACKGROUND = JOB_SETTINGS_BACKGROUND      # Same as job settings title
