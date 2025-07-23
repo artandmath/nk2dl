@@ -75,6 +75,23 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         # Register widgets for change tracking
         self._register_widgets_for_change_tracking()
     
+    def showEvent(self, event):
+        """Override showEvent to ensure UI state is properly updated after widget is shown."""
+        super().showEvent(event)
+        
+        # Defer UI state updates until after the widget is fully shown
+        # This ensures that enabled/disabled states are properly displayed
+        QtCore.QTimer.singleShot(0, self._deferred_ui_state_update)
+    
+    def _deferred_ui_state_update(self):
+        """Update UI state after widget is fully shown."""
+        # Update frame range UI based on current mode
+        current_mode = self.frames_combo.currentText()
+        self._update_frame_range_ui(current_mode)
+        
+        # Update checkbox dependencies
+        self._update_checkbox_dependencies()
+    
     def _create_ui(self):
         """Create the settings UI components."""
         # Main container with horizontal layout for responsive behavior
@@ -660,8 +677,8 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             
             self.frame_range_edit.setText(job_settings.get('frames', ''))
             
-            # Update frame range UI based on the selected mode
-            self._update_frame_range_ui(frames_mode)
+            # Update frame range UI based on the selected mode - REMOVED: now handled in deferred update
+            # self._update_frame_range_ui(frames_mode)
             
             self.use_node_frame_list_check.setChecked(job_settings.get('use_node_frame_list', False))
             self.task_timeout_spin.setValue(int(job_settings.get('task_timeout', 0)))
@@ -682,8 +699,8 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             self.submit_suspended_check.setChecked(job_settings.get('submit_suspended', False))
             self.continue_on_error_check.setChecked(job_settings.get('continue_on_error', False))
             
-            # Apply checkbox dependencies after loading all checkbox states
-            self._update_checkbox_dependencies()
+            # Apply checkbox dependencies after loading all checkbox states - REMOVED: now handled in deferred update
+            # self._update_checkbox_dependencies()
             
             # Load machine settings
             machine_settings = self.settings_model.get_all_machine_settings()
