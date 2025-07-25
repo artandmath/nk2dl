@@ -292,6 +292,9 @@ class WidgetChangeTracker:
             elif param_name == 'frames':
                 # Dynamic frame range based on Nuke script
                 return self._get_nuke_root_frame_range()
+            elif param_name == 'custom_frames':
+                # Custom frames default to None (no custom value set)
+                return None
             
             return None
             

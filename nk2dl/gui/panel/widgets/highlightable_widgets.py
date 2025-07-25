@@ -232,10 +232,11 @@ class HighlightableLineEdit(QtWidgets.QLineEdit):
     
     def _apply_highlight(self):
         """Apply the highlight styling to the widget."""
-        color = self.highlight_color
+        # Don't apply highlight if widget is disabled
         if not self.isEnabled():
-            from ..constants import Colors
-            color = Colors.WIDGET_HIGHLIGHT_DISABLED_COLOR
+            return
+            
+        color = self.highlight_color
         highlight_style = f"""
             QLineEdit {{
                 background-color: {color};
@@ -251,4 +252,9 @@ class HighlightableLineEdit(QtWidgets.QLineEdit):
     def setEnabled(self, enabled):
         super().setEnabled(enabled)
         if self.is_highlighted:
-            self._apply_highlight() 
+            if enabled:
+                # Re-apply highlight when enabled
+                self._apply_highlight()
+            else:
+                # Remove highlight when disabled
+                self._remove_highlight() 

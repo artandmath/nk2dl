@@ -590,6 +590,12 @@ class SettingsSchema:
             'required': False,
             'category': 'job'
         },
+        'custom_frames': {
+            'type': TYPE_STRING,
+            'config_key': None,  # This is stored separately from config
+            'required': False,
+            'category': 'job'
+        },
         'use_node_frame_list': {
             'type': TYPE_BOOL,
             'config_key': 'submission.use_node_frame_list',

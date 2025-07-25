@@ -77,6 +77,7 @@ class SettingsModel(QtCore.QObject):
             'chunk_size': config.get('submission.chunk_size', 10),
             'frames_mode': 'Global',  # UI-specific setting
             'frames': self._get_initial_frame_range(),  # Dynamic based on mode
+            'custom_frames': None,  # Store custom frame range separately
             'use_node_frame_list': config.get('submission.use_node_frame_list', False),
             'task_timeout': 0,        # UI-specific setting
             'enable_auto_timeout': config.get('submission.enable_auto_timeout', False),
@@ -325,8 +326,9 @@ class SettingsModel(QtCore.QObject):
         elif mode == 'Hero Frames':
             return 'hero'
         elif mode == 'Custom':
-            # Return the current custom value or default to global range
-            return self._job_settings.get('frames', self._get_nuke_root_frame_range())
+            # Return the stored custom value or global frame range if no custom value
+            custom_frames = self._job_settings.get('custom_frames')
+            return custom_frames if custom_frames is not None else self._get_nuke_root_frame_range()
         else:
             return self._get_nuke_root_frame_range()
     
@@ -353,7 +355,30 @@ class SettingsModel(QtCore.QObject):
             mode (str): Frame mode selected
         """
         new_frame_range = self._get_frame_range_for_mode(mode)
-        self.set_job_setting('frames', new_frame_range)
+        # Only update the frames setting, don't overwrite custom_frames
+        self.set_job_setting('frames', new_frame_range, user_changed=False)
+    
+    def set_custom_frame_range(self, frame_range):
+        """Set a custom frame range value.
+        
+        This method should only be called when the user edits the frame range
+        while the dropdown is set to 'Custom'.
+        
+        Args:
+            frame_range (str): Custom frame range string
+        """
+        # Store the custom value separately
+        self._job_settings['custom_frames'] = frame_range
+        # Also update the current frames value
+        self.set_job_setting('frames', frame_range)
+    
+    def get_custom_frame_range(self):
+        """Get the stored custom frame range value.
+        
+        Returns:
+            str: Custom frame range string or None if not set
+        """
+        return self._job_settings.get('custom_frames')
     
     def is_frame_range_editable(self, mode):
         """Check if frame range should be editable for given mode.

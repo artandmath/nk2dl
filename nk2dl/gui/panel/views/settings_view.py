@@ -61,6 +61,9 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         super().__init__(parent)
         self.settings_model = settings_model
         
+        # Track the original text in frame range edit to detect actual changes
+        self._frame_range_original_text = ""
+        
         # Create the main layout and UI components
         self._create_ui()
         self._connect_signals()
@@ -579,7 +582,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.priority_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('priority', v, 'job'))
         self.chunk_size_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('chunk_size', v, 'job'))
         self.frames_combo.currentTextChanged.connect(self._on_frames_mode_changed)
-        self.frame_range_edit.textChanged.connect(lambda t: self._on_user_changed_setting('frames', t, 'job'))
+        self.frame_range_edit.textChanged.connect(self._on_frame_range_edit_changed)
         self.use_node_frame_list_check.toggled.connect(lambda c: self._on_user_changed_setting('use_node_frame_list', c, 'job'))
         self.task_timeout_spin.valueChanged.connect(lambda v: self._on_user_changed_setting('task_timeout', v, 'job'))
         self.enable_auto_timeout_check.toggled.connect(lambda c: self._on_user_changed_setting('enable_auto_timeout', c, 'job'))
@@ -675,7 +678,19 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             if index >= 0:
                 self.frames_combo.setCurrentIndex(index)
             
-            self.frame_range_edit.setText(job_settings.get('frames', ''))
+            # Load the appropriate frame range based on mode
+            if frames_mode == 'Custom':
+                # For custom mode, use the stored custom value or current frames value
+                custom_frames = self.settings_model.get_custom_frame_range()
+                frame_range = custom_frames if custom_frames is not None else job_settings.get('frames', '')
+            else:
+                # For non-custom modes, use the current frames value
+                frame_range = job_settings.get('frames', '')
+            
+            self.frame_range_edit.setText(frame_range)
+            
+            # Track the original text for change detection
+            self._frame_range_original_text = frame_range
             
             # Update frame range UI based on the selected mode - REMOVED: now handled in deferred update
             # self._update_frame_range_ui(frames_mode)
@@ -842,12 +857,41 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             # Update the text
             self.frame_range_edit.setText(frame_range)
             
+            # Track the original text for change detection
+            self._frame_range_original_text = frame_range
+            
             # Enable/disable the text box based on the mode
             is_editable = self.settings_model.is_frame_range_editable(mode)
             self.frame_range_edit.setEnabled(is_editable)
                 
         finally:
             self.frame_range_edit.blockSignals(False)
+    
+    def _on_frame_range_edit_changed(self, text):
+        """Handle text changes in the frame range edit box.
+        
+        Only stores the value when the dropdown is set to 'Custom' AND
+        the user has actually changed the text from its original value.
+        When in other modes, the text changes are just for display and
+        should not be stored to the model.
+        """
+        current_mode = self.frames_combo.currentText()
+        
+        if current_mode == 'Custom':
+            # Check if the text has actually changed from the original
+            if text != self._frame_range_original_text:
+                # Store the custom frame range value only if it's different
+                self.settings_model.set_custom_frame_range(text)
+                # Mark as user-changed for tracking
+                self.settings_model.mark_as_user_changed('frames')
+                logger.debug(f"Custom frame range updated to: {text}")
+            else:
+                # Text hasn't changed, don't store
+                logger.debug(f"Frame range text unchanged: {text}")
+        else:
+            # In non-custom modes, text changes are just for display
+            # Don't store to the model
+            logger.debug(f"Frame range display updated to: {text} (mode: {current_mode})")
     
     def _on_separate_tasks_toggled(self, checked):
         """Handle separate tasks checkbox toggle."""
@@ -1014,6 +1058,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
             apply_panel_config(self.chunk_size_spin, "chunk_size")
             apply_panel_config(self.frames_combo, "frames")
             apply_panel_config(self.frame_range_edit, "frame_range")
+            apply_panel_config(self.frame_range_edit, "custom_frames")
             apply_panel_config(self.use_node_frame_list_check, "use_node_frame_list")
             apply_panel_config(self.task_timeout_spin, "task_timeout")
             apply_panel_config(self.enable_auto_timeout_check, "enable_auto_timeout")
@@ -1191,6 +1236,7 @@ class SettingsView(StorageVisualIndicationMixin, WidgetChangeTrackingMixin, QtWi
         self.register_widget_for_change_tracking(self.chunk_size_spin, 'chunk_size')
         self.register_widget_for_change_tracking(self.frames_combo, 'frames_mode')
         self.register_widget_for_change_tracking(self.frame_range_edit, 'frames')
+        self.register_widget_for_change_tracking(self.frame_range_edit, 'custom_frames')
         self.register_widget_for_change_tracking(self.use_node_frame_list_check, 'use_node_frame_list')
         self.register_widget_for_change_tracking(self.task_timeout_spin, 'task_timeout')
         self.register_widget_for_change_tracking(self.enable_auto_timeout_check, 'enable_auto_timeout')

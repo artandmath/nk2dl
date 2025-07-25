@@ -52,7 +52,7 @@ ESSENTIAL_CONTROLS = {
 
 CONTROL_GROUPS = {
     'job_settings': {
-        'priority', 'chunk_size', 'frames', 'frame_range', 'use_node_frame_list',
+        'priority', 'chunk_size', 'frames', 'custom_frames', 'frame_range', 'use_node_frame_list',
         'task_timeout', 'enable_auto_timeout', 'render_mode', 'render_nukex',
         'separate_tasks', 'separate_jobs',
         'render_order_dependencies', 'views_separate_jobs'
