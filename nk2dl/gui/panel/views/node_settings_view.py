@@ -515,34 +515,31 @@ class NodeSettingsView(QtWidgets.QWidget):
         if col == 0:
             return
             
-        # Don't apply bold styling to other frozen columns (Order, Node, Filename)
+        # Don't apply highlighting to other frozen columns (Order, Node, Filename)
         # since they don't support inheritance and are always explicit
         if (hasattr(self.render_table, 'frozen_column_count') and 
             col < self.render_table.frozen_column_count):
-            # Frozen columns use normal font and default text color
-            font = item.font()
-            font.setBold(False)
-            item.setFont(font)
+            # Frozen columns use default colors
             item.setForeground(QtGui.QBrush())
+            item.setBackground(QtGui.QBrush())
             return
         
         # Check if cell is overridden (has explicit value different from inherited)
         is_overridden = self.table_model.is_cell_overridden(row, col)
         
         if is_overridden:
-            # Bold font for override values
-            font = item.font()
-            font.setBold(True)
-            item.setFont(font)
+            # Use highlight color background for override values (same as other highlightable widgets)
+            from ..constants import Colors
             # White text for explicit values
             item.setForeground(QtGui.QBrush(QtGui.QColor(255, 255, 255)))
+            # Light blue background for highlighting (same as other widgets)
+            item.setBackground(QtGui.QBrush(QtGui.QColor(Colors.WIDGET_HIGHLIGHT_COLOR)))
         else:
-            # Normal font for inherited values
-            font = item.font()
-            font.setBold(False)
-            item.setFont(font)
+            # Default colors for inherited values
             # Default text color for inherited values
             item.setForeground(QtGui.QBrush())
+            # Default background for inherited values
+            item.setBackground(QtGui.QBrush())
     
     def _sync_frozen_item(self, row, col, item):
         """Sync item to frozen table if it's in a frozen column."""

@@ -155,11 +155,11 @@ class FrozenColumnTestWindow(QtWidgets.QMainWindow):
                 
                 # Apply styling based on override status
                 is_overridden = self.table_model.is_cell_overridden(row, col)
-                # Don't make frozen columns bold (they don't support inheritance)
-                if col >= 3 and is_overridden:  # Only non-frozen columns can be bold
-                    font = item.font()
-                    font.setBold(True)
-                    item.setFont(font)
+                # Don't make frozen columns highlighted (they don't support inheritance)
+                if col >= 3 and is_overridden:  # Only non-frozen columns can be highlighted
+                    from nk2dl.gui.panel.constants import Colors
+                    # Light blue background for highlighting (same as other widgets)
+                    item.setBackground(QtGui.QBrush(QtGui.QColor(Colors.WIDGET_HIGHLIGHT_COLOR)))
                 
                 self.table.setItem(row, col, item)
     

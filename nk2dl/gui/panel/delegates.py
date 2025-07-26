@@ -53,12 +53,14 @@ class SettingsAwareDelegate(QtWidgets.QStyledItemDelegate):
         self.table_model = table_model
     
     def paint(self, painter, option, index):
-        """Paint cell with bold text for overridden values."""
+        """Paint cell with highlight color background for overridden values."""
         # Check if cell is overridden
         if self.table_model.is_cell_overridden(index.row(), index.column()):
-            # Create new option with bold font for override values
+            # Create new option with highlight color background for override values
             new_option = QtWidgets.QStyleOptionViewItem(option)
-            new_option.font.setBold(True)
+            # Set background color to match other highlightable widgets
+            from .constants import Colors
+            new_option.backgroundBrush = QtGui.QBrush(QtGui.QColor(Colors.WIDGET_HIGHLIGHT_COLOR))
             super().paint(painter, new_option, index)
         else:
             # Use normal styling for inherited values

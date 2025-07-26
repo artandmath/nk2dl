@@ -251,10 +251,10 @@ class CustomHeaderTestWindow(QtWidgets.QMainWindow):
                 # Apply styling based on override status
                 is_overridden = self.table_model.is_cell_overridden(row, col)
                 if is_overridden:
-                    font = item.font()
-                    font.setBold(True)
-                    item.setFont(font)
+                    from nk2dl.gui.panel.constants import Colors
                     item.setForeground(QtGui.QBrush(QtGui.QColor(255, 255, 255)))
+                    # Light blue background for highlighting (same as other widgets)
+                    item.setBackground(QtGui.QBrush(QtGui.QColor(Colors.WIDGET_HIGHLIGHT_COLOR)))
                 
                 self.table.setItem(row, col, item)
     

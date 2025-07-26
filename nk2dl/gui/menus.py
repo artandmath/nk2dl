@@ -55,11 +55,18 @@ def create_render_menus():
         tooltip='Submit the current Nuke script to Deadline',
     )
     '''
-
     # Add submission command
+    '''
     render_menu.addCommand(
         'Submit Nuke to Deadline',
         'nukescripts.panels.restorePanel("com.danielharkness.nk2dl.panel")',
+        "shift+F7",
+        tooltip='Open submission dialog with advanced options',
+    )
+    '''
+    render_menu.addCommand(
+        'Submit Nuke to Deadline',
+        'nuke.nk2dlPane=nukescripts.panels.restorePanel("com.danielharkness.nk2dl.panel"); nuke.nk2dlPane.addToPane(nuke.getPaneFor("Viewer.1"))',
         "shift+F7",
         tooltip='Open submission dialog with advanced options',
     )

@@ -146,19 +146,18 @@ class SimpleNodeSettingsView(QtWidgets.QWidget):
         is_overridden = self.table_model.is_cell_overridden(row, col)
         
         if is_overridden:
-            # Bold font for override values
-            font = item.font()
-            font.setBold(True)
-            item.setFont(font)
+            # Use highlight color background for override values (same as other highlightable widgets)
+            from nk2dl.gui.panel.constants import Colors
             # White text for explicit values
             item.setForeground(QtGui.QBrush(QtGui.QColor(255, 255, 255)))
+            # Light blue background for highlighting (same as other widgets)
+            item.setBackground(QtGui.QBrush(QtGui.QColor(Colors.WIDGET_HIGHLIGHT_COLOR)))
         else:
-            # Normal font for inherited values
-            font = item.font()
-            font.setBold(False)
-            item.setFont(font)
+            # Default colors for inherited values
             # Default text color for inherited values
             item.setForeground(QtGui.QBrush())
+            # Default background for inherited values
+            item.setBackground(QtGui.QBrush())
     
     def _on_table_item_changed(self, item):
         """Handle table item changes and update the model."""
