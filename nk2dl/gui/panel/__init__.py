@@ -793,8 +793,26 @@ if NUKE_AVAILABLE or 'QtWidgets' in locals():
                 
                 try:
                     # 1. Switch to console tab and set up logging
-                    console_tab_index = self.tab_widget.indexOf(self.console_view)
-                    self.tab_widget.setCurrentIndex(console_tab_index)
+                    # Use get_original_widget to find the correct tab index since ScrollableTabWidget wraps widgets
+                    console_tab_index = -1
+                    for i in range(self.tab_widget.count()):
+                        original_widget = self.tab_widget.get_original_widget(i)
+                        if original_widget == self.console_view:
+                            console_tab_index = i
+                            break
+                    
+                    logger.debug(f"Console tab index: {console_tab_index}, Total tabs: {self.tab_widget.count()}")
+                    if console_tab_index >= 0:
+                        self.tab_widget.setCurrentIndex(console_tab_index)
+                        logger.debug("Successfully switched to console tab")
+                    else:
+                        logger.error(f"Console tab not found! Console view: {self.console_view}")
+                        # Fallback: try to find console tab by name
+                        for i in range(self.tab_widget.count()):
+                            if self.tab_widget.tabText(i) == "Console":
+                                self.tab_widget.setCurrentIndex(i)
+                                logger.debug(f"Found console tab by name at index {i}")
+                                break
                     
                     # Set up console logging handler
                     self._setup_console_logging()
