@@ -1,0 +1,76 @@
+deadline:
+  # Web service configuration
+  use_web_service: false  # Whether to use web service or command-line
+  host: localhost
+  port: 8081
+  ssl: false
+  ssl_cert: null  # Path to SSL certificate
+  timeout: 1  # seconds
+  commandline_on_fail: true  # Whether to use command-line if web service fails
+  
+  # Command-line configuration
+  command_path: null  # Will be auto-detected from DEADLINE_PATH
+  repository_path: null  # Will be auto-detected using deadlinecommand
+
+logging:
+  level: INFO
+  qt_level: INFO   # QT messages are output at DEBUG level or lower
+  call_level: INFO # caller messages are output at DEBUG level or lower
+  file: null
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+submission:
+  priority: 50
+  pool: "nuke"
+  group: "none"
+  chunk_size: 10
+  concurrent_tasks: 1
+  threads: 0
+  ram_use: 0
+  stack_size: 0
+  batch_name_template: "{nukescript}"
+  job_name_template: "{batch} / {write} / {file}"
+  build_job_name_template: "{buildjob} >> {nukescript}"
+  comment_template: ""
+  render_mode: "full"
+  write_nodes_as_tasks: false
+  write_nodes_as_separate_jobs: false
+  render_order_dependencies: false
+  enforce_render_order: true
+  use_node_frame_list: false
+  use_nuke_x: false
+  batch_mode: true
+  use_gpu: false
+  performance_profiler: false
+  performance_profiler_path: ""
+  continue_on_error: false
+  reload_plugins: false
+  use_proxy: false
+  submit_writes_alphabetically: false
+  submit_writes_in_render_order: false
+  copy_script: false
+  submit_copied_script: false
+  submit_script_as_auxiliary_file: false
+  enable_auto_timeout: false
+  gpu_override: ""
+  limit_worker_tasks: false
+  limit_groups: ""
+
+  # Environment variables
+  use_current_environment: false
+  environment_keys: []
+  environment: {}
+  omit_environment_keys: []
+
+  # Script copying options
+  # Full path with tokens: {nkdir}, {nkstem}, {outputdir}, {YYYY}, full token list in docs
+  script_copy_path: "{outdir}/.farm/{nkstem}.nk"  
+
+  # Alternatively, define multiple copy locations:
+  # script_copy0_path: "{outdir}/.farm/{nkstem}.nk"
+  # script_copy1_path: "{nkdir}/archive/{nkstem}_{YYYY}-{MM}-{DD}.nk"
+
+  # Write node types
+  # Additional custom write node types (Write and DeepWrite are always included)
+  # Example: custom_write_classes: ["CustomWrite", "StudioWrite"] 
+  custom_write_classes: []
