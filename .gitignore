@@ -45,7 +45,7 @@ venv.bak/
 .nuke/
 *.nknc
 *.nkc
-/tests/nukescripts/render_output/*
+/python/tests/nukescripts/render_output/*
 
 # Project specific
 # plan/
