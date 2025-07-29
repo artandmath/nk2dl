@@ -57,7 +57,7 @@ def parser_module():
     if _parser_module is None:
         try:
             logger.info("Creating parser module...")
-            from . import nukescript_parser as parser
+            from . import parser
             _parser_module = parser.create_parser()
         except (ImportError, ModuleNotFoundError):
             raise SubmissionError("The nukescript parser is required but is not available or implemented.")

@@ -37,7 +37,7 @@ src/nk2dl/
 ├── framerange.py (moved from common/)
 ├── logging.py (moved from common/)
 ├── connection.py (moved from deadline/)
-├── nukescript_parser.py (renamed from nuke/parser.py)
+├── parser.py (renamed from nukescript_parser.py, originally from nuke/parser.py)
 ├── submission.py (moved from nuke/)
 ├── subprocess.py (moved from nuke/)
 └── nuke_utils.py (renamed from nuke/utils.py)
@@ -58,7 +58,7 @@ src/nk2dl/
   - `nuke/subprocess.py` → `subprocess.py`
 
 ### 2. File Renames
-- `nuke/parser.py` → `nukescript_parser.py`
+- `nuke/parser.py` → `nukescript_parser.py` → `parser.py`
 - `nuke/utils.py` → `nuke_utils.py`
 
 ### 3. Import Updates Required
@@ -76,7 +76,7 @@ Update all import statements throughout the codebase to reflect the new structur
 #### Nuke Module Imports
 - `from nk2dl.nuke.submission import ...` → `from nk2dl.submission import ...`
 - `from nk2dl.nuke.subprocess import ...` → `from nk2dl.subprocess import ...`
-- `from nk2dl.nuke.parser import ...` → `from nk2dl.nukescript_parser import ...`
+- `from nk2dl.nuke.parser import ...` → `from nk2dl.nukescript_parser import ...` → `from nk2dl.parser import ...`
 - `from nk2dl.nuke.utils import ...` → `from nk2dl.nuke_utils import ...`
 
 ### 4. Files Requiring Import Updates

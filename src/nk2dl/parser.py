@@ -203,4 +203,4 @@ def create_parser() -> NukeParser:
     Returns:
         A new NukeParser instance
     """
-    return NukeParser() 
+    return NukeParser()
