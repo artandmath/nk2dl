@@ -15,8 +15,8 @@ setup(
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/artandmath/nk2dl",
-    packages=find_packages(where="python"),
-    package_dir={"": "python"},
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     install_requires=[
         "pyyaml>=6.0.1",
     ],
