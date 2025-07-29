@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 import yaml
 
-from nk2dl.common.config import Config, ConfigError
+from nk2dl.config import Config, ConfigError
 
 @pytest.fixture(autouse=True)
 def clean_environment():
@@ -20,7 +20,7 @@ def clean_environment():
             del os.environ[key]
     
     # Reset global config instance
-    from nk2dl.common.config import config
+    from nk2dl.config import config
     config._config = config.DEFAULT_CONFIG.copy()
     
     yield

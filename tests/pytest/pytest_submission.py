@@ -32,9 +32,9 @@ from contextlib import nullcontext
 import shutil
 import uuid
 
-from nk2dl.nuke.submission import NukeSubmission
-from nk2dl.common.framerange import FrameRange
-from nk2dl.common.errors import DeadlineError, ValidationError, SubmissionError
+from nk2dl.submission import NukeSubmission
+from nk2dl.framerange import FrameRange
+from nk2dl.errors import DeadlineError, ValidationError, SubmissionError
 
 
 def create_temp_nuke_script(script_name="pytest_nukescript.nk"):
@@ -652,7 +652,7 @@ def test_submit_nuke_script(create_submission):
             mock_submit_nuke.return_value = {0: ["mock-job-id"]}
             
             # Call submit_nuke_script
-            from nk2dl.nuke.submission import submit_nuke_script
+            from nk2dl.submission import submit_nuke_script
             job_ids = submit_nuke_script(
                 script_path=temp_script_path,
                 frame_range="1-10",

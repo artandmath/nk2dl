@@ -12,8 +12,8 @@ import subprocess as sp
 from typing import Dict, List, Any, Optional
 import re
 
-from ..common.framerange import FrameRange
-from ..common.logging import setup_logging
+from .framerange import FrameRange
+from .logging import setup_logging
 
 # Create a module-specific logger
 logger = setup_logging('nk2dl.nuke.subprocess')
@@ -63,7 +63,7 @@ import os
 import json
 
 try:
-    from nk2dl.nuke.submission import submit_nuke_script
+    from nk2dl.submission import submit_nuke_script
     
     # Parse arguments from JSON
     kwargs = json.loads('''{serialize_kwargs(kwargs)}''')

@@ -8,9 +8,9 @@ import re
 import os
 from typing import Any, Optional, Union
 
-from ..common.config import config
-from ..common.errors import SubmissionError
-from ..common.logging import setup_logging
+from .config import config
+from .errors import SubmissionError
+from .logging import setup_logging
 
 # Create a module-specific logger
 logger = setup_logging('nk2dl.nuke.utils')
@@ -57,7 +57,7 @@ def parser_module():
     if _parser_module is None:
         try:
             logger.info("Creating parser module...")
-            from . import parser
+            from . import nukescript_parser as parser
             _parser_module = parser.create_parser()
         except (ImportError, ModuleNotFoundError):
             raise SubmissionError("The nukescript parser is required but is not available or implemented.")

@@ -15,7 +15,7 @@ from contextlib import contextmanager
 pytest.nuke_env_check_failed = False
 
 # Import directly from your project
-from nk2dl.common.logging import setup_logging
+from nk2dl.logging import setup_logging
 
 
 @contextmanager

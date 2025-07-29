@@ -8,9 +8,9 @@ print("\nNuke to Deadline (nk2dl) v0.1")
 print("Copyright (c) 2025 Daniel Harkness. All Rights Reserved.\n")
 
 from .api import submit_nuke_script
-from .common.config import config
-from .common.errors import NK2DLError, SubmissionError, ConfigError
-from .deadline.connection import DeadlineConnection
+from .config import config
+from .errors import NK2DLError, SubmissionError, ConfigError
+from .connection import DeadlineConnection
 
 __version__ = "0.1.0"
 __author__ = "Daniel Harkness"

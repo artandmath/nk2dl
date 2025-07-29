@@ -576,7 +576,7 @@ def debug_config(force: bool = False) -> None:
         force: If True, show debug info even if already shown once
     
     Usage:
-        from nk2dl.common.config import debug_config
+        from nk2dl.config import debug_config
         debug_config()  # Show once
         debug_config(force=True)  # Force show again
     """

@@ -4,9 +4,9 @@ import os
 import pytest
 from unittest.mock import MagicMock, patch
 
-from nk2dl.common.config import Config
-from nk2dl.common.errors import DeadlineError
-from nk2dl.deadline.connection import DeadlineConnection
+from nk2dl.config import Config
+from nk2dl.errors import DeadlineError
+from nk2dl.connection import DeadlineConnection
 
 @pytest.fixture
 def mock_config():

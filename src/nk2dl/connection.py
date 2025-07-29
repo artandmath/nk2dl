@@ -10,10 +10,10 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
 
-from ..common.config import config
-from ..common.errors import DeadlineError
-from ..common.logging import logger as common_logger
-from ..common.logging import setup_logging
+from .config import config
+from .errors import DeadlineError
+from .logging import logger as common_logger
+from .logging import setup_logging
 
 # Create a module-specific logger
 logger = setup_logging('nk2dl.deadline.connection')

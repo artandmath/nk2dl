@@ -79,9 +79,9 @@ Examples:
 
 import os
 import sys
-from nk2dl.deadline.connection import DeadlineConnection
-from nk2dl.common.config import config
-from nk2dl.common.errors import DeadlineError
+from nk2dl.connection import DeadlineConnection
+from nk2dl.config import config
+from nk2dl.errors import DeadlineError
 
 def setup_deadline_environment():
     """Set up the Deadline environment including Python paths."""

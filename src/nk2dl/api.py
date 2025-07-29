@@ -3,7 +3,7 @@
 This module provides the main public interfaces for submitting Nuke scripts to Deadline.
 """
 
-from .nuke.submission import submit_nuke_script as _submit_nuke_script
+from .submission import submit_nuke_script as _submit_nuke_script
 
 def submit_nuke_script(script_path, **kwargs):
     """Submit a Nuke script to Deadline render farm.

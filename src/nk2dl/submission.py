@@ -15,12 +15,12 @@ import sys
 import tempfile
 import uuid
 
-from ..common.config import config
-from ..common.errors import SubmissionError
-from ..common.logging import setup_logging
-from ..common.framerange import FrameRange
-from ..deadline.connection import get_connection
-from . import utils as nuke_utils
+from .config import config
+from .errors import SubmissionError
+from .logging import setup_logging
+from .framerange import FrameRange
+from .connection import get_connection
+from . import nuke_utils
 
 # Use a more specific logger for the submission module
 logger = setup_logging('nk2dl.submission')
