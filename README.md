@@ -3,12 +3,11 @@ Nuke to Deadline. A toolset for submitting nukescripts to Thinkbox Deadline.
 
 ## Overview
 
-The Nuke to Deadline toolset consists of 3 parts:
-### Core (this repository):
-- `nk2dl` module for submitting nukescripts to Deadline from the python interpreter within Nuke or from another python interpreter where the `nuke` module is available.
-### Add-ons (separate repositories)
-- [`nk2dl gui`](https://github.com/artandmath/nk2dl-gui) is a panel for submitting the currently open nukescript.
-- [`nk2dl cli`](https://github.com/artandmath/nk2dl-cli) for submitting nukescripts to Deadline from the console.
+- `nk2dl` is a python module for submitting nukescripts to Deadline from the python interpreter within Nuke or from another python interpreter where the `nuke` module is available.
+
+## Add-ons
+- [`nk2dl gui`](https://github.com/artandmath/nk2dl-gui) is a panel for submitting the currently open nukescript. Requires `nk2dl` python module.
+- [`nk2dl cli`](https://github.com/artandmath/nk2dl-cli) for submitting nukescripts to Deadline from the console. Requires `nk2dl` python module.
 
 ## Documentation
 
