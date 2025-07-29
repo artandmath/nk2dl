@@ -259,7 +259,7 @@ def setup_venv_environment_vars(venv_path, nuke_install_path, deadline_repositor
         # Modify Windows activation script
         activate_bat = Path(venv_path) / "Scripts" / "activate.bat"
         deactivate_bat = Path(venv_path) / "Scripts" / "deactivate.bat"
-        nuke_path = project_root / "nk2dl" 
+        nuke_path = project_root / "src" 
         python_path = project_root / Path(venv_path) / "Lib" / "site-packages" 
         
         # Create a separate PowerShell script for nk2dl setup
@@ -382,7 +382,7 @@ def setup_venv_environment_vars(venv_path, nuke_install_path, deadline_repositor
     else:
         # Modify Unix/Linux/Mac activation script
         activate_sh = Path(venv_path) / "bin" / "activate"
-        nuke_path = project_root / "nk2dl"
+        nuke_path = project_root / "src"
         python_path = project_root / Path(venv_path) / "lib" / "python3.11" / "site-packages"
         
         with open(activate_sh, "a") as f:
@@ -455,6 +455,9 @@ def create_powershell_wrapper(venv_path):
         scripts_dir = Path(venv_path) / "Scripts"
         wrapper_path = scripts_dir / "Activate-nk2dl.ps1"
         
+        # Get project root for src directory
+        project_root = Path.cwd()
+        
         with open(wrapper_path, "w") as f:
             f.write("# NK2DL Activation Script\n")
             f.write("# This script activates the virtual environment and sets up nk2dl environment variables in one step\n\n")
@@ -462,13 +465,15 @@ def create_powershell_wrapper(venv_path):
             
             # Get the directory where this script is located
             f.write("$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path\n")
-            f.write("$venvPath = Split-Path -Parent $scriptDir\n\n")
+            f.write("$venvPath = Split-Path -Parent $scriptDir\n")
+            f.write(f"$projectRoot = \"{project_root}\"\n")
+            f.write("$srcPath = Join-Path $projectRoot \"src\"\n\n")
             
             # Set up environment variables
             f.write("# Set up environment variables\n")
             f.write("$env:VIRTUAL_ENV = $venvPath\n")
             f.write("$env:PATH = \"$scriptDir;$env:PATH\"\n")
-            f.write("$env:PYTHONPATH = \"$venvPath\\Lib\\site-packages;$env:PYTHONPATH\"\n\n")
+            f.write("$env:PYTHONPATH = \"$srcPath;$venvPath\\Lib\\site-packages;$env:PYTHONPATH\"\n\n")
             
             # Source the nk2dl setup script
             f.write("# Source the nk2dl setup script\n")

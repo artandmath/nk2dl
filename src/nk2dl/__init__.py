@@ -4,9 +4,12 @@ Nuke to Deadline Submitter - Core Library
 A pure Python library for submitting Nuke scripts to Thinkbox Deadline.
 """
 
-from .api import submit_nuke_script, submit_job
+print("\nNuke to Deadline (nk2dl) v0.1")
+print("Copyright (c) 2025 Daniel Harkness. All Rights Reserved.\n")
+
+from .api import submit_nuke_script
 from .common.config import config
-from .common.errors import Nk2dlError, SubmissionError, ConfigError
+from .common.errors import NK2DLError, SubmissionError, ConfigError
 from .deadline.connection import DeadlineConnection
 
 __version__ = "0.1.0"
@@ -15,10 +18,9 @@ __email__ = "danielharkness@icloud.com"
 
 __all__ = [
     "submit_nuke_script",
-    "submit_job", 
     "config",
-    "Nk2dlError",
-    "SubmissionError",
+    "NK2DLError",
+    "SubmissionError", 
     "ConfigError",
     "DeadlineConnection",
 ]
