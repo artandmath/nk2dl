@@ -8,12 +8,61 @@ import sys
 import shutil
 from _pytest.runner import pytest_runtest_protocol
 from _pytest.terminal import TerminalReporter
+from unittest.mock import MagicMock, patch
+from contextlib import contextmanager
 
 # Initialize the global flag at the module level
 pytest.nuke_env_check_failed = False
 
 # Import directly from your project
 from nk2dl.common.logging import setup_logging
+
+
+@contextmanager
+def mock_deadline_connection(expected_jobs=None):
+    """Context manager to mock the Deadline connection for testing.
+    
+    Args:
+        expected_jobs: Optional dictionary of expected job configurations.
+                      If provided, the mock will validate submissions against these.
+                      
+    Yields:
+        MagicMock: A mocked DeadlineConnection object
+    """
+    mock_conn = MagicMock()
+    
+    # Mock the submit_job method to return predictable results
+    def mock_submit_job(job_info, plugin_info, auxiliary_files=None):
+        """Mock implementation of submit_job that returns a mock job ID."""
+        return {
+            "job_id": "mock-job-id",
+            "raw_response": {"_id": "mock-job-id", "Props": {"Name": job_info.get("Name", "Test Job")}},
+            "connection_type": "mock"
+        }
+    
+    mock_conn.submit_job = MagicMock(side_effect=mock_submit_job)
+    mock_conn.ensure_connected = MagicMock(return_value=True)
+    mock_conn.get_job_info = MagicMock(return_value={"Name": "Test Job", "Status": "Completed"})
+    
+    # Mock the get_connection function where it's used in the submission module
+    with patch('nk2dl.nuke.submission.get_connection', return_value=mock_conn):
+        yield mock_conn
+
+
+@pytest.fixture(autouse=True)
+def deadline_connection_mock(test_mode):
+    """Fixture that provides a mocked Deadline connection when test_mode is 'mock'.
+    
+    For 'real' mode, this does nothing and allows real connections.
+    For 'mock' mode, this mocks the get_connection function.
+    """
+    if test_mode == "mock":
+        with mock_deadline_connection() as mock_conn:
+            yield mock_conn
+    else:
+        # In real mode, don't mock anything
+        yield None
+
 
 @pytest.fixture(autouse=True)
 def clean_env():

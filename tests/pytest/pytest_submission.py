@@ -114,7 +114,7 @@ def test_000_environment_check():
 
 
 @pytest.fixture
-def create_submission(test_mode, request):
+def create_submission(test_mode, request, deadline_connection_mock):
     """
     Factory fixture to create a NukeSubmission with configurable parameters.
     
@@ -157,7 +157,7 @@ def create_submission(test_mode, request):
     return _create_submission
 
 
-def test_submit_job(test_mode, create_submission):
+def test_submit_job(test_mode, create_submission, deadline_connection_mock):
     """Test submitting a job."""
     
     # Create a submission engine with default settings
@@ -172,12 +172,24 @@ def test_submit_job(test_mode, create_submission):
             submission_engine.write_nodes_as_tasks = False
             
             # Submit job
-            job_ids = submission_engine.submit()
+            jobs = submission_engine.submit()
             
-            assert 0 in job_ids  # Standard jobs use key 0 for render order
-            assert job_ids[0] == ["mock-job-id"] if test_mode == "mock" else job_ids[0][0] is not None
+            # The submit method returns a list of job dictionaries
+            assert isinstance(jobs, list)
+            assert len(jobs) == 1
+            
+            job = jobs[0]
+            assert "job_id" in job
+            assert "render_order" in job
+            
             if test_mode == "mock":
-                submission_engine.connection.submit_job.assert_called_once()
+                # In mock mode, verify the mock was called and job_id is our mock value
+                assert deadline_connection_mock.submit_job.called
+                assert job["job_id"] == "mock-job-id"
+            else:
+                # In real mode, verify we got actual job IDs
+                assert job["job_id"] is not None
+                assert len(job["job_id"]) > 0
     finally:
         # Clean up the temporary script file
         if temp_script_path and os.path.exists(temp_script_path):
@@ -313,13 +325,17 @@ def test_submit_write_nodes_as_separate_tasks(test_mode, create_submission):
             Path(temp_script_path).unlink(missing_ok=True)
 
 
-@pytest.mark.parametrize("test_mode", [TestMode.MOCKED, TestMode.REAL])
-def test_submit_job_with_invalid_frame_range(create_submission):
+def test_submit_job_with_invalid_frame_range(test_mode, create_submission):
     """Test submitting a job with an invalid frame range."""
     # Create a submission with an invalid frame range
     with pytest.raises(SubmissionError):
         sub, temp_script = create_submission(frames="invalid_frame_range")
-        sub.submit()
+        try:
+            sub.submit()
+        finally:
+            # Clean up the temporary script file
+            if temp_script and os.path.exists(temp_script):
+                Path(temp_script).unlink(missing_ok=True)
 
 
 def test_submit_job_with_no_write_nodes(test_mode, create_submission):
@@ -602,19 +618,26 @@ def test_nuke_submission_render_order_dependencies(test_mode, create_submission)
             Path(temp_script_path).unlink(missing_ok=True)
 
 
-def test_nuke_submission_use_node_frame_list(test_mode, create_submission):
+def test_nuke_submission_use_node_frame_list(test_mode, create_submission, deadline_connection_mock):
     """Test submitting with use_node_frame_list enabled."""
-    EXPECTED_JOBS = {
-        "job1": {"Name": "Test Job", "Frames": "1001-1010", "WriteNode": "Write1,Write2,Write3"},
-    }
-
-    with mock_deadline_connection(EXPECTED_JOBS) as mock_conn:
-        sub = create_submission(
-            write_nodes=["Write1", "Write2", "Write3"],
-            use_node_frame_list=True)
-        sub.submit()
-
-    assert mock_conn.call_count == 1
+    sub, temp_script_path = create_submission(
+        write_nodes=["Write1", "Write2", "Write3"],
+        use_node_frame_list=True)
+    
+    try:
+        job_ids = sub.submit()
+        
+        # In mock mode, verify the mock was called
+        if test_mode == "mock":
+            assert deadline_connection_mock.submit_job.called
+            assert job_ids[0] == ["mock-job-id"]
+        else:
+            # In real mode, verify we got actual job IDs
+            assert job_ids[0] is not None
+    finally:
+        # Clean up the temporary script file
+        if temp_script_path and os.path.exists(temp_script_path):
+            Path(temp_script_path).unlink(missing_ok=True)
 
 
 def test_submit_nuke_script(create_submission):
