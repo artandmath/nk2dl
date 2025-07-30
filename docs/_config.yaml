@@ -1,2 +1,12 @@
-title: Nuke to Deadline
 theme: jekyll-theme-minimal
+title: Nuke to Deadline
+description: Documentation for Nuke to Deadline
+
+# Add sidebar links like this:
+sidebar:
+  title: "Resources"
+  nav:
+    - title: "Download ZIP"
+      url: /files/my-archive.zip
+    - title: "Documentation"
+      url: /docs/index.html
