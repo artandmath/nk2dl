@@ -30,7 +30,7 @@ cd /path/to/nk2dl-0.1.x-alpha
 
 ## 2. Install dependencies
 
-Create the virtual environment:
+Create the virtual environment will also install the dependencies:
 ```bash
 python setup_environment.py
 ```
@@ -40,7 +40,7 @@ Nuke installation path not set.
 Default path: C:\Program Files\Nuke15.2v1
 Enter Nuke installation path (press Enter to use default):
 ```
-The setup script may ask for the Deadline repository location if it automatically find the respository.  The script will copy the Deadline api from the repository to the virtual environment.
+The setup script may ask for the Deadline repository location if it cannot automatically find the respository.  The script will copy the Deadline API from the repository to the virtual environment.
 ```
 Deadline repository root not found automatically.
 Default path: C:\DeadlineRepository10
@@ -52,26 +52,27 @@ Set the virtual environment (only powershell tested thus far).
 ```bash
 ./.venv/Scripts/Activate-nk2dl.ps1
 ```
-A success message should be output to the terminal:
+A success message will output to the terminal:
 ```bash
 Activating NK2DL development environment...
 Setting up NK2DL environment variables...
 Environment activated and ready!
 ```
-Open a python interpereter from the terminal. The python interpereter should indicate that weyou are using the Foundry Nuke version of python.
+Open a python interpereter from the terminal. The python interpereter should indicate that the Foundry's Nuke version of python is in use.
 ```
 > python
 Python 3.10.10 (remotes/origin/foundry/v3.10.10:693bcebd65, Feb  7 2024, 11:52:25) [MSC v.1935 64 bit (AMD64)] on win32
 Type "help", "copyright", "credits" or "license" for more information.
 >>>
 ```
-Import the `nk2dl` module. A copyright message for `nk2dl` will display and nuke will load.
+Import the `nk2dl` module. A copyright message for `nk2dl` will display and Nuke will load.
 ```
 >>> import nk2dl
  
 Nuke to Deadline (nk2dl) v0.1.0
 Copyright (c) 2025 Daniel Harkness. All Rights Reserved.
 ```
+
 ## 4. Install for a single user or multiple users in Nuke
 
 If `nk2dl` will be used in the Nuke applicaiton, then Nuke will need to be able find `nk2dl` and its dependencies during the application launch process.
@@ -79,12 +80,13 @@ If `nk2dl` will be used in the Nuke applicaiton, then Nuke will need to be able 
 ### Install for Nuke GUI, single user (.nuke method)
 
 - Copy the folder `nk2dl` into the user's `.nuke` folder. If installed from source, the `nk2dl` folder is the one inside the parent `nk2dl` folder that contains this README.md and LICENSE.
-- Copy the folders `yaml` and `Deadline`from `.venv/Lib/site-packages` into the user's `.nuke` folder
+- Copy the folders `yaml` and `Deadline` from `.venv/Lib/site-packages` into the user's `.nuke` folder
 
 ### Install for Nuke GUI, multiple users (init.py method)
 
 - Copy the `nk2dl` folder to a location available to all users.
-- If necessary, add the following line to any of the init.py files available to Nuke during the launch of your pipleine:
+- If necessary, add the following line to any of the init.py files available to Nuke during the launch of your pipeline:
+
 ```python
 nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
 ```
@@ -109,12 +111,12 @@ After setting up an instance of Deadline Web Service, [configure](./config.md) a
 # Configuration
 
 > [!IMPORTANT]
-> Configuration is not required, but configuration is recommended
+> Configuration is recommended, but not required.
 
 nk2dl uses a YAML configuration system with multiple levels:
 
 1. Default configuration
-2. Project configuration (from $NK2DL_CONFIG or config.yaml in nk2dl module)
+2. Project configuration (from $NK2DL_CONFIG or config.yaml in the `nk2dl` module)
 3. Environment variables ($NK2DL_*)
 4. User configuration (~/.nk2dl/config.yaml)
 
