@@ -1,9 +1,7 @@
 # nk2dl
-Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukescripts to Thinkbox Deadline via a Deadline web service or via the Deadline commandline. It features speed and quality of life improvements over the default Thinkbox submitter.
-
-## Overview
-
-- `nk2dl` is a python module for submitting nukescripts to Deadline from the Nuke python interpreter.
+Welcome to `nk2dl` (aka Nuke to Deadline).
+- `nk2dl` is a python module for submitting nukescripts to Thinkbox Deadline via a Deadline web service or via the Deadline commandline.
+- `nk2dl` features speed and quality of life improvements over the default Thinkbox submitter.
 - `nk2dl` can also be used with other python interpreters when [The Foundry's](https://www.foundry.com/products/nuke-family/nuke) `nuke` module is available to the interpreter.
 
 ## Optional Add-ons
