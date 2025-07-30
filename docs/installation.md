@@ -113,23 +113,25 @@ After setting up an instance of Deadline Web Service, [configure](./config.md) a
 > [!IMPORTANT]
 > Configuration is recommended, but not required.
 
-nk2dl uses a YAML configuration system with multiple levels:
+nk2dl uses a YAML configuration system with multiple levels of precedence (`~/.nk2dl/config.yaml` has the highest precedence):
 
 1. Default configuration
-2. Project configuration (from $NK2DL_CONFIG or config.yaml in the `nk2dl` module)
-3. Environment variables ($NK2DL_*)
-4. User configuration (~/.nk2dl/config.yaml)
+2. Project configuration (from `$NK2DL_CONFIG` or `config.yaml` in the `nk2dl` module)
+3. Environment variables (`$NK2DL_*`)
+4. User configuration (`~/.nk2dl/config.yaml`)
 
-## Configuring for single user (.nuke method)
+## Setting the config
+
+- Copy the example `config.yaml` from the `nk2dl` module to a location available to all users.
+- Edit the config file. The config file can be renamed.
+- Create an environment variable `NK2DL_CONFIG` and point it to the location of `your_config_name.yaml`
+
+Alternatively:
 
 - Edit the `config.yaml` file in the `nk2dl` module directory
-- OR create a configuration file and set the `NK2DL_CONFIG` environment variable to point to it
+- The `config.yaml` in the `nk2dl` cannot be renamed or otherwise it will not be picked up.
 
-## Configuring for multiple users
 
-- Create a `your_config_name.yaml` in a location available to all users
-- Add configuration to the file in yaml syntax
-- Create an environment variable `NK2DL_CONFIG` and point it to the location of `your_config_name.yaml`
 
 Example configuration:
 
