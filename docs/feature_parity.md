@@ -7,11 +7,11 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 
 | Plugin Info | Job Info | Thinkbox | nk2dl | nk2dl per write overrides |
 |-------------|----------|----------|-------|---------------------------|
-| SceneFile | - | - | script_path | NO |
+| SceneFile | - | - | script_path | - |
 | Version | - | - | nuke_version | YES |
 | UseNukeX | - | useNukeX | use_nuke_x | YES |
 | BatchMode | - | batchMode | batch_mode | YES |
-| BatchModeIsMovie | - | batchModeIsMovie | *auto-detected* | NO |
+| BatchModeIsMovie | - | batchModeIsMovie | *auto-detected* | - |
 | ContinueOnError | - | continueOnError | continue_on_error | YES |
 | EnforceRenderOrder | - | enforceRenderOrder | enforce_render_order | YES |
 | RenderMode | - | renderMode | render_mode | YES |
@@ -24,19 +24,19 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | PerformanceProfiler | - | performanceProfiler | performance_profiler | YES |
 | PerformanceProfilerDir | - | performanceProfilerPath | performance_profiler_path | YES |
 | ReloadPlugins | - | reloadPlugin | reload_plugins | YES |
-| WriteNodesAsSeparateJobs | - | separateJobs | write_nodes_as_separate_jobs | NO |
-| WriteNode | - | write_nodes | write_nodes | NO |
-| WriteNode{index} | - | *auto-generated* | *auto-generated* | NO |
-| WriteNode{index}StartFrame | - | *auto-generated* | *auto-generated* | NO |
-| WriteNode{index}EndFrame | - | *auto-generated* | *auto-generated* | NO |
-| GraphScopeVariables | - | - | graph_scope_variables | NO |
-| GraphScopeVariablesEnabled | - | - | *auto-generated* | NO |
+| Write-desAsSeparateJobs | - | separateJobs | write_-des_as_separate_jobs | - |
+| Write-de | - | write_-des | write_-des | - |
+| Write-de{index} | - | *auto-generated* | *auto-generated* | - |
+| Write-de{index}StartFrame | - | *auto-generated* | *auto-generated* | - |
+| Write-de{index}EndFrame | - | *auto-generated* | *auto-generated* | - |
+| GraphScopeVariables | - | - | graph_scope_variables | - |
+| GraphScopeVariablesEnabled | - | - | *auto-generated* | - |
 | OutputFilePath | - | - | output_file_path | YES |
-| ScriptJob | - | scriptJob | script_job_script_path | NO |
-| ScriptFilename | - | scriptFilename | script_job_script_path | NO |
-| BuildJobsFilename | - | - | *if submission_is_build_job=True* | NO |
-| - | Name | jobName | job_name | NO |
-| - | Plugin | "Nuke" | "Nuke" | NO |
+| ScriptJob | - | scriptJob | script_job_script_path | - |
+| ScriptFilename | - | scriptFilename | script_job_script_path | - |
+| BuildJobsFilename | - | - | *if submission_is_build_job=True* | - |
+| - | Name | jobName | job_name | - |
+| - | Plugin | "Nuke" | "Nuke" | - |
 | - | Frames | frameList | frames | YES |
 | - | ChunkSize | chunkSize | chunk_size | YES |
 | - | ConcurrentTasks | concurrentTasks | concurrent_tasks | YES |
@@ -47,15 +47,15 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | Department | department | department | YES |
 | - | UserName | - | user_name | YES |
 | - | Comment | comment | comment | YES |
-| - | ExtraInfo{index} | extraInfo{n} | extra_info | NO |
+| - | ExtraInfo{index} | extraInfo{n} | extra_info | - |
 | - | JobDependency{index} | dependencies | job_dependencies | YES |
-| - | OutputFilename{index} | *auto-generated* | *auto-generated* | NO |
-| - | AuxiliaryFiles | - | *if submit_script_as_auxiliary_file=True* | NO |
+| - | OutputFilename{index} | *auto-generated* | *auto-generated* | - |
+| - | AuxiliaryFiles | - | *if submit_script_as_auxiliary_file=True* | - |
 | - | OnJobComplete | onComplete | on_job_complete | YES |
 | - | InitialStatus | submitSuspended | submit_suspended | YES |
 | - | LimitGroups | limitGroups | limit_groups | YES |
-| - | MachineLimit | machineLimit | machine_limit | NO |
-| - | Whitelist/Blacklist | isBlacklist/machineList | *implemnted as allow/deny lists* | NO |
+| - | MachineLimit | machineLimit | machine_limit | - |
+| - | Whitelist/Blacklist | isBlacklist/machineList | *implemnted as allow/deny lists* | - |
 | - | TaskTimeoutSeconds | taskTimeout | task_timeout | YES |
 | - | EnableAutoTimeout | autoTaskTimeout | enable_auto_timeout | YES |
 | - | LimitConcurrentTasks | limitConcurrentTasks | limit_worker_tasks | YES |
@@ -63,31 +63,31 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 | - | PostJobScript | - | post_job_script | YES |
 | - | PreTaskScript | - | pre_task_script | YES |
 | - | PostTaskScript | - | post_task_script | YES |
-| - | UseNodeFrameList | useNodeRange | use_node_frame_list | NO |
-| - | - | separateJobDependencies | render_order_dependencies | NO |
-| - | - | separateTasks | write_nodes_as_tasks | NO |
-| - | - | precompFirst | *no plans to implement* | NO |
-| - | - | precompOnly | *no plans to implement* | NO |
-| - | - | smartVectorOnly | *no plans to implement* | NO |
-| - | - | eddySimulateOnly | *no plans to implement* | NO |
-| - | - | draftTemplate | *no plans to implement* | NO |
-| - | - | draftUser | *no plans to implement* | NO |
-| - | - | draftEntity | *no plans to implement* | NO |
-| - | - | - | use_parser_instead_of_nuke | NO |
-| - | - | - | render_settings_from_metadata | NO |
-| - | - | - | proxy_args | NO |
-| - | - | - | copy_script | NO |
-| - | - | - | copy_script_path | NO |
-| - | - | - | submit_copied_script | NO |
-| - | - | - | script_is_current | NO |
-| - | - | - | submit_script_as_auxiliary_file | NO |
-| - | - | - | parse_output_paths_to_deadline | NO |
-| - | - | - | submit_writes_alphabetically | NO |
-| - | - | - | submit_writes_in_render_order | NO |
-| - | EnvironmentKeyValue{index} | - | *from environment settings* | NO |
-| - | - | - | use_current_environment | NO |
-| - | - | - | environment_keys | NO |
-| - | - | - | environment | NO |
-| - | - | - | omit_environment_keys | NO |
-| - | - | - | submission_is_build_job | NO |
-| - | - | - | build_job_script_path | NO |
+| - | Use-deFrameList | use-deRange | use_-de_frame_list | - |
+| - | - | separateJobDependencies | render_order_dependencies | - |
+| - | - | separateTasks | write_-des_as_tasks | - |
+| - | - | precompFirst | *- plans to implement* | - |
+| - | - | precompOnly | *- plans to implement* | - |
+| - | - | smartVectorOnly | *- plans to implement* | - |
+| - | - | eddySimulateOnly | *- plans to implement* | - |
+| - | - | draftTemplate | *- plans to implement* | - |
+| - | - | draftUser | *- plans to implement* | - |
+| - | - | draftEntity | *- plans to implement* | - |
+| - | - | - | use_parser_instead_of_nuke | - |
+| - | - | - | render_settings_from_metadata | - |
+| - | - | - | proxy_args | - |
+| - | - | - | copy_script | - |
+| - | - | - | copy_script_path | - |
+| - | - | - | submit_copied_script | - |
+| - | - | - | script_is_current | - |
+| - | - | - | submit_script_as_auxiliary_file | - |
+| - | - | - | parse_output_paths_to_deadline | - |
+| - | - | - | submit_writes_alphabetically | - |
+| - | - | - | submit_writes_in_render_order | - |
+| - | EnvironmentKeyValue{index} | - | *from environment settings* | - |
+| - | - | - | use_current_environment | - |
+| - | - | - | environment_keys | - |
+| - | - | - | environment | - |
+| - | - | - | omit_environment_keys | - |
+| - | - | - | submission_is_build_job | - |
+| - | - | - | build_job_script_path | - |
