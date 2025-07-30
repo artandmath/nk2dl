@@ -14,7 +14,7 @@ Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukesc
 
 - Read the [documentation](http://artandmath.github.io/nk2dl) to get `nk2dl` up and running.
 
-## This project is in Alpha
+## Caveats
 
 - We have been using `nk2dl` in a production environment as a replacement to the Thinkbox submitter. We fall back to the Thinkbox submitter when missing a feature or something is broken, although months have passed since we've had to fall back.
 - Graph Scope Variable functionality hasn't been tested in production.
