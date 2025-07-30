@@ -168,6 +168,7 @@ In your Nuke script, you might have expressions like:
 [value this.shotcode]
 ```
 
+```python
 from nk2dl import submit_nuke_script
 
 # Basic usage with frame range patterns
@@ -179,7 +180,9 @@ submit_nuke_script("path/to/script.nk", frames="f,m,l")  # First, middle, and la
 submit_nuke_script("path/to/script.nk", frames="i")  # Input range from write node
 ```
 
-# Full example with multiple options
+### Full Example with Multiple Options
+
+```python
 job_ids = submit_nuke_script(
     "path/to/script.nk",
     frames="1001-1100",
@@ -202,8 +205,10 @@ job_ids = submit_nuke_script(
     performance_profiler=True,
     performance_profiler_path="/path/to/profiles"
 )
+```
 
 ## Script Copying
+
 Control how scripts are copied before submission:
 
 ```python
