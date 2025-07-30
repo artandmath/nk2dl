@@ -12,7 +12,7 @@
 `nk2dl` can be downloaded from [source](#download-from-source) or from a [point release](#download-from-release).
 
 ### Download from source 
-In a Windows powershell:
+From the shell:
 ```bash
 git clone https://github.com/artandmath/nk2dl.git
 cd nk2dl
@@ -23,7 +23,7 @@ cd nk2dl
 - Download the source code from a release. 
 - Unzip the source code.
 
-In a Windows powershell:
+From the shell:
 ```
 cd /path/to/nk2dl-0.1.x-alpha
 ```
@@ -50,7 +50,11 @@ Enter Deadline repository root path (press Enter to use default):
 ## 3. Verify
 Set the virtual environment (only powershell tested thus far).
 ```bash
+# Windows
 ./.venv/Scripts/Activate-nk2dl.ps1
+
+# Linux/MacOSX
+source ./.venv/Scripts/activate
 ```
 A success message will output to the terminal:
 ```bash
@@ -59,14 +63,19 @@ Setting up NK2DL environment variables...
 Environment activated and ready!
 ```
 Open a python interpereter from the terminal. The python interpereter should indicate that the Foundry's Nuke version of python is in use.
-```
+```bash
 > python
 Python 3.10.10 (remotes/origin/foundry/v3.10.10:693bcebd65, Feb  7 2024, 11:52:25) [MSC v.1935 64 bit (AMD64)] on win32
 Type "help", "copyright", "credits" or "license" for more information.
 >>>
 ```
-Import the `nk2dl` module. A copyright message for `nk2dl` will display and Nuke will load.
+If the python enterpereter is not the version by the Foundry, launch Nuke in terminal mode, which is essentially the same as launching the Nuke python interpereter.
+```bash
+# Windows:
+& 'C:\Program Files\Nuke15.1v1\Nuke15.1.exe' --t
 ```
+Import the `nk2dl` module. A copyright message for `nk2dl` will display and Nuke will load.
+```python
 >>> import nk2dl
  
 Nuke to Deadline (nk2dl) v0.1.0
