@@ -16,14 +16,13 @@ Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukesc
 
 ## This project is in Alpha
 
-- The project is in alpha. We have been using it in a limited capacity in a production environment as a replacement to the Thinkbox submitter. We fall back to the Thinkbox submitter when missing a feature or something is broken.
+- We have been using `nk2dl` in a production environment as a replacement to the Thinkbox submitter. We fall back to the Thinkbox submitter when missing a feature or something is broken, although months have passed since we've had to fall back.
 - Graph Scope Variable functionality hasn't been tested in production.
-- Interfaces to `nk2dl` python module and command line are subject to change.
-- The `nk2dl cli` command line will often be out of step with the python module during development. The command line implementation may outright not work when out of step.
+- Interfaces to `nk2dl` python module are subject to change.
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The project has no plans to implement the Deadline Draft, Eddy, Vray or Frameserver features from the Thinbox submitter.
-- nk2dl pulls a Nuke render license if it needs to call on the Nuke python module outside of a Nuke interactive sesssion.
-- Connection to Deadline Web Service currently doesn't support SSL.
+- `nk2dl` pulls a Nuke render license if it needs to call on the Nuke python module outside of a Nuke interactive sesssion.
+- Connection to Deadline Web Service using SSL has yet to be tested.
 - The [roadmap](./ROADMAP.md) sets out the path to overcome the caveats and implement planned features.
 - [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8)
 
