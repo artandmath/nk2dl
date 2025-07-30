@@ -25,11 +25,11 @@ On the front-end/client-side it `nk2dl` replaces the Thinkbox Deadline Nuke Subm
 | PerformanceProfiler | - | performanceProfiler | performance_profiler | &#10004; |
 | PerformanceProfilerDir | - | performanceProfilerPath | performance_profiler_path | &#10004; |
 | ReloadPlugins | - | reloadPlugin | reload_plugins | &#10004; |
-| Write-desAsSeparateJobs | - | separateJobs | write_-des_as_separate_jobs | - |
-| Write-de | - | write_-des | write_-des | - |
-| Write-de{index} | - | *auto-generated* | *auto-generated* | - |
-| Write-de{index}StartFrame | - | *auto-generated* | *auto-generated* | - |
-| Write-de{index}EndFrame | - | *auto-generated* | *auto-generated* | - |
+| WriteNodesAsSeparateJobs | - | separateJobs | write_nodes_as_separate_jobs | - |
+| WriteNode | - | write_nodes | write_nodes | - |
+| WriteNode{index} | - | *auto-generated* | *auto-generated* | - |
+| WriteNode{index}StartFrame | - | *auto-generated* | *auto-generated* | - |
+| WriteNode{index}EndFrame | - | *auto-generated* | *auto-generated* | - |
 | GraphScopeVariables | - | - | graph_scope_variables | - |
 | GraphScopeVariablesEnabled | - | - | *auto-generated* | - |
 | OutputFilePath | - | - | output_file_path | &#10004; |
