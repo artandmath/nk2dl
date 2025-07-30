@@ -7,87 +7,87 @@ On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 
 | Plugin Info | Job Info | Thinkbox | nk2dl | nk2dl per write overrides |
 |-------------|----------|----------|-------|---------------------------|
-| SceneFile | - | - | script_path | :x: |
-| Version | - | - | nuke_version | :white_check_mark: |
-| UseNukeX | - | useNukeX | use_nuke_x | :white_check_mark: |
-| BatchMode | - | batchMode | batch_mode | :white_check_mark: |
-| BatchModeIsMovie | - | batchModeIsMovie | *auto-detected* | :x: |
-| ContinueOnError | - | continueOnError | continue_on_error | :white_check_mark: |
-| EnforceRenderOrder | - | enforceRenderOrder | enforce_render_order | :white_check_mark: |
-| RenderMode | - | renderMode | render_mode | :white_check_mark: |
-| UseGpu | - | useGpu | use_gpu | :white_check_mark: |
-| GpuOverride | - | chooseGpu | gpu_override | :white_check_mark: |
-| Threads | - | threads | threads | :white_check_mark: |
-| RamUse | - | memoryUsage | ram_use | :white_check_mark: |
-| StackSize | - | stackSize | stack_size | :white_check_mark: |
-| Views | - | views | views | :white_check_mark: |
-| PerformanceProfiler | - | performanceProfiler | performance_profiler | :white_check_mark: |
-| PerformanceProfilerDir | - | performanceProfilerPath | performance_profiler_path | :white_check_mark: |
-| ReloadPlugins | - | reloadPlugin | reload_plugins | :white_check_mark: |
-| WriteNodesAsSeparateJobs | - | separateJobs | write_nodes_as_separate_jobs | :x: |
-| WriteNode | - | write_nodes | write_nodes | :x: |
-| WriteNode{index} | - | *auto-generated* | *auto-generated* | :x: |
-| WriteNode{index}StartFrame | - | *auto-generated* | *auto-generated* | :x: |
-| WriteNode{index}EndFrame | - | *auto-generated* | *auto-generated* | :x: |
-| GraphScopeVariables | - | - | graph_scope_variables | :x: |
-| GraphScopeVariablesEnabled | - | - | *auto-generated* | :x: |
-| OutputFilePath | - | - | output_file_path | :white_check_mark: |
-| ScriptJob | - | scriptJob | script_job_script_path | :x: |
-| ScriptFilename | - | scriptFilename | script_job_script_path | :x: |
-| BuildJobsFilename | - | - | *if submission_is_build_job=True* | :x: |
-| - | Name | jobName | job_name | :x: |
-| - | Plugin | "Nuke" | "Nuke" | :x: |
-| - | Frames | frameList | frames | :white_check_mark: |
-| - | ChunkSize | chunkSize | chunk_size | :white_check_mark: |
-| - | ConcurrentTasks | concurrentTasks | concurrent_tasks | :white_check_mark: |
-| - | Pool | pool | pool | :white_check_mark: |
-| - | Group | group | group | :white_check_mark: |
-| - | Priority | priority | priority | :white_check_mark: |
-| - | BatchName | batchName | batch_name | :white_check_mark: |
-| - | Department | department | department | :white_check_mark: |
-| - | UserName | - | user_name | :white_check_mark: |
-| - | Comment | comment | comment | :white_check_mark: |
-| - | ExtraInfo{index} | extraInfo{n} | extra_info | :x: |
-| - | JobDependency{index} | dependencies | job_dependencies | :white_check_mark: |
-| - | OutputFilename{index} | *auto-generated* | *auto-generated* | :x: |
-| - | AuxiliaryFiles | - | *if submit_script_as_auxiliary_file=True* | :x: |
-| - | OnJobComplete | onComplete | on_job_complete | :white_check_mark: |
-| - | InitialStatus | submitSuspended | submit_suspended | :white_check_mark: |
-| - | LimitGroups | limitGroups | limit_groups | :white_check_mark: |
-| - | MachineLimit | machineLimit | machine_limit | :x: |
-| - | Whitelist/Blacklist | isBlacklist/machineList | *implemnted as allow/deny lists* | :x: |
-| - | TaskTimeoutSeconds | taskTimeout | task_timeout | :white_check_mark: |
-| - | EnableAutoTimeout | autoTaskTimeout | enable_auto_timeout | :white_check_mark: |
-| - | LimitConcurrentTasks | limitConcurrentTasks | limit_worker_tasks | :white_check_mark: |
-| - | PreJobScript | - | pre_job_script | :white_check_mark: |
-| - | PostJobScript | - | post_job_script | :white_check_mark: |
-| - | PreTaskScript | - | pre_task_script | :white_check_mark: |
-| - | PostTaskScript | - | post_task_script | :white_check_mark: |
-| - | UseNodeFrameList | useNodeRange | use_node_frame_list | :x: |
-| - | - | separateJobDependencies | render_order_dependencies | :x: |
-| - | - | separateTasks | write_nodes_as_tasks | :x: |
-| - | - | precompFirst | *no plans to implement* | :x: |
-| - | - | precompOnly | *no plans to implement* | :x: |
-| - | - | smartVectorOnly | *no plans to implement* | :x: |
-| - | - | eddySimulateOnly | *no plans to implement* | :x: |
-| - | - | draftTemplate | *no plans to implement* | :x: |
-| - | - | draftUser | *no plans to implement* | :x: |
-| - | - | draftEntity | *no plans to implement* | :x: |
-| - | - | - | use_parser_instead_of_nuke | :x: |
-| - | - | - | render_settings_from_metadata | :x: |
-| - | - | - | proxy_args | :x: |
-| - | - | - | copy_script | :x: |
-| - | - | - | copy_script_path | :x: |
-| - | - | - | submit_copied_script | :x: |
-| - | - | - | script_is_current | :x: |
-| - | - | - | submit_script_as_auxiliary_file | :x: |
-| - | - | - | parse_output_paths_to_deadline | :x: |
-| - | - | - | submit_writes_alphabetically | :x: |
-| - | - | - | submit_writes_in_render_order | :x: |
-| - | EnvironmentKeyValue{index} | - | *from environment settings* | :x: |
-| - | - | - | use_current_environment | :x: |
-| - | - | - | environment_keys | :x: |
-| - | - | - | environment | :x: |
-| - | - | - | omit_environment_keys | :x: |
-| - | - | - | submission_is_build_job | :x: |
-| - | - | - | build_job_script_path | :x: |
+| SceneFile | - | - | script_path | NO |
+| Version | - | - | nuke_version | YES |
+| UseNukeX | - | useNukeX | use_nuke_x | YES |
+| BatchMode | - | batchMode | batch_mode | YES |
+| BatchModeIsMovie | - | batchModeIsMovie | *auto-detected* | NO |
+| ContinueOnError | - | continueOnError | continue_on_error | YES |
+| EnforceRenderOrder | - | enforceRenderOrder | enforce_render_order | YES |
+| RenderMode | - | renderMode | render_mode | YES |
+| UseGpu | - | useGpu | use_gpu | YES |
+| GpuOverride | - | chooseGpu | gpu_override | YES |
+| Threads | - | threads | threads | YES |
+| RamUse | - | memoryUsage | ram_use | YES |
+| StackSize | - | stackSize | stack_size | YES |
+| Views | - | views | views | YES |
+| PerformanceProfiler | - | performanceProfiler | performance_profiler | YES |
+| PerformanceProfilerDir | - | performanceProfilerPath | performance_profiler_path | YES |
+| ReloadPlugins | - | reloadPlugin | reload_plugins | YES |
+| WriteNodesAsSeparateJobs | - | separateJobs | write_nodes_as_separate_jobs | NO |
+| WriteNode | - | write_nodes | write_nodes | NO |
+| WriteNode{index} | - | *auto-generated* | *auto-generated* | NO |
+| WriteNode{index}StartFrame | - | *auto-generated* | *auto-generated* | NO |
+| WriteNode{index}EndFrame | - | *auto-generated* | *auto-generated* | NO |
+| GraphScopeVariables | - | - | graph_scope_variables | NO |
+| GraphScopeVariablesEnabled | - | - | *auto-generated* | NO |
+| OutputFilePath | - | - | output_file_path | YES |
+| ScriptJob | - | scriptJob | script_job_script_path | NO |
+| ScriptFilename | - | scriptFilename | script_job_script_path | NO |
+| BuildJobsFilename | - | - | *if submission_is_build_job=True* | NO |
+| - | Name | jobName | job_name | NO |
+| - | Plugin | "Nuke" | "Nuke" | NO |
+| - | Frames | frameList | frames | YES |
+| - | ChunkSize | chunkSize | chunk_size | YES |
+| - | ConcurrentTasks | concurrentTasks | concurrent_tasks | YES |
+| - | Pool | pool | pool | YES |
+| - | Group | group | group | YES |
+| - | Priority | priority | priority | YES |
+| - | BatchName | batchName | batch_name | YES |
+| - | Department | department | department | YES |
+| - | UserName | - | user_name | YES |
+| - | Comment | comment | comment | YES |
+| - | ExtraInfo{index} | extraInfo{n} | extra_info | NO |
+| - | JobDependency{index} | dependencies | job_dependencies | YES |
+| - | OutputFilename{index} | *auto-generated* | *auto-generated* | NO |
+| - | AuxiliaryFiles | - | *if submit_script_as_auxiliary_file=True* | NO |
+| - | OnJobComplete | onComplete | on_job_complete | YES |
+| - | InitialStatus | submitSuspended | submit_suspended | YES |
+| - | LimitGroups | limitGroups | limit_groups | YES |
+| - | MachineLimit | machineLimit | machine_limit | NO |
+| - | Whitelist/Blacklist | isBlacklist/machineList | *implemnted as allow/deny lists* | NO |
+| - | TaskTimeoutSeconds | taskTimeout | task_timeout | YES |
+| - | EnableAutoTimeout | autoTaskTimeout | enable_auto_timeout | YES |
+| - | LimitConcurrentTasks | limitConcurrentTasks | limit_worker_tasks | YES |
+| - | PreJobScript | - | pre_job_script | YES |
+| - | PostJobScript | - | post_job_script | YES |
+| - | PreTaskScript | - | pre_task_script | YES |
+| - | PostTaskScript | - | post_task_script | YES |
+| - | UseNodeFrameList | useNodeRange | use_node_frame_list | NO |
+| - | - | separateJobDependencies | render_order_dependencies | NO |
+| - | - | separateTasks | write_nodes_as_tasks | NO |
+| - | - | precompFirst | *no plans to implement* | NO |
+| - | - | precompOnly | *no plans to implement* | NO |
+| - | - | smartVectorOnly | *no plans to implement* | NO |
+| - | - | eddySimulateOnly | *no plans to implement* | NO |
+| - | - | draftTemplate | *no plans to implement* | NO |
+| - | - | draftUser | *no plans to implement* | NO |
+| - | - | draftEntity | *no plans to implement* | NO |
+| - | - | - | use_parser_instead_of_nuke | NO |
+| - | - | - | render_settings_from_metadata | NO |
+| - | - | - | proxy_args | NO |
+| - | - | - | copy_script | NO |
+| - | - | - | copy_script_path | NO |
+| - | - | - | submit_copied_script | NO |
+| - | - | - | script_is_current | NO |
+| - | - | - | submit_script_as_auxiliary_file | NO |
+| - | - | - | parse_output_paths_to_deadline | NO |
+| - | - | - | submit_writes_alphabetically | NO |
+| - | - | - | submit_writes_in_render_order | NO |
+| - | EnvironmentKeyValue{index} | - | *from environment settings* | NO |
+| - | - | - | use_current_environment | NO |
+| - | - | - | environment_keys | NO |
+| - | - | - | environment | NO |
+| - | - | - | omit_environment_keys | NO |
+| - | - | - | submission_is_build_job | NO |
+| - | - | - | build_job_script_path | NO |
