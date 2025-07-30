@@ -1,5 +1,5 @@
 # nk2dl
-Documenation for Nuke to Deadline.
+Documenation for `nk2dl` (aka Nuke to Deadline).
 
 ## Getting started
 
