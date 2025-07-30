@@ -61,6 +61,7 @@ htmlcov/
 thinkbox/
 .farm
 /config.yaml
+/migration
 
 # OS specific
 .DS_Store
