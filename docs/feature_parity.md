@@ -1,9 +1,12 @@
-`nk2dl` uses the Thinkbox Deadline Nuke plugin on the server side.
-
 On the client side it replaces the Thinkbox Deadline Nuke Submitter.
 
 ## Feature Parity Table
-`Plugin` and `Job Info` columns are the backend/server-side variables. `Thinkbox` and `nk2dl` columns are the frontend/client-side variables.
+`nk2dl` uses the Thinkbox Deadline Nuke plugin on the back-end/server-side.
+- The `Plugin` and `Job Info` columns are the back-end/server-side variables.
+- Some back-end/server-side features require a modified version of the Nuke plugin. See the plugin section in the [Installation Guide](./installation.md#3-install-the-deadline-plugin-for-nuke-152-optional).
+
+On the front-end/client-side it `nk2dl` replaces the Thinkbox Deadline Nuke Submitter.
+- The `nk2dl` column are the front-end/client-side variables and their `Thinkbox` equivalents.
 
 | Plugin Info | Job Info | Thinkbox | nk2dl | nk2dl per write overrides |
 |-------------|----------|----------|-------|---------------------------|
