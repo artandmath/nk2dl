@@ -19,7 +19,7 @@ cd nk2dl
 ```
 ### Download from release
 - Alternatively `nk2dl` can be installed from a release.
-- Releases can be found in the sidebar on the github repositiory page.
+- Releases can be found in the sidebar on the github repository page.
 - Download the source code from a release. 
 - Unzip the source code.
 
@@ -40,7 +40,7 @@ Nuke installation path not set.
 Default path: C:\Program Files\Nuke15.2v1
 Enter Nuke installation path (press Enter to use default):
 ```
-The setup script may ask for the Deadline repository location if it cannot automatically find the respository.  The script will copy the Deadline API from the repository to the virtual environment.
+The setup script may ask for the Deadline repository location if it cannot automatically find the repository.  The script will copy the Deadline API from the repository to the virtual environment.
 ```
 Deadline repository root not found automatically.
 Default path: C:\DeadlineRepository10
@@ -62,14 +62,14 @@ Activating NK2DL development environment...
 Setting up NK2DL environment variables...
 Environment activated and ready!
 ```
-Open a python interpereter from the terminal. The python interpereter should indicate that the Foundry's Nuke version of python is in use.
+Open a python interpreter from the terminal. The python interpreter should indicate that the Foundry's Nuke version of python is in use.
 ```bash
 > python
 Python 3.10.10 (remotes/origin/foundry/v3.10.10:693bcebd65, Feb  7 2024, 11:52:25) [MSC v.1935 64 bit (AMD64)] on win32
 Type "help", "copyright", "credits" or "license" for more information.
 >>>
 ```
-If the python enterpereter is not the version by the Foundry, launch Nuke in terminal mode, which is essentially the same as launching the Nuke python interpereter.
+If the python interpreter is not the version by the Foundry, launch Nuke in terminal mode, which is essentially the same as launching the Nuke python interpreter.
 ```bash
 # Windows:
 & 'C:\Program Files\Nuke15.1v1\Nuke15.1.exe' --t
@@ -84,7 +84,7 @@ Copyright (c) 2025 Daniel Harkness. All Rights Reserved.
 
 ## 4. Install for a single user or multiple users in Nuke
 
-If `nk2dl` will be used in the Nuke applicaiton, then Nuke will need to be able find `nk2dl` and its dependencies during the application launch process.
+If `nk2dl` will be used in the Nuke application, then Nuke will need to be able find `nk2dl` and its dependencies during the application launch process.
 
 ### Install for Nuke GUI, single user (.nuke method)
 
@@ -189,7 +189,7 @@ python ./tests/test_nk2dl.py
 ## Script Copy functions
 - The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
 - `nk2dl` has a feature that will create a backup copy(s) of the submitted script. `nk2dl` will resolve the project root on the copy(s) before submission and can submit the resolved copy.
-- The example python script includes a demonstation of how to use the script copy features. 
+- The example python script includes a demonstration of how to use the script copy features. 
 - To set up script copying, you can:
   - Use the `copy_script_path` parameter directly in the function call (full path with directory and filename)
   - Or use one of the following config options:

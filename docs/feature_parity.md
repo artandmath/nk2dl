@@ -56,7 +56,7 @@ On the front-end/client-side it `nk2dl` replaces the Thinkbox Deadline Nuke Subm
 | - | InitialStatus | submitSuspended | submit_suspended | &#10004; |
 | - | LimitGroups | limitGroups | limit_groups | &#10004; |
 | - | MachineLimit | machineLimit | machine_limit | - |
-| - | Whitelist/Blacklist | isBlacklist/machineList | *implemnted as allow/deny lists* | - |
+| - | Whitelist/Blacklist | isBlacklist/machineList | *implemented as allow/deny lists* | - |
 | - | TaskTimeoutSeconds | taskTimeout | task_timeout | &#10004; |
 | - | EnableAutoTimeout | autoTaskTimeout | enable_auto_timeout | &#10004; |
 | - | LimitConcurrentTasks | limitConcurrentTasks | limit_worker_tasks | &#10004; |
@@ -66,7 +66,7 @@ On the front-end/client-side it `nk2dl` replaces the Thinkbox Deadline Nuke Subm
 | - | PostTaskScript | - | post_task_script | &#10004; |
 | - | Use-deFrameList | use-deRange | use_-de_frame_list | - |
 | - | - | separateJobDependencies | render_order_dependencies | - |
-| - | - | separateTasks | write_-des_as_tasks | - |
+| - | - | separateTasks | write_nodes_as_tasks | - |
 | - | - | precompFirst | *- plans to implement* | - |
 | - | - | precompOnly | *- plans to implement* | - |
 | - | - | smartVectorOnly | *- plans to implement* | - |

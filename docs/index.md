@@ -6,7 +6,7 @@
 ## Optional Add-ons
 
 - Head on over to the [`nk2dl-gui` repository](https://github.com/artandmath/nk2dl-gui) to install the GUI components for Nuke.
-- Head on over to the [`nk2dl-cli` repository](https://github.com/artandmath/nk2dl-gui) to install the command line tool.
+- Head on over to the [`nk2dl-cli` repository](https://github.com/artandmath/nk2dl-cli) to install the command line tool.
 
 ## Full documentation
 

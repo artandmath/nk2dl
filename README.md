@@ -4,7 +4,7 @@ Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukesc
 ## Overview
 
 - `nk2dl` is a python module for submitting nukescripts to Deadline from the Nuke python interpreter.
-- `nk2dl` can also be used with other python interpereters when [The Foundry's](https://www.foundry.com/products/nuke-family/nuke) `nuke` module is available to the interpereter.
+- `nk2dl` can also be used with other python interpreters when [The Foundry's](https://www.foundry.com/products/nuke-family/nuke) `nuke` module is available to the interpreter.
 
 ## Add-ons
 - [`nk2dl gui`](https://github.com/artandmath/nk2dl-gui) is a panel for submitting nodes to Deadline from the Nuke GUI.
@@ -21,7 +21,7 @@ Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukesc
 - Interfaces to `nk2dl` python module are subject to change.
 - The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
 - The project has no plans to implement the Deadline Draft, Eddy, Vray or Frameserver features from the Thinbox submitter.
-- `nk2dl` pulls a Nuke render license if it needs to call on the Nuke python module outside of a Nuke interactive sesssion.
+- `nk2dl` pulls a Nuke render license if it needs to call on the Nuke python module outside of a Nuke interactive session.
 - Connection to Deadline Web Service using SSL has yet to be tested.
 - The [roadmap](./ROADMAP.md) sets out the path to overcome the caveats and implement planned features.
 - [The project is written using 10% supervision and 90% vibes.](https://www.youtube.com/watch?v=IACHfKmZMr8)
