@@ -12,6 +12,10 @@ a:hover {
     text-decoration: none;
 }
 
-li code {
+code {
     font-weight: bold;
+}
+
+pre code {
+    font-weight: normal;
 }
