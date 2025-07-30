@@ -1,39 +1,23 @@
 # Installation
 
 ## System Requirements
-- **Operating System**: Windows 10 (currently tested only on Windows; Linux and MacOS support planned)
-- **Nuke**: Compatible with Nuke 13+ (required for Graph Scope Variables: Nuke 15.2+)
+- **Operating System**: Windows 10 (currently tested only on Windows; Linux and MacOS support planned.)
+- **Nuke**: Compatible with Nuke 13+ (Nuke 15.2+ required for Graph Scope Variables)
 - **Deadline**: Thinkbox Deadline 10+ with Repository access
-- **Python**: Python 3.7+ 
+- **Python Version**: Python 3.7+
+- **Python Dependencies**: YAML, Deadline API (these are installed into the virtual environment)
 
-## 1. Install from source or release
+## 1. Download
 
-`nk2dl` can be installed from [source](#install-from-source) or from a [point release](#install-from-release).
+`nk2dl` can be downloaded from [source](#download-from-source) or from a [point release](#download-from-release).
 
-### Install from source 
+### Download from source 
 In a Windows powershell:
 ```bash
-# Install from source
 git clone https://github.com/artandmath/nk2dl.git
 cd nk2dl
-
-# Create virtual environment
-python ./scripts/setup_environment
-
-# The setup script will ask for a Nuke location
-# This is the Nuke python interpreter that will be used in the virtual environment
-
-# The setup script will ask for the Deadline repository location
-# The script will copy the Deadline api from the repository to the virtual environment
-
-# Set the virtual environment (only powershell tested thus far)
-./.venv/Scripts/Activate-nk2dl.ps1
-
-# Install the commandline within the virtual environment (optional)
-pip install -e .
 ```
-
-### Install from release
+### Download from release
 - Alternatively `nk2dl` can be installed from a release.
 - Releases can be found in the sidebar on the github repositiory page.
 - Download the source code from a release. 
@@ -41,49 +25,78 @@ pip install -e .
 
 In a Windows powershell:
 ```
-# Install from release
 cd /path/to/nk2dl-0.1.x-alpha
-
-# Create virtual environment
-python ./scripts/setup_environment
-
-# The setup script will ask for a Nuke location
-# This is the Nuke python interpreter that will be used in the virtual environment
-
-# The setup script will ask for the Deadline repository location
-# The script will copy the Deadline api from the repository to the virtual environment
-
-# Set the virtual environment (only powershell tested thus far)
-./.venv/Scripts/Activate-nk2dl.ps1
-
-# Install the commandline within the virtual environment (optional)
-pip install -e .
 ```
-## 2. Install for a single user or multiple users in Nuke
 
-If `nk2dl` will be used in Nuke then Nuke will need to find `nk2dl` during the application launch process.
+## 2. Install dependencies
+
+Create the virtual environment:
+```bash
+python setup_environment.py
+```
+The setup script will ask for a Nuke location. The Nuke location contains the python interpreter that will be used in the virtual environment.
+```
+Nuke installation path not set.
+Default path: C:\Program Files\Nuke15.2v1
+Enter Nuke installation path (press Enter to use default):
+```
+The setup script may ask for the Deadline repository location if it automatically find the respository.  The script will copy the Deadline api from the repository to the virtual environment.
+```
+Deadline repository root not found automatically.
+Default path: C:\DeadlineRepository10
+Enter Deadline repository root path (press Enter to use default):
+```
+
+## 3. Verify
+Set the virtual environment (only powershell tested thus far).
+```bash
+./.venv/Scripts/Activate-nk2dl.ps1
+```
+A success message should be output to the terminal:
+```bash
+Activating NK2DL development environment...
+Setting up NK2DL environment variables...
+Environment activated and ready!
+```
+Open a python interpereter from the terminal. The python interpereter should indicate that weyou are using the Foundry Nuke version of python.
+```
+> python
+Python 3.10.10 (remotes/origin/foundry/v3.10.10:693bcebd65, Feb  7 2024, 11:52:25) [MSC v.1935 64 bit (AMD64)] on win32
+Type "help", "copyright", "credits" or "license" for more information.
+>>>
+```
+Import the `nk2dl` module. A copyright message for `nk2dl` will display and nuke will load.
+```
+>>> import nk2dl
+ 
+Nuke to Deadline (nk2dl) v0.1.0
+Copyright (c) 2025 Daniel Harkness. All Rights Reserved.
+```
+## 4. Install for a single user or multiple users in Nuke
+
+If `nk2dl` will be used in the Nuke applicaiton, then Nuke will need to be able find `nk2dl` and its dependencies during the application launch process.
 
 ### Install for Nuke GUI, single user (.nuke method)
 
 - Copy the folder `nk2dl` into the user's `.nuke` folder. If installed from source, the `nk2dl` folder is the one inside the parent `nk2dl` folder that contains this README.md and LICENSE.
-- Copy the folder `yaml` from `.venv/Lib/site-packages` into the user's `.nuke` folder
+- Copy the folders `yaml` and `Deadline`from `.venv/Lib/site-packages` into the user's `.nuke` folder
 
 ### Install for Nuke GUI, multiple users (init.py method)
 
 - Copy the `nk2dl` folder to a location available to all users.
-- If necessary, add the following line to any of the init.py files available to nuke during the launch of your pipleine:
+- If necessary, add the following line to any of the init.py files available to Nuke during the launch of your pipleine:
 ```python
 nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
 ```
-- The python module `yaml` must be available in nk2dl. If it is not installed in your pipeline, copy it from `.venv/Lib/site-packages` into the same parent folder that contains `nk2dl`
+- The python modules `yaml` and `Deadline` must be available in nk2dl. Copy them from `.venv/Lib/site-packages` into the same parent folder that contains `nk2dl`.
 
-## 3. Install the Deadline Plugin for Nuke 15.2+ (optional)
+## 5. Install the Deadline Plugin for Nuke 15.2+ (optional)
 
 - To use Graph Scope Variables with Nuke 15.2+, a modified version of the deadline plugin is required.
 - Make a backup of `/path/to/your/deadline/repository/plugins/nuke`.
 - Replace the contents of `/path/to/your/deadline/repository/plugins/nuke` with the contents of `/path/to/nk2dl/src/deadline_plugins/nuke`.
 
-## 4. Install Deadline Web Service (optional)
+## 6. Install Deadline Web Service (optional)
 
 ![I feel the need, the need for speed!](./img/nk2dl_vs_default.gif)
 
@@ -91,9 +104,12 @@ For best performance, an instance of a Deadline Web Service is recommended. Inst
 - [How to install Deadline Web Service](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/install-client-web-server-installation.html)
 - [Deadline Web Service Manual](https://docs.thinkboxsoftware.com/products/deadline/10.4/1_User%20Manual/manual/web-service.html)
  
-After setting up an instance of Deadline Web Service, [configure](./config.md) and [test the connection.](./deadline_connection.md)
+After setting up an instance of Deadline Web Service, [configure](./config.md) and [test the connection](./deadline_connection.md) to the Deadline Web Service.
 
 # Configuration
+
+> [!IMPORTANT]
+> Configuration is not required, but configuration is recommended
 
 nk2dl uses a YAML configuration system with multiple levels:
 

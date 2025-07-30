@@ -3,10 +3,10 @@
 - Follow the [Installation Guide](./installation.md) to get `nk2dl` installed and configured.
 - Follow the [Quickstart Usage Guide](./quickstart.md) to verify that `nk2dl` is up and running.
 
-## Add-ons
+## Optional Add-ons
 
-- Head on over to the [`nk2dl-gui` repository](https://github.com/artandmath/nk2dl-gui) to install the GUI components for Nuke. (optional)
-- Head on over to the [`nk2dl-cli` repository](https://github.com/artandmath/nk2dl-gui) to install the command line tool. (optional)
+- Head on over to the [`nk2dl-gui` repository](https://github.com/artandmath/nk2dl-gui) to install the GUI components for Nuke.
+- Head on over to the [`nk2dl-cli` repository](https://github.com/artandmath/nk2dl-gui) to install the command line tool.
 
 ## Full documentation
 
