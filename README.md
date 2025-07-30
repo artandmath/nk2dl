@@ -1,5 +1,5 @@
 # nk2dl
-Nuke to Deadline. A python module for submitting nukescripts to Thinkbox Deadline via a Deadline web service or via the Deadline commandline. It features speed and quality of life improvements over the default Thinkbox submitter.
+Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukescripts to Thinkbox Deadline via a Deadline web service or via the Deadline commandline. It features speed and quality of life improvements over the default Thinkbox submitter.
 
 ## Overview
 
