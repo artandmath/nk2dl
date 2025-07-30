@@ -1,5 +1,3 @@
-Documenation for `nk2dl` (aka Nuke to Deadline).
-
 ## Getting started
 
 - Follow the [Installation Guide](./installation.md) to get `nk2dl` installed and configured.
