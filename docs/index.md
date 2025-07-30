@@ -16,4 +16,5 @@
 - [Deadline Connection](./deadline_connection.md)
 - [Nuke Submission](./nuke_submission.md)
 - [Feature parity table](./feature_parity.md)
+- [FAQ](./faq.md)
 - [Tests](./tests.md)
