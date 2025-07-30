@@ -7,8 +7,8 @@ Welcome to `nk2dl` (aka Nuke to Deadline). A python module for submitting nukesc
 - `nk2dl` can also be used with other python interpreters when [The Foundry's](https://www.foundry.com/products/nuke-family/nuke) `nuke` module is available to the interpreter.
 
 ## Add-ons
-- [`nk2dl gui`](https://github.com/artandmath/nk2dl-gui) is a panel for submitting nodes to Deadline from the Nuke GUI.
-- [`nk2dl cli`](https://github.com/artandmath/nk2dl-cli) is a command line tool for submitting nukescripts to Deadline from a terminal. 
+- [`nk2dl-gui`](https://github.com/artandmath/nk2dl-gui) is a panel for submitting nodes to Deadline from the Nuke GUI.
+- [`nk2dl-cli`](https://github.com/artandmath/nk2dl-cli) is a command line tool for submitting nukescripts to Deadline from a terminal. 
 
 ## Getting started
 
