@@ -27,19 +27,6 @@ job_ids = submit_nuke_script(
 print(f"Job IDs: {job_ids}")
 ```
 
-## Command Line Interface
-
-```bash
-# Help docs
-nk2dl submit --help
-
-# Basic submission
-nk2dl submit /path/to/script.nk
-
-# With options
-nk2dl submit /path/to/script.nk --frame-range 1-100 --priority 75 --use-nuke-x --render-threads 16 --use-gpu
-```
-
 # Advanced Options
 
 ## Environment Variables
