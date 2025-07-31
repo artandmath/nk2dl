@@ -157,9 +157,7 @@ In the case of a single user install in the user's `.nuke` folder, level 2 and l
 Alternatively:
 
 - Edit the `config.yaml` file in the `nk2dl` module directory
-- The `config.yaml` in the `nk2dl` cannot be renamed or otherwise it will not be picked up.
-
-
+- The `config.yaml` in the `nk2dl` cannot be renamed, otherwise the configuration will not be read by the `nk2dl` pyhton module.
 
 Example configuration:
 
