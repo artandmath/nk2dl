@@ -85,18 +85,35 @@ Copyright (c) 2025 Daniel Harkness. All Rights Reserved.
 
 If `nk2dl` will be used in the Nuke application, then Nuke will need to be able find `nk2dl` and its dependencies during the application launch process.
 
-### Install for Nuke GUI, single user (.nuke method)
+### Install for single user (.nuke method)
 
-- Copy the folder `nk2dl` into the user's `.nuke` folder. If installed from source, the `nk2dl` folder is the one inside the parent `nk2dl` folder that contains this README.md and LICENSE.
+- Copy the folder `nk2dl` from `src` into the user's `.nuke` folder.
 - Copy the folders `yaml` and `Deadline` from `.venv/Lib/site-packages` into the user's `.nuke` folder
+- The `.nuke` folder will contain the following structure
 
-### Install for Nuke GUI, multiple users (init.py method)
+```bash
+~/.nuke/
+ ├─ Deadline/
+ ├─ nk2dl/
+ ├─ yaml/
+ ├─ init.py
+ ├─ menu.py
+ │
+etc
+```
+
+### Install for multiple users (init.py method)
 
 - Copy the `nk2dl` folder to a location available to all users.
-- If necessary, add the following line to any of the init.py files available to Nuke during the launch of your pipeline:
+- If necessary, add the location to an init.py file available to Nuke during the launch of your pipeline:
 
 ```python
+# Use nuke.pluginAddPath()
 nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
+
+# Or append/insert to sys.path
+import sys
+sys.path.insert(0, '/path/to/parent/folder/containing/nk2dl')
 ```
 - The python modules `yaml` and `Deadline` must be available in nk2dl. Copy them from `.venv/Lib/site-packages` into the same parent folder that contains `nk2dl`.
 
