@@ -19,8 +19,7 @@ cd nk2dl
 ```
 ### Download from release
 - Alternatively `nk2dl` can be installed from a release.
-- Releases can be found in the sidebar on the github repository page.
-- Download the source code from a release. 
+- [Download the source code from a release](https://github.com/artandmath/nk2dl/releases). 
 - Unzip the source code.
 
 From the shell:
@@ -124,10 +123,13 @@ After setting up an instance of Deadline Web Service, [configure](./config.md) a
 
 nk2dl uses a YAML configuration system with multiple levels of precedence (`~/.nk2dl/config.yaml` has the highest precedence):
 
-1. Default configuration
-2. Project configuration (from `$NK2DL_CONFIG` or `config.yaml` in the `nk2dl` module)
-3. Environment variables (`$NK2DL_*`)
-4. User configuration (`~/.nk2dl/config.yaml`)
+1. Default configuration hard coded into the system.
+2. Facility level configuraton via `config.yaml` in the `nk2dl` module.
+2. Project/facility level configuration via `$NK2DL_CONFIG`.
+3. Project/facility level configuration via environment variables (`$NK2DL_*`)
+4. User configuration (`~/.nuke/nk2dl/config.yaml`)
+
+In the case of a single user install in the user's `.nuke` folder, level 2 and level 4 may be the same. If using `$NK2DL_*` environment variables or the `NK2DL_CONFIG` that points to a config, file remove the `config.yaml` from the `nk2dl` folder in the `.nuke` firectory to avoid this file taking precedence.
 
 ## Setting the config
 

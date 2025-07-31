@@ -12,7 +12,7 @@
 
 - [Installation Guide](./installation.md)
 - [Quickstart Usage Guide](./quickstart.md) 
-- [Configuration Details](./config.md)
+- [Configuration](./config.md)
 - [Deadline Connection](./deadline_connection.md)
 - [Nuke Submission](./nuke_submission.md)
 - [Feature parity table](./feature_parity.md)
