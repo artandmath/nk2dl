@@ -129,7 +129,7 @@ nk2dl uses a YAML configuration system with multiple levels of precedence (`~/.n
 3. Project/facility level configuration via environment variables (`$NK2DL_*`)
 4. User configuration (`~/.nuke/nk2dl/config.yaml`)
 
-In the case of a single user install in the user's `.nuke` folder, level 2 and level 4 may be the same. If using `$NK2DL_*` environment variables or the `NK2DL_CONFIG` that points to a config, file remove the `config.yaml` from the `nk2dl` folder in the `.nuke` firectory to avoid this file taking precedence.
+In the case of a single user install in the user's `.nuke` folder, level 2 and level 5 may be the same file. If using `$NK2DL_*` environment variables or the `NK2DL_CONFIG` that points to a config, file remove the `config.yaml` from the `nk2dl` folder in the `.nuke` firectory to avoid this file taking precedence over the environemnt variables.
 
 ## Setting the config
 
