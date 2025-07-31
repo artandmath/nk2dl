@@ -1,7 +1,7 @@
 # Installation
 
 ## System Requirements
-- **Operating System**: Windows 10 (currently tested only on Windows; Linux and MacOS support planned.)
+- **Operating System**: Windows 10 (currently tested only on Windows; Testing Linux and MacOS support planned. Linux and MacOS may already work)
 - **Nuke**: Compatible with Nuke 13+ (Nuke 15.2+ required for Graph Scope Variables)
 - **Deadline**: Thinkbox Deadline 10+ with Repository access
 - **Python Version**: Python 3.7+
@@ -115,7 +115,8 @@ nuke.pluginAddPath('/path/to/parent/folder/containing/nk2dl')
 import sys
 sys.path.insert(0, '/path/to/parent/folder/containing/nk2dl')
 ```
-- The python modules `yaml` and `Deadline` must be available in nk2dl. Copy them from `.venv/Lib/site-packages` into the same parent folder that contains `nk2dl`.
+- The python modules `yaml` and `Deadline` must be available in nk2dl.
+- If they are not already available in the pipeline, copy `yaml` and `Deadline` from `.venv/Lib/site-packages` to a location that is available to `sys.path`.
 
 ## 5. Install the Deadline Plugin for Nuke 15.2+ (optional)
 
