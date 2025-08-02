@@ -8,7 +8,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
             <dock id="" hideTitles="1" activePageId="Toolbar.1">
                 <page id="Toolbar.1"/>
             </dock>
-            <split size="1477" stretch="1"/>
+            <split size="1897" stretch="1"/>
             <splitter orientation="2">
                 <split size="779"/>
                 <dock id="" activePageId="Viewer.1">
@@ -21,7 +21,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
                     <page id="DopeSheet.1"/>
                 </dock>
             </splitter>
-            <split size="1035"/>
+            <split size="615"/>
             <dock id="" activePageId="Properties.1">
                 <page id="Properties.1"/>
                 <page id="uk.co.thefoundry.backgroundrenderview.1"/>
@@ -33,7 +33,7 @@ define_window_layout_xml {<?xml version="1.0" encoding="UTF-8"?>
 }
 Root {
  inputs 0
- name C:/Users/Daniel/Documents/repo/nk2dl/examples/renderWithDeadline.nk
+ name C:/Users/Daniel/Documents/repo/nk2dl-modules/nk2dl/tests/nukescripts/test_dependencies.nk
  project_directory "\[python \{nuke.script_directory()\}]"
  frame 1001
  first_frame 1001
@@ -42,17 +42,14 @@ Root {
  format "1920 1080 0 0 1920 1080 1 HD_1080"
  proxy_type scale
  proxy_format "1024 778 0 0 1024 778 1 1K_Super_35(full-ap)"
- colorManagement OCIO
- OCIO_config custom
- customOCIOConfigPath "P:/peach/admin/genericSoftwareFolderStructures/ocio/KMM OCIO/config.ocio"
- defaultViewerLUT "OCIO LUTs"
- workingSpaceLUT scene_linear
- monitorLut "sRGB (ACES)"
- monitorOutLUT "Rec.709 (ACES)"
- int8Lut matte_paint
- int16Lut texture_paint
- logLut compositing_log
- floatLut scene_linear
+ colorManagement Nuke
+ workingSpaceLUT linear
+ monitorLut sRGB
+ monitorOutLUT rec709
+ int8Lut sRGB
+ int16Lut sRGB
+ logLut Cineon
+ floatLut linear
  addUserKnob {20 Deadline}
  addUserKnob {1 FrameListMode l frameListMode}
  FrameListMode Global
@@ -111,61 +108,155 @@ Root {
 }
 CheckerBoard2 {
  inputs 0
- name CheckerBoard2
- xpos -1222
- ypos -265
+ name CheckerBoard3
+ xpos -810
+ ypos -273
 }
 CameraShake3 {
- name CameraShake3_2
+ name CameraShake3_3
  label "\[value amplitude] px at \[value frequency]"
- xpos -1222
- ypos -151
+ xpos -810
+ ypos -159
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
-NoOp {
- name DeadlineSettings3
- xpos -1222
- ypos -73
+Group {
+ name Nk2dl_ModifyMetaData4
+ xpos -810
+ ypos -81
  addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
+ addUserKnob {41 metadata l "" -STARTLINE T nk2dl_modify_keys.metadata}
 }
+ ModifyMetaData {
+  inputs 0
+  metadata {
+   {set input/nk2dl/priority ""}
+   {set input/nk2dl/pool ""}
+   {set input/nk2dl/group ""}
+   {set input/nk2dl/chunk_size ""}
+   {set input/nk2dl/department ""}
+   {set input/nk2dl/user_name ""}
+   {set input/nk2dl/comment ""}
+   {set input/nk2dl/concurrent_tasks ""}
+   {set input/nk2dl/frames ""}
+   {set input/nk2dl/job_dependencies ""}
+   {set input/nk2dl/on_job_complete ""}
+   {set input/nk2dl/submit_suspended ""}
+   {set input/nk2dl/limit_groups ""}
+   {set input/nk2dl/task_timeout ""}
+   {set input/nk2dl/enable_auto_timeout ""}
+   {set input/nk2dl/limit_worker_tasks ""}
+   {set input/nk2dl/batch_name ""}
+   {set input/nk2dl/pre_job_script ""}
+   {set input/nk2dl/post_job_script ""}
+   {set input/nk2dl/pre_task_script ""}
+   {set input/nk2dl/post_task_script ""}
+   {set input/nk2dl/nuke_version ""}
+   {set input/nk2dl/use_nuke_x ""}
+   {set input/nk2dl/batch_mode ""}
+   {set input/nk2dl/threads ""}
+   {set input/nk2dl/use_gpu ""}
+   {set input/nk2dl/gpu_override ""}
+   {set input/nk2dl/ram_use ""}
+   {set input/nk2dl/enforce_render_order ""}
+   {set input/nk2dl/stack_size ""}
+   {set input/nk2dl/continue_on_error ""}
+   {set input/nk2dl/reload_plugins ""}
+   {set input/nk2dl/performance_profiler ""}
+   {set input/nk2dl/performance_profiler_path ""}
+   {set input/nk2dl/output_file_path ""}
+   {set input/nk2dl/render_mode ""}
+   {set input/nk2dl/views ""}
+  }
+  name nk2dl_keys
+  xpos 400
+  ypos -273
+ }
+ Input {
+  inputs 0
+  name Input1
+  xpos 620
+  ypos -345
+ }
+ Dot {
+  name Dot2
+  xpos 654
+  ypos -270
+ }
+set Nf099d800 [stack 0]
+ CopyMetaData {
+  inputs 2
+  mergeMode "Meta only"
+  imageMetadatafilterMode "keys only"
+  name copy_nk2dl_keys
+  xpos 510
+  ypos -273
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/comment "Job values overridden with \[value parent.name]"}
+   {set input/nk2dl/chunk_size 5}
+  }
+  name nk2dl_modify_keys
+  xpos 510
+  ypos -201
+ }
+push $Nf099d800
+ CopyMetaData {
+  inputs 2
+  metadatafilter input/nk2dl
+  name CopyMetaData1
+  xpos 620
+  ypos -201
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/metadata_nodes "\[value parent.name]:nogui\[if \{\[metadata input/nk2dl/metadata_nodes] != \"\"\} \{return ,\[metadata input/nk2dl/metadata_nodes]\} else \{return \"\"\}]"}
+  }
+  name nk2dl_metadata_node_name
+  xpos 620
+  ypos -129
+ }
+ Output {
+  name Output1
+  xpos 620
+  ypos -57
+ }
+end_group
 FrameRange {
  first_frame 1001
  last_frame 1200
  time ""
- name FrameRange3
- xpos -1222
- ypos -1
+ name FrameRange4
+ xpos -810
+ ypos -9
 }
 Crop {
  box {0 0 1920 1080}
- name Crop3
- xpos -1222
- ypos 47
+ name Crop4
+ xpos -810
+ ypos 39
 }
+set Nf09e5000 [stack 0]
 Write {
  channels rgba
- file ./render_output/testFrames02_v001.####.exr
+ file ./render_output/testFrames04_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
- render_order 10
+ render_order 20
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write2
- xpos -1222
- ypos 155
+ name Write4
+ xpos -810
+ ypos 147
 }
 Read {
  inputs 0
  file_type exr
- file C:/Users/Daniel/Documents/repo/nk2dl/examples/render_output/ABC_0010_testFrames01_v001_wh.####.exr
+ file ./render_output/testFrames02_v001.####.exr
  format "1920 1080 0 0 1920 1080 1 HD_1080"
  first 1001
  last 1200
@@ -173,39 +264,132 @@ Read {
  origlast 1200
  origset true
  name Read1
- xpos -1002
- ypos -277
+ xpos -1030
+ ypos -279
 }
 Grade {
  white {1 0 1 1}
  white_panelDropped true
  name Grade1
- xpos -1002
- ypos -145
+ xpos -1030
+ ypos -153
 }
-NoOp {
- name DeadlineSettings2
- xpos -1002
- ypos -73
+Group {
+ name Nk2dl_ModifyMetaData3
+ xpos -1030
+ ypos -81
  addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
+ addUserKnob {41 metadata l "" -STARTLINE T nk2dl_modify_keys.metadata}
 }
+ ModifyMetaData {
+  inputs 0
+  metadata {
+   {set input/nk2dl/priority ""}
+   {set input/nk2dl/pool ""}
+   {set input/nk2dl/group ""}
+   {set input/nk2dl/chunk_size ""}
+   {set input/nk2dl/department ""}
+   {set input/nk2dl/user_name ""}
+   {set input/nk2dl/comment ""}
+   {set input/nk2dl/concurrent_tasks ""}
+   {set input/nk2dl/frames ""}
+   {set input/nk2dl/job_dependencies ""}
+   {set input/nk2dl/on_job_complete ""}
+   {set input/nk2dl/submit_suspended ""}
+   {set input/nk2dl/limit_groups ""}
+   {set input/nk2dl/task_timeout ""}
+   {set input/nk2dl/enable_auto_timeout ""}
+   {set input/nk2dl/limit_worker_tasks ""}
+   {set input/nk2dl/batch_name ""}
+   {set input/nk2dl/pre_job_script ""}
+   {set input/nk2dl/post_job_script ""}
+   {set input/nk2dl/pre_task_script ""}
+   {set input/nk2dl/post_task_script ""}
+   {set input/nk2dl/nuke_version ""}
+   {set input/nk2dl/use_nuke_x ""}
+   {set input/nk2dl/batch_mode ""}
+   {set input/nk2dl/threads ""}
+   {set input/nk2dl/use_gpu ""}
+   {set input/nk2dl/gpu_override ""}
+   {set input/nk2dl/ram_use ""}
+   {set input/nk2dl/enforce_render_order ""}
+   {set input/nk2dl/stack_size ""}
+   {set input/nk2dl/continue_on_error ""}
+   {set input/nk2dl/reload_plugins ""}
+   {set input/nk2dl/performance_profiler ""}
+   {set input/nk2dl/performance_profiler_path ""}
+   {set input/nk2dl/output_file_path ""}
+   {set input/nk2dl/render_mode ""}
+   {set input/nk2dl/views ""}
+  }
+  name nk2dl_keys
+  xpos 400
+  ypos -273
+ }
+ Input {
+  inputs 0
+  name Input1
+  xpos 620
+  ypos -345
+ }
+ Dot {
+  name Dot2
+  xpos 654
+  ypos -270
+ }
+set Ned4a2c00 [stack 0]
+ CopyMetaData {
+  inputs 2
+  mergeMode "Meta only"
+  imageMetadatafilterMode "keys only"
+  name copy_nk2dl_keys
+  xpos 510
+  ypos -273
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/comment "Job values overridden with \[value parent.name]"}
+   {set input/nk2dl/chunk_size 5}
+  }
+  name nk2dl_modify_keys
+  xpos 510
+  ypos -201
+ }
+push $Ned4a2c00
+ CopyMetaData {
+  inputs 2
+  metadatafilter input/nk2dl
+  name CopyMetaData1
+  xpos 620
+  ypos -201
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/metadata_nodes "\[value parent.name]:nogui\[if \{\[metadata input/nk2dl/metadata_nodes] != \"\"\} \{return ,\[metadata input/nk2dl/metadata_nodes]\} else \{return \"\"\}]"}
+  }
+  name nk2dl_metadata_node_name
+  xpos 620
+  ypos -129
+ }
+ Output {
+  name Output1
+  xpos 620
+  ypos -57
+ }
+end_group
 FrameRange {
  first_frame 1001
  last_frame 1050
  time ""
  name FrameRange1
- xpos -1002
- ypos -1
+ xpos -1030
+ ypos -9
 }
 Crop {
  box {0 0 1920 1080}
  name Crop2
- xpos -1002
- ypos 47
+ xpos -1030
+ ypos 39
 }
 Write {
  channels rgba
@@ -217,68 +401,160 @@ Write {
  first {{first_frame}}
  last {{last_frame}}
  use_limit true
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
- display ACES
- view Rec.709
  name Write3
- xpos -1002
- ypos 155
+ xpos -1030
+ ypos 147
 }
 CheckerBoard2 {
  inputs 0
- name CheckerBoard3
- xpos -782
- ypos -265
+ name CheckerBoard1
+ xpos -1470
+ ypos -273
 }
 CameraShake3 {
- name CameraShake3_3
+ name CameraShake3_1
  label "\[value amplitude] px at \[value frequency]"
- xpos -782
- ypos -151
+ xpos -1470
+ ypos -159
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
-NoOp {
- name DeadlineSettings4
- xpos -782
- ypos -73
+Group {
+ name Nk2dl_ModifyMetaData1
+ xpos -1470
+ ypos -81
  addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
+ addUserKnob {41 metadata l "" -STARTLINE T nk2dl_modify_keys.metadata}
 }
+ ModifyMetaData {
+  inputs 0
+  metadata {
+   {set input/nk2dl/priority ""}
+   {set input/nk2dl/pool ""}
+   {set input/nk2dl/group ""}
+   {set input/nk2dl/chunk_size ""}
+   {set input/nk2dl/department ""}
+   {set input/nk2dl/user_name ""}
+   {set input/nk2dl/comment ""}
+   {set input/nk2dl/concurrent_tasks ""}
+   {set input/nk2dl/frames ""}
+   {set input/nk2dl/job_dependencies ""}
+   {set input/nk2dl/on_job_complete ""}
+   {set input/nk2dl/submit_suspended ""}
+   {set input/nk2dl/limit_groups ""}
+   {set input/nk2dl/task_timeout ""}
+   {set input/nk2dl/enable_auto_timeout ""}
+   {set input/nk2dl/limit_worker_tasks ""}
+   {set input/nk2dl/batch_name ""}
+   {set input/nk2dl/pre_job_script ""}
+   {set input/nk2dl/post_job_script ""}
+   {set input/nk2dl/pre_task_script ""}
+   {set input/nk2dl/post_task_script ""}
+   {set input/nk2dl/nuke_version ""}
+   {set input/nk2dl/use_nuke_x ""}
+   {set input/nk2dl/batch_mode ""}
+   {set input/nk2dl/threads ""}
+   {set input/nk2dl/use_gpu ""}
+   {set input/nk2dl/gpu_override ""}
+   {set input/nk2dl/ram_use ""}
+   {set input/nk2dl/enforce_render_order ""}
+   {set input/nk2dl/stack_size ""}
+   {set input/nk2dl/continue_on_error ""}
+   {set input/nk2dl/reload_plugins ""}
+   {set input/nk2dl/performance_profiler ""}
+   {set input/nk2dl/performance_profiler_path ""}
+   {set input/nk2dl/output_file_path ""}
+   {set input/nk2dl/render_mode ""}
+   {set input/nk2dl/views ""}
+  }
+  name nk2dl_keys
+  xpos 400
+  ypos -273
+ }
+ Input {
+  inputs 0
+  name Input1
+  xpos 620
+  ypos -345
+ }
+ Dot {
+  name Dot2
+  xpos 654
+  ypos -270
+ }
+set Ned518800 [stack 0]
+ CopyMetaData {
+  inputs 2
+  mergeMode "Meta only"
+  imageMetadatafilterMode "keys only"
+  name copy_nk2dl_keys
+  xpos 510
+  ypos -273
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/comment "Job values overridden with \[value parent.name]"}
+   {set input/nk2dl/chunk_size 5}
+  }
+  name nk2dl_modify_keys
+  xpos 510
+  ypos -201
+ }
+push $Ned518800
+ CopyMetaData {
+  inputs 2
+  metadatafilter input/nk2dl
+  name CopyMetaData1
+  xpos 620
+  ypos -201
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/metadata_nodes "\[value parent.name]:nogui\[if \{\[metadata input/nk2dl/metadata_nodes] != \"\"\} \{return ,\[metadata input/nk2dl/metadata_nodes]\} else \{return \"\"\}]"}
+  }
+  name nk2dl_metadata_node_name
+  xpos 620
+  ypos -129
+ }
+ Output {
+  name Output1
+  xpos 620
+  ypos -57
+ }
+end_group
 FrameRange {
  first_frame 1001
- last_frame 1200
+ last_frame 1100
  time ""
- name FrameRange4
- xpos -782
- ypos -1
+ name FrameRange2
+ xpos -1470
+ ypos -9
 }
 Crop {
  box {0 0 1920 1080}
- name Crop4
- xpos -782
- ypos 47
+ name Crop1
+ xpos -1470
+ ypos 39
 }
-set Naa2e3800 [stack 0]
 Write {
  channels rgba
- file ./render_output/testFrames04_v001.####.exr
+ file ./render_output/testFrames01_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
- render_order 20
+ render_order 10
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write4
- xpos -782
- ypos 155
+ name Write1
+ xpos -1470
+ ypos 147
 }
-push $Naa2e3800
+push $Nf09e5000
 Write {
  channels rgba
  file ./render_output/testFrames04_v001.mov
@@ -286,7 +562,7 @@ Write {
  mov64_format "mov (QuickTime / MOV)"
  mov64_codec appr
  mov_h264_codec_profile "High 4:2:0 8-bit"
- mov64_pixel_format {{0}}
+ mov64_pixel_format {{0} "yuv420p\tYCbCr 4:2:0 8-bit"}
  mov64_quality High
  mov64_fast_start true
  mov64_write_timecode true
@@ -296,72 +572,148 @@ Write {
  mov64_bitrate_tolerance 4000000
  mov64_quality_min 1
  mov64_quality_max 3
- transformType display
- colorspace matte_paint
  render_order 20
  checkHashOnRead false
+ in_colorspace scene_linear
+ out_colorspace scene_linear
  ocioColorspace scene_linear
- display ACES
- view Rec.709
  name Write7
- xpos -562
- ypos 155
+ xpos -590
+ ypos 147
 }
 CheckerBoard2 {
  inputs 0
  name CheckerBoard4
- xpos -342
- ypos -265
+ xpos -370
+ ypos -273
 }
 CameraShake3 {
  name CameraShake3_4
  label "\[value amplitude] px at \[value frequency]"
- xpos -342
- ypos -151
+ xpos -370
+ ypos -159
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
-NoOp {
- name DeadlineSettings5
- xpos -342
- ypos -73
+Group {
+ name Nk2dl_ModifyMetaData5
+ xpos -370
+ ypos -81
  addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
+ addUserKnob {41 metadata l "" -STARTLINE T nk2dl_modify_keys.metadata}
 }
+ ModifyMetaData {
+  inputs 0
+  metadata {
+   {set input/nk2dl/priority ""}
+   {set input/nk2dl/pool ""}
+   {set input/nk2dl/group ""}
+   {set input/nk2dl/chunk_size ""}
+   {set input/nk2dl/department ""}
+   {set input/nk2dl/user_name ""}
+   {set input/nk2dl/comment ""}
+   {set input/nk2dl/concurrent_tasks ""}
+   {set input/nk2dl/frames ""}
+   {set input/nk2dl/job_dependencies ""}
+   {set input/nk2dl/on_job_complete ""}
+   {set input/nk2dl/submit_suspended ""}
+   {set input/nk2dl/limit_groups ""}
+   {set input/nk2dl/task_timeout ""}
+   {set input/nk2dl/enable_auto_timeout ""}
+   {set input/nk2dl/limit_worker_tasks ""}
+   {set input/nk2dl/batch_name ""}
+   {set input/nk2dl/pre_job_script ""}
+   {set input/nk2dl/post_job_script ""}
+   {set input/nk2dl/pre_task_script ""}
+   {set input/nk2dl/post_task_script ""}
+   {set input/nk2dl/nuke_version ""}
+   {set input/nk2dl/use_nuke_x ""}
+   {set input/nk2dl/batch_mode ""}
+   {set input/nk2dl/threads ""}
+   {set input/nk2dl/use_gpu ""}
+   {set input/nk2dl/gpu_override ""}
+   {set input/nk2dl/ram_use ""}
+   {set input/nk2dl/enforce_render_order ""}
+   {set input/nk2dl/stack_size ""}
+   {set input/nk2dl/continue_on_error ""}
+   {set input/nk2dl/reload_plugins ""}
+   {set input/nk2dl/performance_profiler ""}
+   {set input/nk2dl/performance_profiler_path ""}
+   {set input/nk2dl/output_file_path ""}
+   {set input/nk2dl/render_mode ""}
+   {set input/nk2dl/views ""}
+  }
+  name nk2dl_keys
+  xpos 400
+  ypos -273
+ }
+ Input {
+  inputs 0
+  name Input1
+  xpos 620
+  ypos -345
+ }
+ Dot {
+  name Dot2
+  xpos 654
+  ypos -270
+ }
+set Ned586400 [stack 0]
+ CopyMetaData {
+  inputs 2
+  mergeMode "Meta only"
+  imageMetadatafilterMode "keys only"
+  name copy_nk2dl_keys
+  xpos 510
+  ypos -273
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/comment "Job values overridden with \[value parent.name]"}
+   {set input/nk2dl/chunk_size 5}
+  }
+  name nk2dl_modify_keys
+  xpos 510
+  ypos -201
+ }
+push $Ned586400
+ CopyMetaData {
+  inputs 2
+  metadatafilter input/nk2dl
+  name CopyMetaData1
+  xpos 620
+  ypos -201
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/metadata_nodes "\[value parent.name]:nogui\[if \{\[metadata input/nk2dl/metadata_nodes] != \"\"\} \{return ,\[metadata input/nk2dl/metadata_nodes]\} else \{return \"\"\}]"}
+  }
+  name nk2dl_metadata_node_name
+  xpos 620
+  ypos -129
+ }
+ Output {
+  name Output1
+  xpos 620
+  ypos -57
+ }
+end_group
 FrameRange {
  first_frame 1001
  last_frame 1200
  time ""
  name FrameRange5
- xpos -342
- ypos -1
+ xpos -370
+ ypos -9
 }
 Crop {
  box {0 0 1920 1080}
  name Crop5
- xpos -342
- ypos 47
+ xpos -370
+ ypos 39
 }
-set Naa36e000 [stack 0]
-Write {
- channels rgba
- file ./render_output/testFrames05_v001.####.exr
- file_type exr
- compression DWAA
- first_part rgba
- render_order 40
- ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write5
- xpos -342
- ypos 153
-}
-push $Naa36e000
+set Ned587c00 [stack 0]
 Write {
  channels rgba
  file ./render_output/testFrames05_v001.mov
@@ -379,67 +731,166 @@ Write {
  mov64_bitrate_tolerance 4000000
  mov64_quality_min 1
  mov64_quality_max 3
- transformType display
- colorspace matte_paint
  render_order 40
  checkHashOnRead false
- ocioColorspace scene_linear
- display ACES
- view Rec.709
  name Write6
- xpos -122
- ypos 155
+ xpos -150
+ ypos 147
+}
+push $Ned587c00
+Write {
+ channels rgba
+ file ./render_output/testFrames05_v001.####.exr
+ file_type exr
+ compression DWAA
+ first_part rgba
+ render_order 40
+ name Write5
+ xpos -370
+ ypos 147
 }
 CheckerBoard2 {
  inputs 0
- name CheckerBoard1
- xpos -1442
- ypos -265
+ name CheckerBoard2
+ xpos -1250
+ ypos -273
 }
 CameraShake3 {
- name CameraShake3_1
+ name CameraShake3_2
  label "\[value amplitude] px at \[value frequency]"
- xpos -1442
- ypos -151
+ xpos -1250
+ ypos -159
  amplitude 100
  rotation 50
  cs_center {{"\[value input.width 0]/2"} {"\[value input.height 0]/2"}}
 }
-NoOp {
- name DeadlineSettings1
- xpos -1442
- ypos -73
+Group {
+ name Nk2dl_ModifyMetaData2
+ xpos -1250
+ ypos -81
  addUserKnob {20 User}
- addUserKnob {7 poop}
- addUserKnob {3 JobInfoChunkSize}
- JobInfoChunkSize 5
- addUserKnob {3 PluginInfoRamUse}
+ addUserKnob {41 metadata l "" -STARTLINE T nk2dl_modify_keys.metadata}
 }
+ ModifyMetaData {
+  inputs 0
+  metadata {
+   {set input/nk2dl/priority ""}
+   {set input/nk2dl/pool ""}
+   {set input/nk2dl/group ""}
+   {set input/nk2dl/chunk_size ""}
+   {set input/nk2dl/department ""}
+   {set input/nk2dl/user_name ""}
+   {set input/nk2dl/comment ""}
+   {set input/nk2dl/concurrent_tasks ""}
+   {set input/nk2dl/frames ""}
+   {set input/nk2dl/job_dependencies ""}
+   {set input/nk2dl/on_job_complete ""}
+   {set input/nk2dl/submit_suspended ""}
+   {set input/nk2dl/limit_groups ""}
+   {set input/nk2dl/task_timeout ""}
+   {set input/nk2dl/enable_auto_timeout ""}
+   {set input/nk2dl/limit_worker_tasks ""}
+   {set input/nk2dl/batch_name ""}
+   {set input/nk2dl/pre_job_script ""}
+   {set input/nk2dl/post_job_script ""}
+   {set input/nk2dl/pre_task_script ""}
+   {set input/nk2dl/post_task_script ""}
+   {set input/nk2dl/nuke_version ""}
+   {set input/nk2dl/use_nuke_x ""}
+   {set input/nk2dl/batch_mode ""}
+   {set input/nk2dl/threads ""}
+   {set input/nk2dl/use_gpu ""}
+   {set input/nk2dl/gpu_override ""}
+   {set input/nk2dl/ram_use ""}
+   {set input/nk2dl/enforce_render_order ""}
+   {set input/nk2dl/stack_size ""}
+   {set input/nk2dl/continue_on_error ""}
+   {set input/nk2dl/reload_plugins ""}
+   {set input/nk2dl/performance_profiler ""}
+   {set input/nk2dl/performance_profiler_path ""}
+   {set input/nk2dl/output_file_path ""}
+   {set input/nk2dl/render_mode ""}
+   {set input/nk2dl/views ""}
+  }
+  name nk2dl_keys
+  xpos 400
+  ypos -273
+ }
+ Input {
+  inputs 0
+  name Input1
+  xpos 620
+  ypos -345
+ }
+ Dot {
+  name Dot2
+  xpos 654
+  ypos -270
+ }
+set Ned609000 [stack 0]
+ CopyMetaData {
+  inputs 2
+  mergeMode "Meta only"
+  imageMetadatafilterMode "keys only"
+  name copy_nk2dl_keys
+  xpos 510
+  ypos -273
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/comment "Job values overridden with \[value parent.name]"}
+   {set input/nk2dl/chunk_size 5}
+  }
+  name nk2dl_modify_keys
+  xpos 510
+  ypos -201
+ }
+push $Ned609000
+ CopyMetaData {
+  inputs 2
+  metadatafilter input/nk2dl
+  name CopyMetaData1
+  xpos 620
+  ypos -201
+ }
+ ModifyMetaData {
+  metadata {
+   {set input/nk2dl/metadata_nodes "\[value parent.name]:nogui\[if \{\[metadata input/nk2dl/metadata_nodes] != \"\"\} \{return ,\[metadata input/nk2dl/metadata_nodes]\} else \{return \"\"\}]"}
+  }
+  name nk2dl_metadata_node_name
+  xpos 620
+  ypos -129
+ }
+ Output {
+  name Output1
+  xpos 620
+  ypos -57
+ }
+end_group
 FrameRange {
  first_frame 1001
- last_frame 1100
+ last_frame 1200
  time ""
- name FrameRange2
- xpos -1442
- ypos -1
+ name FrameRange3
+ xpos -1250
+ ypos -9
 }
 Crop {
  box {0 0 1920 1080}
- name Crop1
- xpos -1442
- ypos 47
+ name Crop3
+ xpos -1250
+ ypos 39
 }
 Write {
  channels rgba
- file ./render_output/testFrames01_v001.####.exr
+ file ./render_output/testFrames02_v001.####.exr
  file_type exr
  compression DWAA
  first_part rgba
  render_order 10
  ocioColorspace scene_linear
- display ACES
- view Rec.709
- name Write1
- xpos -1442
- ypos 155
+ name Write2
+ selected true
+ xpos -1250
+ ypos 147
 }

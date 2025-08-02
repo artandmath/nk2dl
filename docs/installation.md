@@ -191,19 +191,6 @@ submission:
     # - "GSVs: {gsvs}"
 ```
 
-# Usage example
-
-- The `tests/nukescripts` folder contains 2 simple nukescripts.
-  - an example nukescript for Nuke without GSVs.
-  - an example nukescript for Nuke 15.2+ using GSVs to demo multishot output.
-- Run the `tests/test_nk2dl.py` python script to submit the example nukescripts to Deadline.
-
-```bash
-cd /path/to/downloaded/nk2dl-repository/
-./.venv/Scripts/Activate-nk2dl.ps1
-python ./tests/test_nk2dl.py
-``` 
-- Test jobs should appear in the Deadline monitor after running `tests/test_nk2dl.py`.
 
 ## Script Copy functions
 - The example nukescripts use relative paths. If your Deadline is set to remap paths, then relative pathing can break if the project root is derived from the script location.
@@ -259,3 +246,17 @@ submission:
   script_copy1_path: '{nkdir}/archive/{basename}_{YYYY}-{MM}-{DD}_{hh}-{mm}-{ss}.nk'
   #script_copy2_path: etc
 ```
+# Usage example
+
+- The `tests/nukescripts` folder contains 2 simple nukescripts.
+  - an example nukescript for Nuke without GSVs.
+  - an example nukescript for Nuke 15.2+ using GSVs to demo multishot output.
+- Copy the `tests` folder to a location on the network that is available to the deadline workers.
+- Run the `tests/test_nk2dl.py` python script to submit the example nukescripts to Deadline.
+
+```bash
+cd /path/to/downloaded/nk2dl-repository/
+./.venv/Scripts/Activate-nk2dl.ps1
+python /path/to/tests/test_nk2dl.py
+``` 
+- Test jobs should appear in the Deadline monitor after running `tests/test_nk2dl.py`.
