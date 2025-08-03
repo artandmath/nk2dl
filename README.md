@@ -21,7 +21,7 @@ Welcome to `nk2dl` (aka Nuke to Deadline).
 - We have been using `nk2dl` in a production environment as a replacement to the Thinkbox submitter. We fall back to the Thinkbox submitter when missing a feature or something is broken, although months have passed since we've had to fall back.
 - Graph Scope Variable functionality hasn't been tested in production.
 - Interfaces to `nk2dl` python module are subject to change.
-- The project has only been tested under Windows 11. Linux will be tested at a later date. MacOS at an even later date.
+- The project has only been tested under Windows 10 & 11. Linux will be tested at a later date. MacOS at an even later date.
 - The project has no plans to implement the Deadline Draft, Eddy, Vray or Frameserver features from the Thinbox submitter.
 - `nk2dl` pulls a Nuke render license if it needs to call on the Nuke python module outside of a Nuke interactive session.
 - Connection to Deadline Web Service using SSL has yet to be tested.
