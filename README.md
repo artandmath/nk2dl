@@ -12,6 +12,10 @@ Welcome to `nk2dl` (aka Nuke to Deadline).
 
 - Read the [documentation](http://artandmath.github.io/nk2dl) to get `nk2dl` up and running.
 
+## Video Guide
+
+[![Video install guide for nk2dl (aka Nuke to Deadline)](https://img.youtube.com/vi/wIfZzAxLtlM/0.jpg)](https://www.youtube.com/watch?v=wIfZzAxLtlM)
+
 ## Caveats
 
 - We have been using `nk2dl` in a production environment as a replacement to the Thinkbox submitter. We fall back to the Thinkbox submitter when missing a feature or something is broken, although months have passed since we've had to fall back.
