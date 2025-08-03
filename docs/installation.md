@@ -122,7 +122,7 @@ sys.path.insert(0, '/path/to/parent/folder/containing/nk2dl')
 
 - To use Graph Scope Variables with Nuke 15.2+, a modified version of the deadline plugin is required.
 - Make a backup of `/path/to/your/deadline/repository/plugins/nuke`.
-- Replace the contents of `/path/to/your/deadline/repository/plugins/nuke` with the contents of `/path/to/nk2dl/src/deadline_plugins/nuke`.
+- Replace the contents of `/path/to/your/deadline/repository/plugins/Nuke` with the contents of `/path/to/nk2dl/src/deadline_plugins/Nuke`.
 
 ## 6. Install Deadline Web Service (optional)
 
