@@ -1044,11 +1044,14 @@ class NukeSubmission:
             String with tokens replaced
         """
         
-        # Apply GSV values if provided
-        if gsv_combination:
-            # Ensure the script is open
+        # Initialize nuke object once if needed for any token processing
+        nuke = None
+        if (gsv_combination or 
+            (write_node and any(token in template for token in output_stem_tokens + output_directory_tokens + write_node_tokens + output_tokens + render_order_tokens))):
             nuke = self._ensure_script_can_be_parsed()
-
+        
+        # Apply GSV values if provided
+        if gsv_combination and nuke:
             # Check Nuke version before attempting to use GSV
             nuke_version_str = nuke_utils.nuke_version(self.nuke_version) if self.nuke_version else nuke_utils.nuke_version()
             try:
@@ -1058,9 +1061,6 @@ class NukeSubmission:
                 supports_gsv = False
             
             if supports_gsv:
-                # Ensure the script is open
-                nuke = self._ensure_script_can_be_parsed()
-
                 root_node = nuke.root()
                 if 'gsv' in root_node.knobs():
                     gsv_knob = root_node['gsv']
@@ -1140,10 +1140,7 @@ class NukeSubmission:
                     value = self.script_filename
                 elif token in output_stem_tokens:
                     # File stem tokens require a write node to get output path
-                    if write_node:
-                        # Ensure the script is open
-                        nuke = self._ensure_script_can_be_parsed()
-
+                    if write_node and nuke:
                         node = nuke.toNode(write_node)
                         if node and node.Class() == "Write":
                             try:
@@ -1158,6 +1155,23 @@ class NukeSubmission:
                             value = self.script_stem  # Fallback to script stem
                     else:
                         value = self.script_stem  # Fallback to script stem
+                elif token in output_directory_tokens:
+                    # Output directory tokens require a write node to get output path
+                    if write_node and nuke:
+                        node = nuke.toNode(write_node)
+                        if node and node.Class() == "Write":
+                            try:
+                                output_file = self._get_node_pretty_path(node, gsv_combination)
+                                # Extract directory from the output path
+                                output_dir = os.path.dirname(output_file)
+                                value = output_dir
+                            except:
+                                logger.warning(f"Failed to get output directory for write node {write_node}")
+                                value = str(self.script_path.parent)  # Fallback to script directory
+                        else:
+                            value = str(self.script_path.parent)  # Fallback to script directory
+                    else:
+                        value = str(self.script_path.parent)  # Fallback to script directory
                 elif token in batch_name_tokens:
                     value = self.batch_name
                 elif token in frame_range_tokens:
@@ -1218,10 +1232,7 @@ class NukeSubmission:
                     elif token == '{ss}':
                         value = now.strftime('%S')
   
-                elif write_node and token in write_node_tokens + output_tokens + render_order_tokens:
-                    # Ensure the script is open
-                    nuke = self._ensure_script_can_be_parsed()
-
+                elif write_node and nuke and token in write_node_tokens + output_tokens + render_order_tokens:
                     node = nuke.toNode(write_node)
                     if node and node.Class() == "Write":
                         if token in write_node_tokens:
