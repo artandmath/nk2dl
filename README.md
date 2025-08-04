@@ -12,9 +12,9 @@ Welcome to `nk2dl` (aka Nuke to Deadline).
 
 - Read the [documentation](http://artandmath.github.io/nk2dl) to get `nk2dl` up and running.
 
-## Video Guide
+## Installation Video Walkthrough
 
-[![Video install guide for nk2dl (aka Nuke to Deadline)](https://img.youtube.com/vi/wIfZzAxLtlM/0.jpg)](https://www.youtube.com/watch?v=wIfZzAxLtlM)
+[![Video install walkthrough for nk2dl (aka Nuke to Deadline)](https://img.youtube.com/vi/wIfZzAxLtlM/0.jpg)](https://www.youtube.com/watch?v=wIfZzAxLtlM)
 
 ## Caveats
 
