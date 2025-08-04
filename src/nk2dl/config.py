@@ -307,7 +307,7 @@ class Config:
         logger.debug("=== Configuration Summary ===")
         logger.debug(f"Sources loaded:")
         logger.debug(f"  - Default config: ✓")
-        logger.debug(f"  - Project config: {'✓' if project_config else '✗'} {self._project_config_path if project_config else ''}")
+        logger.debug(f"  - Module config: {'✓' if project_config else '✗'} {self._project_config_path if project_config else ''}")
         logger.debug(f"  - Environment vars: {'✓' if env_count > 0 else '✗'} ({env_count} vars)")
         logger.debug(f"  - User config: {'✓' if user_config_loaded else '✗'} {user_config_path_used if user_config_loaded else ''}")
         
