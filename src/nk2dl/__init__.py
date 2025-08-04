@@ -5,13 +5,12 @@ A pure Python library for submitting nukescripts to Thinkbox Deadline.
 """
 
 from datetime import date
+from . import info
+import os
 
-__version__ = "0.1.0"
-__author__ = "Daniel Harkness"
-__email__ = "danielharkness@icloud.com"
-
-print(f"\nNuke to Deadline (nk2dl) v{__version__}")
-print(f"Copyright (c) {date.today().year} {__author__}. All Rights Reserved.\n")
+if not os.environ.get('NK2DL_HIDE_COPYRIGHT', ''):
+    print(f"\nNuke to Deadline (nk2dl) v{info.__version__}")
+    print(f"Copyright (c) {date.today().year} {info.__author__}. All Rights Reserved.\n")
 
 from .submission import submit_nuke_script as _submit_nuke_script
 

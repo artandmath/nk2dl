@@ -29,7 +29,8 @@ if not logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.setLevel(logging.DEBUG)
+    #logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.CRITICAL) # default to critical to avoid spamming the console
     logger.propagate = False
 
 # Flag to track if we need to reinitialize the logger with proper setup
@@ -92,7 +93,7 @@ class Config:
             'level': 'INFO',
             'file': None,
             'format': '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            'qt_level': 'INFO',     # Level for Qt debug messages (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            'qt_level': 'INFO',     # Level for Qt debug messages (DEBUG, INFO, WARNING, ERROR, CRITICAL) (used by nk2dl-gui module)
             'call_level': 'INFO'    # Level for caller information (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         },
         'submission': {

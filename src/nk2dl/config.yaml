@@ -14,8 +14,8 @@ deadline:
 
 logging:
   level: INFO
-  qt_level: INFO   # QT messages are output at DEBUG level or lower
   call_level: INFO # caller messages are output at DEBUG level or lower
+  qt_level: INFO   # QT messages are output at DEBUG level or lower (used by nk2dl-gui module)
   file: null
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
