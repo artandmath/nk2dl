@@ -12,6 +12,44 @@ from typing import Any, Dict, Optional
 import importlib.resources
 import inspect
 
+def _get_initial_log_level() -> int:
+    """Get the initial logging level from config.yaml for bootstrap logger.
+    
+    This is a lightweight function to avoid hardcoding the logger level
+    while avoiding duplication of the full config loading logic.
+    
+    Returns:
+        logging level constant (defaults to INFO if config unavailable)
+    """
+    try:
+        # Find the config.yaml file using the same logic as the main Config class
+        try:
+            import nk2dl
+            module_dir = Path(importlib.resources.files(nk2dl))
+            config_path = module_dir / 'config.yaml'
+        except (ImportError, TypeError):
+            # Fall back to relative path if module lookup fails
+            module_dir = Path(__file__).parent
+            config_path = module_dir / 'config.yaml'
+        
+        # Simple YAML load just for the logging.level
+        if config_path.exists():
+            with config_path.open('r') as f:
+                config_data = yaml.safe_load(f)
+                if (isinstance(config_data, dict) and 
+                    'logging' in config_data and 
+                    isinstance(config_data['logging'], dict) and 
+                    'level' in config_data['logging']):
+                    level_str = config_data['logging']['level']
+                    # Convert string level to logging constant
+                    return getattr(logging, level_str.upper(), logging.INFO)
+    except Exception:
+        # If anything fails, fall back to INFO
+        pass
+
+    # Default fallback
+    return logging.INFO
+
 # Get module-level logger with fallback format
 # Use basic logger initially to avoid circular import, will be upgraded later
 try:
@@ -29,9 +67,9 @@ if not logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s', datefmt='%H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    #logger.setLevel(logging.DEBUG)
-    logger.setLevel(logging.CRITICAL) # default to critical to avoid spamming the console
+    logger.setLevel(_get_initial_log_level()) # fetch initial level from config.yaml, defaults to INFO
     logger.propagate = False
+    logger.debug("Fallback logger initialized")
 
 # Flag to track if we need to reinitialize the logger with proper setup
 _logger_needs_setup = True
