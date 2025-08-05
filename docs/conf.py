@@ -38,7 +38,6 @@ myst_enable_extensions = [
     "colon_fence",
     "smartquotes",
     "replacements",
-    "linkify",
     "substitution",
     "tasklist",
 ]
@@ -46,11 +45,11 @@ myst_enable_extensions = [
 # Add support for both .rst and .md files
 source_suffix = {
     '.rst': None,
-    '.md': None,
+    '.md': 'myst_parser',
 }
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'index.md']  # Exclude Jekyll index.md to avoid conflict
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = 'sphinx_rtd_theme'
