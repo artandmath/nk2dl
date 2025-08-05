@@ -8,11 +8,11 @@ Welcome to `nk2dl` (aka Nuke to Deadline).
 - [`nk2dl-gui`](https://github.com/artandmath/nk2dl-gui) is a panel for submitting nodes to Deadline from the Nuke GUI.
 - [`nk2dl-cli`](https://github.com/artandmath/nk2dl-cli) is a command line tool for submitting nukescripts to Deadline from a terminal. 
 
-## Getting started
+## Getting Started
 
 - Read the [documentation](http://artandmath.github.io/nk2dl) to get `nk2dl` up and running.
 
-## Installation Video Walkthrough
+## Installation Walkthrough Video
 
 [![Video install walkthrough for nk2dl (aka Nuke to Deadline)](https://img.youtube.com/vi/wIfZzAxLtlM/0.jpg)](https://www.youtube.com/watch?v=wIfZzAxLtlM)
 
