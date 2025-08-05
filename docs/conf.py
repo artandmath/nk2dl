@@ -1,6 +1,4 @@
 # Configuration file for the Sphinx documentation builder.
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
 
 import os
 import sys
@@ -26,30 +24,10 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'sphinx.ext.githubpages',
-    'myst_parser',  # For markdown support
 ]
-
-# MyST parser configuration for markdown
-myst_enable_extensions = [
-    "deflist",
-    "fieldlist", 
-    "html_admonition",
-    "html_image",
-    "colon_fence",
-    "smartquotes",
-    "replacements",
-    "substitution",
-    "tasklist",
-]
-
-# Add support for both .rst and .md files
-source_suffix = {
-    '.rst': None,
-    '.md': 'myst_parser',
-}
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store', 'index.md']  # Exclude Jekyll index.md to avoid conflict
+exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 # -- Options for HTML output -------------------------------------------------
 html_theme = 'sphinx_rtd_theme'
