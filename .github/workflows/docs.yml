@@ -21,7 +21,15 @@ jobs:
     - name: Install dependencies
       run: |
         pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme
-        pip install -r requirements.txt  # Your project dependencies
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Setup Sphinx (if not already done)
+      run: |
+        if [ ! -f docs/conf.py ]; then
+          mkdir -p docs
+          cd docs
+          sphinx-quickstart . --no-sep -p "Your Project Name" -a "Your Name" -v "1.0" --ext-autodoc --makefile --no-batchfile -q
+        fi
     
     - name: Build documentation
       run: |
