@@ -1,6 +1,7 @@
 """ Version/author information """
 __version__ = "0.1.9-alpha"
 __author__ = "Daniel Harkness"
+__copyright__ = "2025 Daniel Harkness"
 __date__ = "2025-08-05"
 __mail__ = "danielharkness@icloud.com"
 __web__ = "www.danielharkness.com"

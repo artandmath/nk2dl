@@ -20,7 +20,9 @@ jobs:
     
     - name: Install dependencies
       run: |
-        pip install sphinx sphinx-autodoc-typehints sphinx-rtd-theme
+        # Install documentation specific requirements first
+        if [ -f docs/requirements.txt ]; then pip install -r docs/requirements.txt; fi
+        # Install project requirements if they exist
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     
     - name: Setup Sphinx (if not already done)
@@ -35,6 +37,8 @@ jobs:
       run: |
         cd docs
         make html
+        # Copy .nojekyll to build directory to prevent Jekyll processing
+        cp .nojekyll _build/html/
     
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/development'
