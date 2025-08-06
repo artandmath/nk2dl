@@ -64,6 +64,9 @@ thinkbox/
 /config.yaml
 /migration
 
+# Sphinx documentation
+docs/_build/
+
 # OS specific
 .DS_Store
 Thumbs.db 
