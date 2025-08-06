@@ -66,6 +66,7 @@ thinkbox/
 
 # Sphinx documentation
 docs/_build/
+# Keep built HTML docs in _site for GitHub Pages
 
 # OS specific
 .DS_Store

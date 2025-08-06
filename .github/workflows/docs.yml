@@ -9,6 +9,8 @@ on:
 jobs:
   docs:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v4
@@ -39,15 +41,15 @@ jobs:
         make html
         # Copy .nojekyll to build directory to prevent Jekyll processing
         cp .nojekyll _build/html/
-        # Copy built docs to a permanent location in the repo
-        rm -rf ../docs-html
-        cp -r _build/html ../docs-html
+        # Copy built docs to docs/_site/ folder (standard practice)
+        rm -rf _site
+        cp -r _build/html _site
     
     - name: Commit built documentation
       if: github.ref == 'refs/heads/development'
       run: |
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add docs-html/
+        git add docs/_site/
         git diff --staged --quiet || git commit -m "docs: update built documentation [skip ci]"
         git push
