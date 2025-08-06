@@ -1,0 +1,362 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>API Reference &mdash; nk2dl v0.1.9-alpha</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=61204282"></script>
+      <script src="../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="nk2dl package" href="nk2dl.html" />
+    <link rel="prev" title="Nuke to Deadline (nk2dl) API Documentation" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            nk2dl
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html">nk2dl package</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="#module-nk2dl">nk2dl Package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#nk2dl.submit_nuke_script"><code class="docutils literal notranslate"><span class="pre">submit_nuke_script()</span></code></a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">nk2dl</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">API Reference</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/modules.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="api-reference">
+<h1>API Reference<a class="headerlink" href="#api-reference" title="Link to this heading"></a></h1>
+<p>This section contains the complete API reference for the nk2dl package.</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="nk2dl.html">nk2dl package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#nk2dl.submit_nuke_script"><code class="docutils literal notranslate"><span class="pre">submit_nuke_script()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.config">nk2dl.config module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.config.ConfigError"><code class="docutils literal notranslate"><span class="pre">ConfigError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config"><code class="docutils literal notranslate"><span class="pre">Config</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.USER_CONFIG_PATH"><code class="docutils literal notranslate"><span class="pre">Config.USER_CONFIG_PATH</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.nk2dl"><code class="docutils literal notranslate"><span class="pre">Config.nk2dl</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.MODULE_DIR"><code class="docutils literal notranslate"><span class="pre">Config.MODULE_DIR</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.GLOBAL_CONFIG_PATH"><code class="docutils literal notranslate"><span class="pre">Config.GLOBAL_CONFIG_PATH</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.PROJECT_CONFIG_PATH"><code class="docutils literal notranslate"><span class="pre">Config.PROJECT_CONFIG_PATH</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.SPECIAL_ENV_VARS"><code class="docutils literal notranslate"><span class="pre">Config.SPECIAL_ENV_VARS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.DEFAULT_CONFIG"><code class="docutils literal notranslate"><span class="pre">Config.DEFAULT_CONFIG</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.__init__"><code class="docutils literal notranslate"><span class="pre">Config.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.load_config"><code class="docutils literal notranslate"><span class="pre">Config.load_config()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.get"><code class="docutils literal notranslate"><span class="pre">Config.get()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.trigger_debug_if_enabled"><code class="docutils literal notranslate"><span class="pre">Config.trigger_debug_if_enabled()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.config.Config.debug_config_info"><code class="docutils literal notranslate"><span class="pre">Config.debug_config_info()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.config.debug_config"><code class="docutils literal notranslate"><span class="pre">debug_config()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.connection">nk2dl.connection module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors"><code class="docutils literal notranslate"><span class="pre">Colors</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.RED"><code class="docutils literal notranslate"><span class="pre">Colors.RED</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.GREEN"><code class="docutils literal notranslate"><span class="pre">Colors.GREEN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.YELLOW"><code class="docutils literal notranslate"><span class="pre">Colors.YELLOW</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.BLUE"><code class="docutils literal notranslate"><span class="pre">Colors.BLUE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.MAGENTA"><code class="docutils literal notranslate"><span class="pre">Colors.MAGENTA</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.CYAN"><code class="docutils literal notranslate"><span class="pre">Colors.CYAN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.Colors.RESET"><code class="docutils literal notranslate"><span class="pre">Colors.RESET</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.connection.colored_text"><code class="docutils literal notranslate"><span class="pre">colored_text()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.connection.DeadlineConnection"><code class="docutils literal notranslate"><span class="pre">DeadlineConnection</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.DeadlineConnection.__init__"><code class="docutils literal notranslate"><span class="pre">DeadlineConnection.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.DeadlineConnection.ensure_connected"><code class="docutils literal notranslate"><span class="pre">DeadlineConnection.ensure_connected()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.DeadlineConnection.get_groups"><code class="docutils literal notranslate"><span class="pre">DeadlineConnection.get_groups()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.DeadlineConnection.get_pools"><code class="docutils literal notranslate"><span class="pre">DeadlineConnection.get_pools()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.connection.DeadlineConnection.submit_job"><code class="docutils literal notranslate"><span class="pre">DeadlineConnection.submit_job()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.connection.get_connection"><code class="docutils literal notranslate"><span class="pre">get_connection()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.errors">nk2dl.errors module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.NK2DLError"><code class="docutils literal notranslate"><span class="pre">NK2DLError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.ConfigError"><code class="docutils literal notranslate"><span class="pre">ConfigError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.ValidationError"><code class="docutils literal notranslate"><span class="pre">ValidationError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.DeadlineError"><code class="docutils literal notranslate"><span class="pre">DeadlineError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.SubmissionError"><code class="docutils literal notranslate"><span class="pre">SubmissionError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.NukeError"><code class="docutils literal notranslate"><span class="pre">NukeError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.ParserError"><code class="docutils literal notranslate"><span class="pre">ParserError</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.errors.handle_error"><code class="docutils literal notranslate"><span class="pre">handle_error()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.framerange">nk2dl.framerange module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange"><code class="docutils literal notranslate"><span class="pre">FrameRange</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.RANGE_PATTERN"><code class="docutils literal notranslate"><span class="pre">FrameRange.RANGE_PATTERN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.SINGLE_PATTERN"><code class="docutils literal notranslate"><span class="pre">FrameRange.SINGLE_PATTERN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.FRAME_RANGE_PATTERN"><code class="docutils literal notranslate"><span class="pre">FrameRange.FRAME_RANGE_PATTERN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.TOKEN_PATTERN"><code class="docutils literal notranslate"><span class="pre">FrameRange.TOKEN_PATTERN</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.__init__"><code class="docutils literal notranslate"><span class="pre">FrameRange.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.is_valid_syntax"><code class="docutils literal notranslate"><span class="pre">FrameRange.is_valid_syntax()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.normalize_hero_frames"><code class="docutils literal notranslate"><span class="pre">FrameRange.normalize_hero_frames()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.substitute_tokens"><code class="docutils literal notranslate"><span class="pre">FrameRange.substitute_tokens()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.substitute_tokens_from_nuke"><code class="docutils literal notranslate"><span class="pre">FrameRange.substitute_tokens_from_nuke()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.substitute_tokens_from_script"><code class="docutils literal notranslate"><span class="pre">FrameRange.substitute_tokens_from_script()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.expand_range"><code class="docutils literal notranslate"><span class="pre">FrameRange.expand_range()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.framerange.FrameRange.__str__"><code class="docutils literal notranslate"><span class="pre">FrameRange.__str__()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.info">nk2dl.info module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.logging">nk2dl.logging module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.Nk2dlLogger"><code class="docutils literal notranslate"><span class="pre">Nk2dlLogger</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.logging.Nk2dlLogger.debug"><code class="docutils literal notranslate"><span class="pre">Nk2dlLogger.debug()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.disable_caller_info"><code class="docutils literal notranslate"><span class="pre">disable_caller_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.enable_caller_info"><code class="docutils literal notranslate"><span class="pre">enable_caller_info()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.get_nk2dl_logger"><code class="docutils literal notranslate"><span class="pre">get_nk2dl_logger()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.log_session_start"><code class="docutils literal notranslate"><span class="pre">log_session_start()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.setup_logging"><code class="docutils literal notranslate"><span class="pre">setup_logging()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.fix_existing_loggers"><code class="docutils literal notranslate"><span class="pre">fix_existing_loggers()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.logging.configure_logging"><code class="docutils literal notranslate"><span class="pre">configure_logging()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.nuke_utils">nk2dl.nuke_utils module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.nuke_utils.nuke_module"><code class="docutils literal notranslate"><span class="pre">nuke_module()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.nuke_utils.parser_module"><code class="docutils literal notranslate"><span class="pre">parser_module()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.nuke_utils.node_pretty_path"><code class="docutils literal notranslate"><span class="pre">node_pretty_path()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.nuke_utils.nuke_version"><code class="docutils literal notranslate"><span class="pre">nuke_version()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.parser">nk2dl.parser module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeKnob"><code class="docutils literal notranslate"><span class="pre">NukeKnob</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeKnob.__init__"><code class="docutils literal notranslate"><span class="pre">NukeKnob.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeKnob.value"><code class="docutils literal notranslate"><span class="pre">NukeKnob.value()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeKnob.evaluate"><code class="docutils literal notranslate"><span class="pre">NukeKnob.evaluate()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.GSVKnob"><code class="docutils literal notranslate"><span class="pre">GSVKnob</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.GSVKnob.__init__"><code class="docutils literal notranslate"><span class="pre">GSVKnob.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.GSVKnob.getListOptions"><code class="docutils literal notranslate"><span class="pre">GSVKnob.getListOptions()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.GSVKnob.getGsvValue"><code class="docutils literal notranslate"><span class="pre">GSVKnob.getGsvValue()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.GSVKnob.setGsvValue"><code class="docutils literal notranslate"><span class="pre">GSVKnob.setGsvValue()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode"><code class="docutils literal notranslate"><span class="pre">NukeNode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.__init__"><code class="docutils literal notranslate"><span class="pre">NukeNode.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.name"><code class="docutils literal notranslate"><span class="pre">NukeNode.name()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.Class"><code class="docutils literal notranslate"><span class="pre">NukeNode.Class()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.knobs"><code class="docutils literal notranslate"><span class="pre">NukeNode.knobs()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.__getitem__"><code class="docutils literal notranslate"><span class="pre">NukeNode.__getitem__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.firstFrame"><code class="docutils literal notranslate"><span class="pre">NukeNode.firstFrame()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeNode.lastFrame"><code class="docutils literal notranslate"><span class="pre">NukeNode.lastFrame()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.RootNode"><code class="docutils literal notranslate"><span class="pre">RootNode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.RootNode.__init__"><code class="docutils literal notranslate"><span class="pre">RootNode.__init__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.WriteNode"><code class="docutils literal notranslate"><span class="pre">WriteNode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.WriteNode.__init__"><code class="docutils literal notranslate"><span class="pre">WriteNode.__init__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeParser"><code class="docutils literal notranslate"><span class="pre">NukeParser</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeParser.__init__"><code class="docutils literal notranslate"><span class="pre">NukeParser.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeParser.scriptOpen"><code class="docutils literal notranslate"><span class="pre">NukeParser.scriptOpen()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeParser.root"><code class="docutils literal notranslate"><span class="pre">NukeParser.root()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeParser.toNode"><code class="docutils literal notranslate"><span class="pre">NukeParser.toNode()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.parser.NukeParser.allNodes"><code class="docutils literal notranslate"><span class="pre">NukeParser.allNodes()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.parser.create_parser"><code class="docutils literal notranslate"><span class="pre">create_parser()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.submission">nk2dl.submission module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNode"><code class="docutils literal notranslate"><span class="pre">WriteNode</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNode.NK2DL_TO_DEADLINE"><code class="docutils literal notranslate"><span class="pre">WriteNode.NK2DL_TO_DEADLINE</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNode.BOOLEAN_PARAMS"><code class="docutils literal notranslate"><span class="pre">WriteNode.BOOLEAN_PARAMS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNode.PLUGIN_INFO_KEYS"><code class="docutils literal notranslate"><span class="pre">WriteNode.PLUGIN_INFO_KEYS</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNode.PLUGIN_INFO_KEY_PREFIXES"><code class="docutils literal notranslate"><span class="pre">WriteNode.PLUGIN_INFO_KEY_PREFIXES</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNode.__init__"><code class="docutils literal notranslate"><span class="pre">WriteNode.__init__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes"><code class="docutils literal notranslate"><span class="pre">WriteNodes</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.__init__"><code class="docutils literal notranslate"><span class="pre">WriteNodes.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.get_names"><code class="docutils literal notranslate"><span class="pre">WriteNodes.get_names()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.get_overrides"><code class="docutils literal notranslate"><span class="pre">WriteNodes.get_overrides()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.get_job_info_overrides"><code class="docutils literal notranslate"><span class="pre">WriteNodes.get_job_info_overrides()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.get_plugin_info_overrides"><code class="docutils literal notranslate"><span class="pre">WriteNodes.get_plugin_info_overrides()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.__bool__"><code class="docutils literal notranslate"><span class="pre">WriteNodes.__bool__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.WriteNodes.__len__"><code class="docutils literal notranslate"><span class="pre">WriteNodes.__len__()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.submission.NukeSubmission"><code class="docutils literal notranslate"><span class="pre">NukeSubmission</span></code></a><ul>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.NukeSubmission.__init__"><code class="docutils literal notranslate"><span class="pre">NukeSubmission.__init__()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.NukeSubmission.submit"><code class="docutils literal notranslate"><span class="pre">NukeSubmission.submit()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="nk2dl.html#nk2dl.submission.NukeSubmission.submit_as_build_job"><code class="docutils literal notranslate"><span class="pre">NukeSubmission.submit_as_build_job()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.submission.submit_nuke_script"><code class="docutils literal notranslate"><span class="pre">submit_nuke_script()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="nk2dl.html#module-nk2dl.subprocess">nk2dl.subprocess module</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.subprocess.serialize_kwargs"><code class="docutils literal notranslate"><span class="pre">serialize_kwargs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.subprocess.submit_script_via_subprocess"><code class="docutils literal notranslate"><span class="pre">submit_script_via_subprocess()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.subprocess.create_submission_script"><code class="docutils literal notranslate"><span class="pre">create_submission_script()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.subprocess.execute_submission_script"><code class="docutils literal notranslate"><span class="pre">execute_submission_script()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="nk2dl.html#nk2dl.subprocess.script_parsing_required"><code class="docutils literal notranslate"><span class="pre">script_parsing_required()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="module-nk2dl">
+<span id="nk2dl-package"></span><h1>nk2dl Package<a class="headerlink" href="#module-nk2dl" title="Link to this heading"></a></h1>
+<p>Nuke to Deadline Submitter - Core Library</p>
+<p>A pure Python library for submitting nukescripts to Thinkbox Deadline.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="nk2dl.submit_nuke_script">
+<span class="sig-prename descclassname"><span class="pre">nk2dl.</span></span><span class="sig-name descname"><span class="pre">submit_nuke_script</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">script_path</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/nk2dl.html#submit_nuke_script"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#nk2dl.submit_nuke_script" title="Link to this definition"></a></dt>
+<dd><p>Submit a Nuke script to Deadline render farm.</p>
+<p>This is the primary entry point for the nk2dl package. It handles parsing the script,
+configuring job parameters, and submitting to Deadline.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>script_path</strong> (<a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.13)"><em>str</em></a>) – Path to the Nuke script file (.nk)</p></li>
+<li><p><strong>**kwargs</strong> – Submission parameters</p></li>
+<li><p><strong>list</strong> (<em># For full parameter</em>)</p></li>
+<li><p><strong>documentation</strong> (<em>see the NukeSubmission class</em>)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><dl class="simple">
+<dt>List of dictionaries containing job information:</dt><dd><ul class="simple">
+<li><p>job_id (str): The Deadline job ID</p></li>
+<li><p>render_order (int): The render order value</p></li>
+<li><p>plugin_info (dict): Plugin info used for submission</p></li>
+<li><p>job_info (dict): Job info used for submission</p></li>
+<li><p>deadline_return (dict): Raw return data from Deadline</p></li>
+</ul>
+</dd>
+</dl>
+</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#list" title="(in Python v3.13)">list</a></p>
+</dd>
+</dl>
+<p class="rubric">Examples</p>
+<p>Basic usage:
+&gt;&gt;&gt; from nk2dl import submit_nuke_script
+&gt;&gt;&gt; submit_nuke_script(“path/to/script.nk”)</p>
+<p>With specific write nodes:
+&gt;&gt;&gt; submit_nuke_script(“path/to/script.nk”, write_nodes=[“Write1”, “Write2”])</p>
+<p>With job parameters:
+&gt;&gt;&gt; submit_nuke_script(
+…     “path/to/script.nk”,
+…     priority=80,
+…     pool=”nuke”,
+…     chunk_size=10,
+…     comment=”Render {script} on farm”
+… )</p>
+<p>Submit as a Python script job (ScriptJob in Deadline):
+&gt;&gt;&gt; submit_nuke_script(
+…     “path/to/script.nk”,
+…     submission_as_script_job=True
+… )</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><a class="reference internal" href="nk2dl.html#nk2dl.errors.NK2DLError" title="nk2dl.errors.NK2DLError"><strong>NK2DLError</strong></a> – For configuration or submission errors</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="Nuke to Deadline (nk2dl) API Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="nk2dl.html" class="btn btn-neutral float-right" title="nk2dl package" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Daniel Harkness.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

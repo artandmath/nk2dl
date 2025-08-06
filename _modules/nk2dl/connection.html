@@ -1,0 +1,674 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>nk2dl.connection &mdash; nk2dl v0.1.9-alpha</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=61204282"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            nk2dl
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">API Reference:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../api/modules.html#module-nk2dl">nk2dl Package</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">nk2dl</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+          <li class="breadcrumb-item"><a href="../nk2dl.html">nk2dl</a></li>
+      <li class="breadcrumb-item active">nk2dl.connection</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for nk2dl.connection</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Deadline connection handling.</span>
+
+<span class="sd">This module provides a unified interface for connecting to Deadline using either</span>
+<span class="sd">the Web Service API or command-line interface.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">subprocess</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">sys</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">config</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.errors</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeadlineError</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">logger</span> <span class="k">as</span> <span class="n">common_logger</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.logging</span><span class="w"> </span><span class="kn">import</span> <span class="n">setup_logging</span>
+
+<span class="c1"># Create a module-specific logger</span>
+<span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logging</span><span class="p">(</span><span class="s1">&#39;nk2dl.deadline.connection&#39;</span><span class="p">)</span>
+
+<span class="c1"># ANSI color codes for terminal output</span>
+<div class="viewcode-block" id="Colors">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.Colors">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Colors</span><span class="p">:</span>
+    <span class="n">RED</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[91m&#39;</span>
+    <span class="n">GREEN</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[92m&#39;</span>
+    <span class="n">YELLOW</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[93m&#39;</span>
+    <span class="n">BLUE</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[94m&#39;</span>
+    <span class="n">MAGENTA</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[95m&#39;</span>
+    <span class="n">CYAN</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[96m&#39;</span>
+    <span class="n">RESET</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\033</span><span class="s1">[0m&#39;</span></div>
+
+
+<div class="viewcode-block" id="colored_text">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.colored_text">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">colored_text</span><span class="p">(</span><span class="n">text</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">color_code</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Add color to text for terminal output.</span>
+<span class="sd">    </span>
+<span class="sd">    Args:</span>
+<span class="sd">        text: Text to colorize</span>
+<span class="sd">        color_code: ANSI color code</span>
+<span class="sd">        </span>
+<span class="sd">    Returns:</span>
+<span class="sd">        Colorized text string</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">color_code</span><span class="si">}{</span><span class="n">text</span><span class="si">}{</span><span class="n">Colors</span><span class="o">.</span><span class="n">RESET</span><span class="si">}</span><span class="s2">&quot;</span></div>
+
+
+<div class="viewcode-block" id="DeadlineConnection">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.DeadlineConnection">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">DeadlineConnection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Manages connection to Deadline.</span>
+<span class="sd">    </span>
+<span class="sd">    Provides a unified interface regardless of whether using Web Service</span>
+<span class="sd">    or command-line interface.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+<div class="viewcode-block" id="DeadlineConnection.__init__">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.DeadlineConnection.__init__">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize connection based on configuration.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.use_web_service&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span> <span class="o">=</span> <span class="kc">None</span>
+        
+        <span class="c1"># Don&#39;t initialize connection in __init__ to make testing easier</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">False</span>
+        
+        <span class="c1"># For command line, verify the command path exists - but only if we&#39;re using command line</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span></div>
+
+    
+<div class="viewcode-block" id="DeadlineConnection.ensure_connected">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.DeadlineConnection.ensure_connected">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">ensure_connected</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Ensure connection is initialized.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_init_web_service</span><span class="p">()</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_initialized</span> <span class="o">=</span> <span class="kc">True</span></div>
+
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_web_service</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize web service connection.&quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="kn">from</span><span class="w"> </span><span class="nn">Deadline.DeadlineConnect</span><span class="w"> </span><span class="kn">import</span> <span class="n">DeadlineCon</span> <span class="k">as</span> <span class="n">Connect</span>
+        <span class="k">except</span> <span class="ne">ImportError</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.commandline_on_fail&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                <span class="n">fallback_msg</span> <span class="o">=</span> <span class="s2">&quot;Failed to import Deadline Web Service API. Attempting fallback to command line.&quot;</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">fallback_msg</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">RED</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Successfully connected via command line.&quot;</span><span class="p">)</span>
+                    <span class="k">return</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Command line fallback also failed.&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to connect via both Web Service and command line: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Command line fallback disabled in config.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span>
+                    <span class="s2">&quot;Failed to import Deadline Web Service API and fallback is disabled. &quot;</span>
+                    <span class="s2">&quot;Enable fallback by setting deadline.commandline_on_fail=true in config.&quot;</span>
+                <span class="p">)</span>
+        
+        <span class="n">host</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.host&#39;</span><span class="p">,</span> <span class="s1">&#39;localhost&#39;</span><span class="p">)</span>
+        <span class="n">port</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.port&#39;</span><span class="p">,</span> <span class="mi">8081</span><span class="p">)</span>
+        <span class="n">use_ssl</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.ssl&#39;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+        <span class="n">ssl_cert</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.ssl_cert&#39;</span><span class="p">)</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">use_ssl</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">ssl_cert</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="s2">&quot;SSL certificate path not provided. Please set NK2DL_DEADLINE_SSL__CERT environment variable.&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">ssl_cert</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;SSL certificate not found at path: </span><span class="si">{</span><span class="n">ssl_cert</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                
+                <span class="c1"># For PFX/P12 files, we don&#39;t need to verify the CA</span>
+                <span class="c1"># The certificate itself contains the private key and certificate chain</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span> <span class="o">=</span> <span class="n">Connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">,</span> <span class="n">use_ssl</span><span class="p">,</span> <span class="n">ssl_cert</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># For non-SSL connections, only pass host and port</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span> <span class="o">=</span> <span class="n">Connect</span><span class="p">(</span><span class="n">host</span><span class="p">,</span> <span class="n">port</span><span class="p">)</span>
+            
+            <span class="c1"># Test connection</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">groups</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span><span class="o">.</span><span class="n">Groups</span><span class="o">.</span><span class="n">GetGroupNames</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">groups</span> <span class="ow">is</span> <span class="kc">None</span> <span class="ow">or</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">groups</span><span class="p">,</span> <span class="nb">list</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Invalid response from Groups.GetGroupNames(): </span><span class="si">{</span><span class="n">groups</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Successfully connected to Deadline Web Service at </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.commandline_on_fail&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                    <span class="n">fallback_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Failed to test Deadline Web Service connection at </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Attempting fallback to command line.&quot;</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">fallback_msg</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">RED</span><span class="p">))</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="kc">False</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Successfully connected via command line.&quot;</span><span class="p">)</span>
+                        <span class="k">return</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">fallback_error</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Command line fallback also failed.&quot;</span><span class="p">)</span>
+                        <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to connect via both Web Service and command line. Web Service error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, Command line error: </span><span class="si">{</span><span class="n">fallback_error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Command line fallback disabled in config.&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span>
+                        <span class="sa">f</span><span class="s2">&quot;Failed to connect to Deadline Web Service and fallback is disabled. &quot;</span>
+                        <span class="sa">f</span><span class="s2">&quot;Enable fallback by setting deadline.commandline_on_fail=true in config. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                    <span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.commandline_on_fail&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                <span class="n">fallback_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Failed to connect to Deadline Web Service at </span><span class="si">{</span><span class="n">host</span><span class="si">}</span><span class="s2">:</span><span class="si">{</span><span class="n">port</span><span class="si">}</span><span class="s2">. Attempting fallback to command line.&quot;</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">fallback_msg</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">RED</span><span class="p">))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Successfully connected via command line.&quot;</span><span class="p">)</span>
+                    <span class="k">return</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">fallback_error</span><span class="p">:</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Command line fallback also failed.&quot;</span><span class="p">)</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to connect via both Web Service and command line. Web Service error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">, Command line error: </span><span class="si">{</span><span class="n">fallback_error</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="s2">&quot;Web Service connection failed. Command line fallback disabled in config.&quot;</span><span class="p">)</span>
+                <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Failed to connect to Deadline Web Service and fallback is disabled. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Enable fallback by setting deadline.commandline_on_fail=true in config. Error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_init_command_line</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize command-line interface.&quot;&quot;&quot;</span>
+        <span class="c1"># Test connection by getting repository path directly</span>
+        <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">,</span> <span class="s2">&quot;-GetRepositoryPath&quot;</span><span class="p">]</span>
+        
+        <span class="n">startupinfo</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">:</span>
+            <span class="n">startupinfo</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">STARTUPINFO</span><span class="p">()</span>
+            <span class="n">startupinfo</span><span class="o">.</span><span class="n">dwFlags</span> <span class="o">|=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">STARTF_USESHOWWINDOW</span>
+        
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+                <span class="n">args</span><span class="p">,</span>
+                <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                <span class="n">startupinfo</span><span class="o">=</span><span class="n">startupinfo</span>
+            <span class="p">)</span>
+            <span class="n">output</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+            
+            <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+            
+            <span class="n">path</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="s2">&quot;Empty repository path returned&quot;</span><span class="p">)</span>
+                
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Successfully connected to Deadline via command-line&quot;</span><span class="p">)</span>
+            
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to connect to Deadline: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="DeadlineConnection.get_groups">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.DeadlineConnection.get_groups">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_groups</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get list of Deadline groups.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of group names</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensure_connected</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span><span class="o">.</span><span class="n">Groups</span><span class="o">.</span><span class="n">GetGroupNames</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.commandline_on_fail&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                    <span class="n">fallback_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Failed to get groups via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Falling back to command line.&quot;</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">fallback_msg</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">RED</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_groups</span><span class="p">()</span>  <span class="c1"># Retry with command line</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get groups via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;dotnet&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">:</span>
+                <span class="c1"># For dotnet command string, split into command parts</span>
+                <span class="n">command_parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">command_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-Groups&quot;</span><span class="p">)</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="n">command_parts</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">,</span> <span class="s2">&quot;-Groups&quot;</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+                    <span class="n">args</span><span class="p">,</span>
+                    <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                    <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                    <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span>
+                <span class="p">)</span>
+                <span class="n">output</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+                
+                <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+                
+                <span class="k">return</span> <span class="p">[</span><span class="n">g</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">g</span> <span class="ow">in</span> <span class="n">output</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">g</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get groups: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="DeadlineConnection.get_pools">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.DeadlineConnection.get_pools">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_pools</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get list of Deadline pools.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            List of pool names</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensure_connected</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span><span class="o">.</span><span class="n">Pools</span><span class="o">.</span><span class="n">GetPoolNames</span><span class="p">()</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.commandline_on_fail&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                    <span class="n">fallback_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Failed to get pools via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Falling back to command line.&quot;</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">fallback_msg</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">RED</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_pools</span><span class="p">()</span>  <span class="c1"># Retry with command line</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get pools via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;dotnet&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">:</span>
+                <span class="c1"># For dotnet command string, split into command parts</span>
+                <span class="n">command_parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">command_parts</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;-Pools&quot;</span><span class="p">)</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="n">command_parts</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">,</span> <span class="s2">&quot;-Pools&quot;</span><span class="p">]</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+                    <span class="n">args</span><span class="p">,</span>
+                    <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                    <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                    <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span>
+                <span class="p">)</span>
+                <span class="n">output</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+                
+                <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+                
+                <span class="k">return</span> <span class="p">[</span><span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">output</span><span class="o">.</span><span class="n">splitlines</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">strip</span><span class="p">()]</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to get pools: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="DeadlineConnection.submit_job">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.DeadlineConnection.submit_job">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">submit_job</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">job_info</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">plugin_info</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">],</span> <span class="n">auxiliary_files</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Submit a job to Deadline.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            job_info: Job information dictionary</span>
+<span class="sd">            plugin_info: Plugin-specific information dictionary</span>
+<span class="sd">            auxiliary_files: Optional list of auxiliary files to include with the job</span>
+<span class="sd">            </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dictionary containing:</span>
+<span class="sd">                - job_id: The Deadline job ID</span>
+<span class="sd">                - raw_response: The raw response from Deadline</span>
+<span class="sd">                - connection_type: Either &#39;web&#39; or &#39;command_line&#39;</span>
+<span class="sd">            </span>
+<span class="sd">        Raises:</span>
+<span class="sd">            DeadlineError: If job submission fails</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ensure_connected</span><span class="p">()</span>
+        
+        <span class="c1"># Set UserName to current user if not specified</span>
+        <span class="k">if</span> <span class="s1">&#39;UserName&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">job_info</span><span class="p">:</span>
+            <span class="kn">import</span><span class="w"> </span><span class="nn">getpass</span>
+            <span class="n">job_info</span><span class="p">[</span><span class="s1">&#39;UserName&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">getpass</span><span class="o">.</span><span class="n">getuser</span><span class="p">()</span>
+        
+        <span class="c1"># Convert all values to strings</span>
+        <span class="k">def</span><span class="w"> </span><span class="nf">stringify_dict</span><span class="p">(</span><span class="n">d</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+            <span class="k">return</span> <span class="p">{</span><span class="n">k</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">v</span><span class="p">)</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">d</span><span class="o">.</span><span class="n">items</span><span class="p">()}</span>
+        
+        <span class="n">job_info_str</span> <span class="o">=</span> <span class="n">stringify_dict</span><span class="p">(</span><span class="n">job_info</span><span class="p">)</span>
+        <span class="n">plugin_info_str</span> <span class="o">=</span> <span class="n">stringify_dict</span><span class="p">(</span><span class="n">plugin_info</span><span class="p">)</span>
+        
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span><span class="p">:</span>
+            <span class="c1"># Submit via web service using direct JSON API</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitting job via web service&quot;</span><span class="p">)</span>
+
+            <span class="k">try</span><span class="p">:</span>
+                <span class="kn">import</span><span class="w"> </span><span class="nn">json</span>
+                
+                <span class="c1"># Create the payload as required by the Deadline REST API</span>
+                <span class="n">payload</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s2">&quot;JobInfo&quot;</span><span class="p">:</span> <span class="n">job_info_str</span><span class="p">,</span>
+                    <span class="s2">&quot;PluginInfo&quot;</span><span class="p">:</span> <span class="n">plugin_info_str</span><span class="p">,</span>
+                    <span class="s2">&quot;AuxFiles&quot;</span><span class="p">:</span> <span class="p">[]</span>  <span class="c1"># Initialize empty array for auxiliary files</span>
+                <span class="p">}</span>
+                
+                <span class="c1"># Use provided auxiliary files if any</span>
+                <span class="k">if</span> <span class="n">auxiliary_files</span><span class="p">:</span>
+                    <span class="c1"># Ensure all files are strings</span>
+                    <span class="n">aux_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">auxiliary_files</span><span class="p">]</span>
+                    <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;AuxFiles&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">aux_files</span>
+                
+                <span class="c1"># Log the JSON payload for debugging</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitting job JSON payload via deadline web service:</span><span class="se">\n</span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span><span class="w"> </span><span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                
+                <span class="c1"># Submit job with correct arguments to the API</span>
+                <span class="k">if</span> <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;AuxFiles&quot;</span><span class="p">]:</span>
+                    <span class="c1"># If we have auxiliary files, pass them to the API</span>
+                    <span class="n">job_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span><span class="o">.</span><span class="n">Jobs</span><span class="o">.</span><span class="n">SubmitJob</span><span class="p">(</span><span class="n">job_info_str</span><span class="p">,</span> <span class="n">plugin_info_str</span><span class="p">,</span> <span class="n">payload</span><span class="p">[</span><span class="s2">&quot;AuxFiles&quot;</span><span class="p">])</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Otherwise, use the standard call without auxiliary files</span>
+                    <span class="n">job_response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_web_client</span><span class="o">.</span><span class="n">Jobs</span><span class="o">.</span><span class="n">SubmitJob</span><span class="p">(</span><span class="n">job_info_str</span><span class="p">,</span> <span class="n">plugin_info_str</span><span class="p">)</span>
+                
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">job_response</span><span class="p">,</span> <span class="nb">str</span><span class="p">)</span> <span class="ow">and</span> <span class="n">job_response</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;Error:&quot;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to submit job: </span><span class="si">{</span><span class="n">job_response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                
+                <span class="c1"># Extract job ID from response - handle both string and dict responses</span>
+                <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">job_response</span><span class="p">,</span> <span class="nb">dict</span><span class="p">)</span> <span class="ow">and</span> <span class="s1">&#39;_id&#39;</span> <span class="ow">in</span> <span class="n">job_response</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;Props&#39;</span><span class="p">,</span> <span class="p">{}):</span>
+                    <span class="c1"># Extract just the ID from the response dictionary</span>
+                    <span class="n">job_id</span> <span class="o">=</span> <span class="n">job_response</span><span class="p">[</span><span class="s1">&#39;Props&#39;</span><span class="p">][</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span>
+                    <span class="c1"># Format the response in the log</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;===== WEB SERVICE RESPONSE START =====</span><span class="se">\n</span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">job_response</span><span class="p">,</span><span class="w"> </span><span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">===== WEB SERVICE RESPONSE END =====&quot;</span><span class="p">)</span>
+                <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">job_response</span><span class="p">,</span> <span class="nb">str</span><span class="p">):</span>
+                    <span class="n">job_id</span> <span class="o">=</span> <span class="n">job_response</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Try to find any ID property in the response</span>
+                    <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">job_response</span><span class="p">,</span> <span class="nb">dict</span><span class="p">):</span>
+                        <span class="c1"># Log the response for debugging with clear formatting</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;===== WEB SERVICE RESPONSE START =====</span><span class="se">\n</span><span class="si">{</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">job_response</span><span class="p">,</span><span class="w"> </span><span class="n">indent</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span><span class="si">}</span><span class="se">\n</span><span class="s2">===== WEB SERVICE RESPONSE END =====&quot;</span><span class="p">)</span>
+                        <span class="c1"># Look for &#39;_id&#39; anywhere in the dictionary</span>
+                        <span class="k">if</span> <span class="s1">&#39;_id&#39;</span> <span class="ow">in</span> <span class="n">job_response</span><span class="p">:</span>
+                            <span class="n">job_id</span> <span class="o">=</span> <span class="n">job_response</span><span class="p">[</span><span class="s1">&#39;_id&#39;</span><span class="p">]</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found job ID in response: </span><span class="si">{</span><span class="n">job_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">else</span><span class="p">:</span>
+                            <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not find job ID in response: </span><span class="si">{</span><span class="n">job_response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Unexpected job response format: </span><span class="si">{</span><span class="n">job_response</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Job submitted successfully with ID: </span><span class="si">{</span><span class="n">job_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="c1"># Return a dictionary with job ID, raw response, and connection type</span>
+                <span class="k">return</span> <span class="p">{</span>
+                    <span class="s2">&quot;job_id&quot;</span><span class="p">:</span> <span class="n">job_id</span><span class="p">,</span>
+                    <span class="s2">&quot;raw_response&quot;</span><span class="p">:</span> <span class="n">job_response</span><span class="p">,</span>
+                    <span class="s2">&quot;connection_type&quot;</span><span class="p">:</span> <span class="s2">&quot;web&quot;</span>
+                <span class="p">}</span>
+                
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">error_message</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                <span class="c1"># Check for auxiliary file not found error</span>
+                <span class="k">if</span> <span class="s2">&quot;Error: could not find Auxiliary submission file:&quot;</span> <span class="ow">in</span> <span class="n">error_message</span><span class="p">:</span>
+                    <span class="n">file_access_warning</span> <span class="o">=</span> <span class="p">(</span>
+                        <span class="s2">&quot;The Deadline Web Service cannot access the auxiliary files. &quot;</span>
+                        <span class="s2">&quot;Ensure the Deadline Web Service has the same file access rights as your machine. &quot;</span>
+                        <span class="s2">&quot;Network drives must be mounted and accessible on the Deadline Web Service server.&quot;</span>
+                    <span class="p">)</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">file_access_warning</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">YELLOW</span><span class="p">))</span>
+                
+                <span class="k">if</span> <span class="n">config</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;deadline.commandline_on_fail&#39;</span><span class="p">,</span> <span class="kc">True</span><span class="p">):</span>
+                    <span class="n">fallback_msg</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;Failed to submit job via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. Falling back to command line.&quot;</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">colored_text</span><span class="p">(</span><span class="n">fallback_msg</span><span class="p">,</span> <span class="n">Colors</span><span class="o">.</span><span class="n">YELLOW</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_setup_command_line</span><span class="p">()</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">use_web_service</span> <span class="o">=</span> <span class="kc">False</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">_init_command_line</span><span class="p">()</span>
+                    <span class="c1"># Need to also pass auxiliary_files when retrying</span>
+                    <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">submit_job</span><span class="p">(</span><span class="n">job_info</span><span class="p">,</span> <span class="n">plugin_info</span><span class="p">,</span> <span class="n">auxiliary_files</span><span class="p">)</span>  <span class="c1"># Retry with command line</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">if</span> <span class="s2">&quot;Error: could not find Auxiliary submission file:&quot;</span> <span class="ow">in</span> <span class="n">error_message</span><span class="p">:</span>
+                        <span class="c1"># Add file access info to the error message if not already warned</span>
+                        <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span>
+                            <span class="sa">f</span><span class="s2">&quot;Failed to submit job via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">. &quot;</span>
+                            <span class="s2">&quot;The Deadline Web Service cannot access the auxiliary files. &quot;</span>
+                            <span class="s2">&quot;Ensure the Deadline Web Service has the same file access rights as your machine.&quot;</span>
+                        <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to submit job via web service: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># Command line submission using files</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitting job via deadline command line&quot;</span><span class="p">)</span>
+
+            <span class="kn">import</span><span class="w"> </span><span class="nn">tempfile</span>
+            <span class="n">job_info_path</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">plugin_info_path</span> <span class="o">=</span> <span class="kc">None</span>
+            
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.job&#39;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">job_file</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">job_info_str</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="n">job_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">job_info_path</span> <span class="o">=</span> <span class="n">job_file</span><span class="o">.</span><span class="n">name</span>
+                    
+                <span class="k">with</span> <span class="n">tempfile</span><span class="o">.</span><span class="n">NamedTemporaryFile</span><span class="p">(</span><span class="n">mode</span><span class="o">=</span><span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="n">suffix</span><span class="o">=</span><span class="s1">&#39;.job&#39;</span><span class="p">,</span> <span class="n">delete</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span> <span class="k">as</span> <span class="n">plugin_file</span><span class="p">:</span>
+                    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">plugin_info_str</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                        <span class="n">plugin_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">key</span><span class="si">}</span><span class="s2">=</span><span class="si">{</span><span class="n">value</span><span class="si">}</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">plugin_info_path</span> <span class="o">=</span> <span class="n">plugin_file</span><span class="o">.</span><span class="n">name</span>
+                
+                <span class="c1"># Log the files for debugging</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">job_info_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">job_data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">plugin_info_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                    <span class="n">plugin_data</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                    
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitting job info via deadline command line:</span><span class="se">\n</span><span class="si">{</span><span class="n">job_data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Submitting plugin info via deadline command line:</span><span class="se">\n</span><span class="si">{</span><span class="n">plugin_data</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                
+                <span class="c1"># Submit via command line</span>
+                <span class="k">if</span> <span class="s2">&quot;dotnet&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">:</span>
+                    <span class="c1"># For dotnet command string, split into command parts</span>
+                    <span class="n">command_parts</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                    <span class="n">command_parts</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="n">job_info_path</span><span class="p">,</span> <span class="n">plugin_info_path</span><span class="p">])</span>
+                    <span class="n">args</span> <span class="o">=</span> <span class="n">command_parts</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">args</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">,</span> <span class="n">job_info_path</span><span class="p">,</span> <span class="n">plugin_info_path</span><span class="p">]</span>
+
+                <span class="c1"># Use provided auxiliary files if any</span>
+                <span class="k">if</span> <span class="n">auxiliary_files</span><span class="p">:</span>
+                    <span class="c1"># Ensure all files are strings</span>
+                    <span class="n">aux_files</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">auxiliary_files</span><span class="p">]</span>
+                    <span class="n">args</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">aux_files</span><span class="p">)</span>
+                
+                <span class="n">startupinfo</span> <span class="o">=</span> <span class="kc">None</span>
+                <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="s1">&#39;nt&#39;</span><span class="p">:</span>
+                    <span class="n">startupinfo</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">STARTUPINFO</span><span class="p">()</span>
+                    <span class="n">startupinfo</span><span class="o">.</span><span class="n">dwFlags</span> <span class="o">|=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">STARTF_USESHOWWINDOW</span>
+                
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">proc</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+                        <span class="n">args</span><span class="p">,</span>
+                        <span class="n">stdin</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                        <span class="n">stderr</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>
+                        <span class="n">startupinfo</span><span class="o">=</span><span class="n">startupinfo</span>
+                    <span class="p">)</span>
+                    <span class="n">output</span><span class="p">,</span> <span class="n">errors</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+                    
+                    <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">version_info</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">2</span><span class="p">:</span>
+                        <span class="n">output</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+                        <span class="k">if</span> <span class="n">errors</span><span class="p">:</span>
+                            <span class="n">errors</span> <span class="o">=</span> <span class="n">errors</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+                    
+                    <span class="c1"># Check for errors</span>
+                    <span class="k">if</span> <span class="n">errors</span> <span class="ow">and</span> <span class="s2">&quot;error&quot;</span> <span class="ow">in</span> <span class="n">errors</span><span class="o">.</span><span class="n">lower</span><span class="p">():</span>
+                        <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Command line error: </span><span class="si">{</span><span class="n">errors</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    
+                    <span class="c1"># Log the response for debugging with clear formatting</span>
+                    <span class="n">logger</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;===== COMMAND LINE RESPONSE START =====</span><span class="se">\n</span><span class="si">{</span><span class="n">output</span><span class="si">}</span><span class="se">\n</span><span class="s2">===== COMMAND LINE RESPONSE END =====&quot;</span><span class="p">)</span>
+                    
+                    <span class="c1"># Parse job ID from output</span>
+                    <span class="n">job_id</span> <span class="o">=</span> <span class="kc">None</span>
+                    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">output</span><span class="o">.</span><span class="n">splitlines</span><span class="p">():</span>
+                        <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;JobID=&quot;</span><span class="p">):</span>
+                            <span class="n">job_id</span> <span class="o">=</span> <span class="n">line</span><span class="p">[</span><span class="mi">6</span><span class="p">:]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Job submitted successfully with ID: </span><span class="si">{</span><span class="n">job_id</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">break</span>
+                            
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">job_id</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="s2">&quot;No job ID found in submission output&quot;</span><span class="p">)</span>
+                    
+                    <span class="c1"># Return a dictionary with job ID, raw response, and connection type</span>
+                    <span class="k">return</span> <span class="p">{</span>
+                        <span class="s2">&quot;job_id&quot;</span><span class="p">:</span> <span class="n">job_id</span><span class="p">,</span>
+                        <span class="s2">&quot;raw_response&quot;</span><span class="p">:</span> <span class="n">output</span><span class="p">,</span>
+                        <span class="s2">&quot;connection_type&quot;</span><span class="p">:</span> <span class="s2">&quot;command_line&quot;</span>
+                    <span class="p">}</span>
+                    
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to submit job via command line: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    
+            <span class="k">finally</span><span class="p">:</span>
+                <span class="c1"># Clean up temporary files</span>
+                <span class="k">if</span> <span class="n">job_info_path</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">job_info_path</span><span class="p">):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">job_info_path</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to clean up job info file </span><span class="si">{</span><span class="n">job_info_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="n">plugin_info_path</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">plugin_info_path</span><span class="p">):</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">os</span><span class="o">.</span><span class="n">unlink</span><span class="p">(</span><span class="n">plugin_info_path</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to clean up plugin info file </span><span class="si">{</span><span class="n">plugin_info_path</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_setup_command_line</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set up command line path for fallback.&quot;&quot;&quot;</span>
+        <span class="c1"># Try to find it in DEADLINE_PATH</span>
+        <span class="n">deadline_bin</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">deadline_bin</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;DEADLINE_PATH&#39;</span><span class="p">]</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="c1"># If the error is a key error it means that DEADLINE_PATH is not set</span>
+            <span class="k">pass</span>
+            
+        <span class="c1"># On OSX, we look for the DEADLINE_PATH file if the environment variable does not exist.</span>
+        <span class="k">if</span> <span class="n">deadline_bin</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="s2">&quot;/Users/Shared/Thinkbox/DEADLINE_PATH&quot;</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;/Users/Shared/Thinkbox/DEADLINE_PATH&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">deadline_bin</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">read</span><span class="p">()</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">deadline_bin</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">deadline_bin</span><span class="p">,</span> <span class="s2">&quot;deadlinecommand&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sys</span><span class="o">.</span><span class="n">platform</span> <span class="o">==</span> <span class="s1">&#39;win32&#39;</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span> <span class="o">+=</span> <span class="s1">&#39;.exe&#39;</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_command_path</span><span class="p">):</span>
+            <span class="k">raise</span> <span class="n">DeadlineError</span><span class="p">(</span>
+                <span class="s2">&quot;Could not find deadlinecommand. Please ensure Deadline is installed &quot;</span>
+                <span class="s2">&quot;and DEADLINE_PATH environment variable is set correctly.&quot;</span>
+            <span class="p">)</span></div>
+
+
+<span class="c1"># Global connection instance - but don&#39;t initialize it yet</span>
+<span class="n">_connection</span> <span class="o">=</span> <span class="kc">None</span>
+
+<div class="viewcode-block" id="get_connection">
+<a class="viewcode-back" href="../../api/nk2dl.html#nk2dl.connection.get_connection">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_connection</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">DeadlineConnection</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Get the global connection instance, creating it if needed.&quot;&quot;&quot;</span>
+    <span class="k">global</span> <span class="n">_connection</span>
+    <span class="k">if</span> <span class="n">_connection</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">_connection</span> <span class="o">=</span> <span class="n">DeadlineConnection</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">_connection</span> </div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2025 Daniel Harkness.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
