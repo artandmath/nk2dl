@@ -66,8 +66,8 @@ jobs:
           # Add .nojekyll inside api directory to preserve Sphinx assets
           echo "" > api/.nojekyll
           
-          # Build Jekyll site
-          bundle exec jekyll build --source . --destination ./_site
+          # Build Jekyll site with proper exclusions
+          bundle exec jekyll build --source . --destination ./_site --verbose
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

@@ -24,6 +24,12 @@ exclude:
   - Makefile
   - requirements.txt
   - "*.rst"
+  - vendor/
+  - .bundle/
+  - Gemfile
+  - Gemfile.lock
+  - node_modules/
+  - .sass-cache/
 
 # Collections
 collections:
