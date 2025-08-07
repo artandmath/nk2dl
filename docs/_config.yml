@@ -1,0 +1,45 @@
+title: "nk2dl - Nuke to Deadline"
+description: >
+  A pure Python library for submitting Nuke scripts to Thinkbox Deadline render farms.
+  No Nuke runtime dependencies required.
+
+baseurl: "/nk2dl"
+url: "https://artandmath.github.io"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Plugins
+plugins:
+  - jekyll-feed
+
+# Exclude from processing
+exclude:
+  - _build/
+  - _static/
+  - conf.py
+  - make.bat
+  - Makefile
+  - requirements.txt
+  - "*.rst"
+
+# Collections
+collections:
+  docs:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  - scope:
+      path: ""
+      type: "docs"
+    values:
+      layout: "page"
