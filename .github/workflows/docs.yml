@@ -51,32 +51,39 @@ jobs:
           sphinx-quickstart . --no-sep -p "Your Project Name" -a "Your Name" -v "1.0" --ext-autodoc --makefile --no-batchfile -q
         fi
     
-    - name: Build documentation
+    - name: Build Sphinx documentation
       run: |
         cd docs
         make html
-        # Copy .nojekyll to build directory to prevent Jekyll processing
+        # Copy .nojekyll to build directory
         cp .nojekyll _build/html/
         
-        # Move Sphinx docs to /api subdirectory to preserve Jekyll homepage
-        echo "Moving Sphinx docs to /api subdirectory..."
-        mkdir -p _build/html/api
-        # Move all Sphinx content to api/ except the .nojekyll file
-        find _build/html -maxdepth 1 -type f ! -name '.nojekyll' -exec mv {} _build/html/api/ \;
-        find _build/html -maxdepth 1 -type d ! -name 'api' ! -name '_build' ! -path '_build/html' -exec mv {} _build/html/api/ \; 2>/dev/null || true
+    - name: Create hybrid documentation structure
+      run: |
+        cd docs
         
-        # Copy Jekyll files to root (so index.md becomes the homepage)
-        echo "Copying Jekyll documentation to root..."
-        cp *.md _build/html/ 2>/dev/null || echo "No markdown files to copy"
-        cp _config.yaml _build/html/ 2>/dev/null || echo "No Jekyll config to copy"
+        # Create final site structure
+        mkdir -p _build/final_site
         
-        # Copy any assets to root
+        # First, set up Jekyll for the main site
+        echo "Setting up Jekyll structure..."
+        cp *.md _build/final_site/ 2>/dev/null || echo "No markdown files to copy"
+        cp _config.yaml _build/final_site/ 2>/dev/null || echo "No Jekyll config to copy"
+        
+        # Copy assets
         if [ -d "assets" ]; then
-          cp -r assets _build/html/
+          cp -r assets _build/final_site/
         fi
         if [ -d "img" ]; then
-          cp -r img _build/html/
+          cp -r img _build/final_site/
         fi
+        
+        # Copy Sphinx docs to /api subdirectory
+        echo "Moving Sphinx docs to /api..."
+        cp -r _build/html _build/final_site/api
+        
+        # Copy .nojekyll to root to prevent Jekyll processing of Sphinx content
+        cp .nojekyll _build/final_site/
     
     - name: Setup Pages
       uses: actions/configure-pages@v5
@@ -84,7 +91,7 @@ jobs:
     - name: Upload artifact
       uses: actions/upload-pages-artifact@v3
       with:
-        path: ./docs/_build/html
+        path: ./docs/_build/final_site
         
     - name: Deploy to GitHub Pages
       id: deployment

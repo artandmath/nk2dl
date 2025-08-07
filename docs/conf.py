@@ -65,3 +65,11 @@ intersphinx_mapping = {
 
 # Autosummary settings
 autosummary_generate = True
+
+# Suppress warnings for better CI output
+suppress_warnings = [
+    'docutils',  # Suppress docstring formatting warnings
+]
+
+# Make warnings less verbose
+nitpicky = False
