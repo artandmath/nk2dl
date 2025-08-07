@@ -54,11 +54,17 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      - name: Build with Jekyll
+        uses: actions/jekyll-build-pages@v1
+        with:
+          source: ./docs
+          destination: ./docs/_site
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload docs directory - Jekyll will process it automatically
-          path: ./docs
+          # Upload Jekyll-built site
+          path: ./docs/_site
 
   deploy:
     environment:
