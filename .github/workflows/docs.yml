@@ -2,9 +2,8 @@ name: Build and Deploy Documentation
 
 on:
   push:
-    branches: [ development ]
-  pull_request:
-    branches: [ development ]
+    tags: [ 'v*' ]  # Only build docs on version tags (v1.0.0, v0.2.1, etc.)
+  workflow_dispatch:  # Allow manual triggering from GitHub UI
 
 jobs:
   docs:
@@ -41,15 +40,9 @@ jobs:
         make html
         # Copy .nojekyll to build directory to prevent Jekyll processing
         cp .nojekyll _build/html/
-        # Copy built docs to docs/_site/ folder (standard practice)
-        rm -rf _site
-        cp -r _build/html _site
     
-    - name: Commit built documentation
-      if: github.ref == 'refs/heads/development'
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add docs/_site/
-        git diff --staged --quiet || git commit -m "docs: update built documentation [skip ci]"
-        git push
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html
