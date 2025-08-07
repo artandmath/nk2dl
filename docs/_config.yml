@@ -5,7 +5,3 @@ description: Documentation for nk2dl (aka Nuke to Deadline).
 # Exclude Sphinx build artifacts from Jekyll processing
 exclude:
   - _sphinx/
-
-# Keep static assets for Sphinx
-keep_files:
-  - api/

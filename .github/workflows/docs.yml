@@ -46,12 +46,16 @@ jobs:
 
       - name: Copy Sphinx docs to api directory
         run: |
-          # Copy Sphinx output to docs/api/ for Jekyll and public access
+          # Copy Sphinx output to docs/api/ for Jekyll and public access  
+          rm -rf docs/api
           mkdir -p docs/api
           cp -r docs/_sphinx/_build/html/* docs/api/
           
-          # Add .nojekyll inside api directory to prevent Jekyll from processing Sphinx assets
-          echo "" > docs/api/.nojekyll
+          # Debug: Check what files were copied
+          echo "=== Sphinx files copied to docs/api ==="
+          ls -la docs/api/
+          echo "=== Static files ==="
+          find docs/api -name "*.css" -o -name "*.js" | head -10
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -62,10 +66,22 @@ jobs:
           source: ./docs
           destination: ./docs/_site
 
+      - name: Copy Sphinx assets to final site (preserve original structure)
+        run: |
+          # Remove Jekyll-processed api directory and replace with original Sphinx
+          rm -rf docs/_site/api
+          cp -r docs/_sphinx/_build/html docs/_site/api
+          
+          # Debug: Check final structure
+          echo "=== Final site structure ==="
+          ls -la docs/_site/api/
+          echo "=== Final CSS files ==="
+          find docs/_site/api -name "*.css" | head -5
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # Upload Jekyll-built site
+          # Upload Jekyll-built site with preserved Sphinx
           path: ./docs/_site
 
   deploy:
