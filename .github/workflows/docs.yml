@@ -44,7 +44,7 @@ jobs:
           cd docs/_sphinx
           make html
 
-      - name: Copy Sphinx docs to api directory
+      - name: Copy Sphinx docs to api directory  
         run: |
           # Copy Sphinx output to docs/api/ for Jekyll and public access  
           rm -rf docs/api
@@ -56,6 +56,8 @@ jobs:
           ls -la docs/api/
           echo "=== Static files ==="
           find docs/api -name "*.css" -o -name "*.js" | head -10
+          echo "=== HTML files ==="  
+          find docs/api -name "*.html" | head -10
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
