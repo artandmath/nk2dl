@@ -70,10 +70,19 @@ jobs:
 
       - name: Copy Sphinx assets to final site (preserve original structure)
         run: |
-          # Remove Jekyll-processed api directory and replace with original Sphinx
-          rm -rf docs/_site/api || true
+          # Completely remove and recreate api directory to avoid permission issues
+          sudo rm -rf docs/_site/api || true
           mkdir -p docs/_site/api
-          cp -r docs/_sphinx/_build/html/* docs/_site/api/
+          
+          # Debug: Check what Sphinx built
+          echo "=== Sphinx build output ==="
+          ls -la docs/_sphinx/_build/html/
+          
+          # Copy Sphinx files to final location
+          cp -r docs/_sphinx/_build/html/* docs/_site/api/ || {
+            echo "Copy failed, trying alternative approach..."
+            rsync -av docs/_sphinx/_build/html/ docs/_site/api/
+          }
           
           # Debug: Check final structure
           echo "=== Final site structure ==="
