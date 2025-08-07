@@ -21,4 +21,4 @@
 
 ## API Reference
 
-- [Python API Documentation](./api/) - Complete API reference with docstrings
+- [Python API Documentation](./api/)

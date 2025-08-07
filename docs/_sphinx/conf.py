@@ -4,7 +4,7 @@ import os
 import sys
 
 # Add the source directory to the Python path
-sys.path.insert(0, os.path.abspath('../src'))
+sys.path.insert(0, os.path.abspath('../../src'))
 
 # Import version info
 from nk2dl import info
