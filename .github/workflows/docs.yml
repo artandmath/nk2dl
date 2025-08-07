@@ -71,14 +71,17 @@ jobs:
       - name: Copy Sphinx assets to final site (preserve original structure)
         run: |
           # Remove Jekyll-processed api directory and replace with original Sphinx
-          rm -rf docs/_site/api
-          cp -r docs/_sphinx/_build/html docs/_site/api
+          rm -rf docs/_site/api || true
+          mkdir -p docs/_site/api
+          cp -r docs/_sphinx/_build/html/* docs/_site/api/
           
           # Debug: Check final structure
           echo "=== Final site structure ==="
           ls -la docs/_site/api/
           echo "=== Final CSS files ==="
           find docs/_site/api -name "*.css" | head -5
+          echo "=== Final HTML files ==="
+          find docs/_site/api -name "*.html" | head -5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
