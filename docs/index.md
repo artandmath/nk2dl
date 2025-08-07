@@ -18,3 +18,7 @@
 - [Feature parity table](./feature_parity.md)
 - [FAQ](./faq.md)
 - [Tests](./tests.md)
+
+## API Reference
+
+- [Python API Documentation](./api/) - Complete API reference with docstrings

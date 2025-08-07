@@ -1,0 +1,45 @@
+name: Build and Deploy Documentation (Simple Branch)
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        if [ -f docs/requirements.txt ]; then pip install -r docs/requirements.txt; fi
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    
+    - name: Build documentation
+      run: |
+        cd docs
+        make html
+        cp .nojekyll _build/html/
+    
+    - name: Deploy to gh-pages branch
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./docs/_build/html
+        publish_branch: gh-pages
+        force_orphan: true
+
+# This approach:
+# - Keeps your docs/ folder completely clean and simple
+# - Deploys Sphinx docs to gh-pages branch 
+# - You set GitHub Pages to use gh-pages branch
+# - Your main docs stay as simple Jekyll on development branch
