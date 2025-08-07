@@ -36,26 +36,38 @@ def submit_nuke_script(script_path, **kwargs):
     
     Examples:
         Basic usage:
-        >>> from nk2dl import submit_nuke_script
-        >>> submit_nuke_script("path/to/script.nk")
+        
+        .. code-block:: python
+        
+            from nk2dl import submit_nuke_script
+            submit_nuke_script("path/to/script.nk")
         
         With specific write nodes:
-        >>> submit_nuke_script("path/to/script.nk", write_nodes=["Write1", "Write2"])
+        
+        .. code-block:: python
+        
+            submit_nuke_script("path/to/script.nk", write_nodes=["Write1", "Write2"])
         
         With job parameters:
-        >>> submit_nuke_script(
-        ...     "path/to/script.nk",
-        ...     priority=80,
-        ...     pool="nuke",
-        ...     chunk_size=10,
-        ...     comment="Render {script} on farm"
-        ... )
+        
+        .. code-block:: python
+        
+            submit_nuke_script(
+                "path/to/script.nk",
+                priority=80,
+                pool="nuke",
+                chunk_size=10,
+                comment="Render {script} on farm"
+            )
         
         Submit as a Python script job (ScriptJob in Deadline):
-        >>> submit_nuke_script(
-        ...     "path/to/script.nk",
-        ...     submission_as_script_job=True
-        ... )
+        
+        .. code-block:: python
+        
+            submit_nuke_script(
+                "path/to/script.nk",
+                submission_as_script_job=True
+            )
     
     Raises:
         NK2DLError: For configuration or submission errors
