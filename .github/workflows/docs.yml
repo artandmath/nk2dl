@@ -49,6 +49,9 @@ jobs:
           # Copy Sphinx output to docs/api/ for Jekyll and public access
           mkdir -p docs/api
           cp -r docs/_sphinx/_build/html/* docs/api/
+          
+          # Add .nojekyll inside api directory to prevent Jekyll from processing Sphinx assets
+          echo "" > docs/api/.nojekyll
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
