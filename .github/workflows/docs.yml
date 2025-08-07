@@ -44,35 +44,21 @@ jobs:
           cd docs
           make html
 
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: true
-          working-directory: ./docs
-
-      - name: Build Jekyll site with Sphinx integration
+      - name: Copy Sphinx docs to api subdirectory
         run: |
           cd docs
-          
-          # Copy Sphinx output to Jekyll source directory  
+          # Copy Sphinx output to api/ subdirectory for Jekyll
           mkdir -p api
           cp -r _build/html/* api/
-          
-          # Add .nojekyll inside api directory to preserve Sphinx assets
-          echo "" > api/.nojekyll
-          
-          # Build Jekyll site with proper exclusions
-          bundle exec jekyll build --source . --destination ./_site --verbose
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/_site
+          # Upload docs directory - Jekyll will process it automatically
+          path: ./docs
 
   deploy:
     environment:
