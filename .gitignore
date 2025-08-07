@@ -65,9 +65,9 @@ thinkbox/
 /migration
 
 # Sphinx documentation
-sphinx/_build/
+docs/_sphinx/_build/
 
-# Generated documentation directories
+# Generated documentation directories  
 docs/api/
 docs/_site/
 

@@ -32,8 +32,8 @@ jobs:
 
       - name: Install documentation dependencies
         run: |
-          if [ -f sphinx/requirements.txt ]; then
-            pip install -r sphinx/requirements.txt
+          if [ -f docs/_sphinx/requirements.txt ]; then
+            pip install -r docs/_sphinx/requirements.txt
           fi
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
@@ -41,14 +41,14 @@ jobs:
 
       - name: Build Sphinx documentation
         run: |
-          cd sphinx
+          cd docs/_sphinx
           make html
 
-      - name: Copy Sphinx docs to Jekyll api subdirectory
+      - name: Copy Sphinx docs to api directory
         run: |
-          # Copy Sphinx output to docs/api/ for Jekyll
+          # Copy Sphinx output to docs/api/ for Jekyll and public access
           mkdir -p docs/api
-          cp -r sphinx/_build/html/* docs/api/
+          cp -r docs/_sphinx/_build/html/* docs/api/
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
