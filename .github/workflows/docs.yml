@@ -5,6 +5,18 @@ on:
     tags: [ 'v*' ]  # Only build docs on version tags (v1.0.0, v0.2.1, etc.)
   workflow_dispatch:  # Allow manual triggering from GitHub UI
 
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   docs:
     runs-on: ubuntu-latest
@@ -45,6 +57,18 @@ jobs:
         make html
         # Copy .nojekyll to build directory to prevent Jekyll processing
         cp .nojekyll _build/html/
+        
+        # Copy existing markdown files to the built site for hybrid docs
+        echo "Copying existing markdown documentation..."
+        cp *.md _build/html/ 2>/dev/null || echo "No markdown files to copy"
+        
+        # Copy any assets
+        if [ -d "assets" ]; then
+          cp -r assets _build/html/
+        fi
+        if [ -d "img" ]; then
+          cp -r img _build/html/
+        fi
     
     - name: Setup Pages
       uses: actions/configure-pages@v5
