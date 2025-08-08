@@ -30,8 +30,8 @@ Quick Example
    # Submit a Nuke script to Deadline
    job_results = submit_nuke_script(
        script_path="/path/to/your/script.nk",
-       pool="primary",
-       group="nuke",
+       pool="nuke",
+       group="workstations",
        priority=50
    )
    
