@@ -5,13 +5,13 @@ This guide provides a quick overview of how to use nk2dl to submit Nuke scripts 
 ## Python
 
 ```python
-from nk2dl.nuke import submit_nuke_script
+from nk2dl import submit_nuke_script
 
 # Basic usage
-job_ids = submit_nuke_script("/path/to/script.nk")
+job_results = submit_nuke_script("/path/to/script.nk")
 
 # Advanced usage with options
-job_ids = submit_nuke_script(
+job_results = submit_nuke_script(
     "/path/to/script.nk",
     frames="1001-1100",
     job_name="My Nuke Job",
@@ -24,7 +24,13 @@ job_ids = submit_nuke_script(
     environment={"PROJECT_ROOT": "/path/to/project"},
 )
 
+# Extract and print job IDs
+job_ids = [job["job_id"] for job in job_results]
 print(f"Job IDs: {job_ids}")
+
+# Or print detailed job information
+for job in job_results:
+    print(f"Job ID: {job['job_id']}, Render Order: {job['render_order']}, Mode: {job['render_mode']}")
 ```
 
 # Advanced Options
@@ -170,7 +176,7 @@ submit_nuke_script("path/to/script.nk", frames="i")  # Input range from write no
 ### Full Example with Multiple Options
 
 ```python
-job_ids = submit_nuke_script(
+job_results = submit_nuke_script(
     "path/to/script.nk",
     frames="1001-1100",
     job_name="{batch} / {write} / {range}",
@@ -192,6 +198,10 @@ job_ids = submit_nuke_script(
     performance_profiler=True,
     performance_profiler_path="/path/to/profiles"
 )
+
+# Access job information
+for job in job_results:
+    print(f"Submitted job {job['job_id']} with render order {job['render_order']}")
 ```
 
 ## Script Copying

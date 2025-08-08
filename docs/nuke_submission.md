@@ -13,11 +13,15 @@ To submit a Nuke script to Deadline:
 from nk2dl import submit_nuke_script
 
 # Basic submission with minimal parameters
-job_ids = submit_nuke_script(
+job_results = submit_nuke_script(
     "/path/to/script.nk",
     frames="1-100",         # Frame range to render
     write_nodes=["Write1"],  # Specific write nodes to render
 )
+
+# Extract job IDs and print job information
+for job in job_results:
+    print(f"Job ID: {job['job_id']}, Render Order: {job['render_order']}")
 ```
 
 ## Parameters

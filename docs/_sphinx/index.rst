@@ -17,20 +17,25 @@ Quick Example
    from nk2dl import submit_nuke_script
    
    # Submit a Nuke script to Deadline
-   job_id = submit_nuke_script(
+   job_results = submit_nuke_script(
        script_path="/path/to/your/script.nk",
        pool="primary",
        group="nuke",
        priority=50
    )
    
+   # Extract job ID from the first job result
+   job_id = job_results[0]["job_id"]
    print(f"Submitted job: {job_id}")
+   
+   # Or print all job information
+   for job in job_results:
+       print(f"Job ID: {job['job_id']}, Render Order: {job['render_order']}")
 
 Key Features
 ------------
 
-* Pure Python implementation - no dependencies on Nuke runtime
-* Comprehensive Deadline job submission and management
+* Comprehensive Deadline job submission
 * Flexible configuration system
 * Support for complex render dependencies and frame ranges
 * Extensive logging and error handling
