@@ -7,7 +7,7 @@ Welcome to the API documentation for **nk2dl**, a pure Python library for submit
    :maxdepth: 2
    :caption: API Reference:
 
-   api/modules
+   modules
 
 Quick Example
 -------------
