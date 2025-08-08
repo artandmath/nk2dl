@@ -34,6 +34,34 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['static']
 html_title = f"{project} v{version}"
 
+# Theme options for Read the Docs theme
+html_theme_options = {
+    'navigation_depth': 4,
+    'collapse_navigation': False,
+    'sticky_navigation': True,
+    'includehidden': True,
+    'titles_only': False
+}
+
+# Add custom links to the sidebar
+html_context = {
+    'display_github': True,
+    'github_user': 'artandmath',
+    'github_repo': 'nk2dl',
+    'github_version': 'main',
+    'conf_py_path': '/docs/_sphinx/',
+}
+
+# Custom sidebar links
+html_sidebars = {
+    '**': [
+        'globaltoc.html',
+        'relations.html',
+        'sourcelink.html',
+        'searchbox.html',
+    ]
+}
+
 # -- Extension configuration -------------------------------------------------
 
 # Napoleon settings for Google/NumPy style docstrings

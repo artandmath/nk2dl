@@ -3,6 +3,17 @@ Nuke to Deadline (nk2dl) API Documentation
 
 Welcome to the API documentation for **nk2dl**, a pure Python library for submitting Nuke scripts to Thinkbox Deadline render farms.
 
+.. note::
+   📖 **Looking for user documentation?** Visit the `main documentation site <../index.html>`_ for installation guides, quickstart tutorials, and usage examples.
+
+Navigation
+----------
+
+* 📚 `User Documentation <../index.html>`_ - Installation, quickstart, and usage guides
+* 🔧 `API Reference <#api-reference>`_ - Complete API documentation (you are here)
+* 🐛 `Troubleshooting <../troubleshooting.html>`_ - Common issues and solutions
+* ❓ `FAQ <../faq.html>`_ - Frequently asked questions
+
 .. toctree::
    :maxdepth: 2
    :caption: API Reference:
