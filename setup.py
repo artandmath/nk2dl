@@ -2,13 +2,27 @@
 """Setup script for nk2dl."""
 
 from setuptools import setup, find_packages
+import os
+import re
+
+
+def read_version() -> str:
+    """Read __version__ from src/nk2dl/info.py without importing the package."""
+    version_path = os.path.join("src", "nk2dl", "info.py")
+    with open(version_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    match = re.search(r'^__version__\s*=\s*[\"\']([^\"\']+)[\"\']', content, re.M)
+    if not match:
+        raise RuntimeError("Cannot find __version__ in src/nk2dl/info.py")
+    return match.group(1)
+
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="nk2dl",
-    version="0.1.0",
+    version=read_version(),
     author="Daniel Harkness",
     author_email="danielharkness@icloud.com",
     description="Nuke to Deadline Submitter - Core Library",
