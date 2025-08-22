@@ -16,7 +16,6 @@ def read_version() -> str:
         raise RuntimeError("Cannot find __version__ in src/nk2dl/info.py")
     return match.group(1)
 
-
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
@@ -42,10 +41,7 @@ setup(
             "flake8>=6.1.0",
             "isort>=5.12.0",
             "mypy>=1.5.1",
-            "types-PyYAML>=6.0.12.12",
-            "pluggy>=1.0.0",
-            "exceptiongroup>=1.0.0",
-            "iniconfig>=1.0.0",
+            "types-PyYAML>=6.0.12.12"
         ]
     },
     classifiers=[

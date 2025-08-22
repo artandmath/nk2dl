@@ -2,9 +2,9 @@
 
 ## System Requirements
 - **Operating System**: Windows 10 (currently tested only on Windows; Testing Linux and MacOS support planned. Linux and MacOS may already work)
-- **Nuke**: Compatible with Nuke 13+ (Nuke 15.2+ required for Graph Scope Variables)
+- **Nuke**: Compatible with Nuke 14+ (Nuke 15.2+ required for Graph Scope Variables)
 - **Deadline**: Thinkbox Deadline 10+ with Repository access
-- **Python Version**: Python 3.7+
+- **Python Version**: Python 3.9+
 - **Python Dependencies**: YAML, Deadline API (these are installed into the virtual environment)
 
 ## 1. Download
