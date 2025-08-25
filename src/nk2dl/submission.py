@@ -1066,6 +1066,48 @@ class NukeSubmission:
             String with tokens replaced
         """
         
+        # Define token groups with their names first (needed for condition below)
+        script_directory_tokens = ["{nkdir}", "{scriptdir}", "{nukescriptdir}"]
+        script_stem_tokens = ["{nkstem}", "{scriptstem}", "{nukescriptstem}"]
+        script_name_tokens = ["{nk}", "{script}", "{scriptname}","{nukescript}"]
+        batch_name_tokens = ["{batch}", "{batchname}"]
+        write_node_tokens = ["{write}", "{writenode}", "{writename}"]
+        output_directory_tokens = ["{outdir}", "{outputdir}"]
+        output_stem_tokens = ["{filestem}", "{filenamestem}", "{outstem}", "{outputstem}"]
+        output_tokens = ["{file}", "{filename}", "{out}", "{output}"]
+        render_order_tokens = ["{ro}", "{renderorder}"]
+        frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
+        gsv_tokens = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}"]
+        temp_directory_tokens = ["{tmp}", "{temp}","{tmpdir}", "{tempdir}"]
+        uuid_tokens = ["{uuid}"]
+        build_directory_tokens = ["{builddir}", "{buildjobdir}"]
+        build_name_tokens = ["{buildjob}", "{buildname}"]
+        build_stem_tokens = ["{buildstem}", "{buildjobstem}"]
+        date_tokens = ["{YYYY}", "{YY}", "{MM}", "{DD}", "{hh}", "{mm}", "{ss}"]
+    
+        # Start with the template
+        result = template
+        # Create a mapping of token group names to token groups
+        token_group_map = {
+            'script_directory_tokens': script_directory_tokens,
+            'script_stem_tokens': script_stem_tokens,
+            'script_name_tokens': script_name_tokens,
+            'batch_name_tokens': batch_name_tokens,
+            'write_node_tokens': write_node_tokens,
+            'output_directory_tokens': output_directory_tokens,
+            'output_stem_tokens': output_stem_tokens,
+            'output_tokens': output_tokens,
+            'render_order_tokens': render_order_tokens,
+            'frame_range_tokens': frame_range_tokens,
+            'gsv_tokens': gsv_tokens,
+            'temp_directory_tokens': temp_directory_tokens,
+            'uuid_tokens': uuid_tokens,
+            'build_directory_tokens': build_directory_tokens,
+            'build_name_tokens': build_name_tokens,
+            'build_stem_tokens': build_stem_tokens,
+            'date_tokens': date_tokens
+        }
+        
         # Initialize nuke object once if needed for any token processing
         nuke = None
         if (gsv_combination or 
@@ -1092,49 +1134,6 @@ class NukeSubmission:
                             gsv_knob.setGsvValue(f'__default__.{key}', value)
                         except Exception as e:
                             logger.warning(f"Failed to set GSV value {key}={value}: {e}")
-        
-        # Start with the template
-        result = template
-        
-        # Define token groups with their names
-        script_directory_tokens = ["{nkdir}", "{scriptdir}", "{nukescriptdir}"]
-        script_stem_tokens = ["{nkstem}", "{scriptstem}", "{nukescriptstem}"]
-        script_name_tokens = ["{nk}", "{script}", "{scriptname}","{nukescript}"]
-        batch_name_tokens = ["{batch}", "{batchname}"]
-        write_node_tokens = ["{write}", "{writenode}", "{writename}"]
-        output_directory_tokens = ["{outdir}", "{outputdir}"]
-        output_stem_tokens = ["{filestem}", "{filenamestem}", "{outstem}", "{outputstem}"]
-        output_tokens = ["{file}", "{filename}", "{out}", "{output}"]
-        render_order_tokens = ["{ro}", "{renderorder}"]
-        frame_range_tokens = ["{x}", "{f}", "{fr}", "{range}", "{framerange}"]
-        gsv_tokens = ["{g}", "{gsv}", "{gsvs}", "{GSVs}", "{graphscopevars}", "{graphscopevariables}"]
-        temp_directory_tokens = ["{tmp}", "{temp}","{tmpdir}", "{tempdir}"]
-        uuid_tokens = ["{uuid}"]
-        build_directory_tokens = ["{builddir}", "{buildjobdir}"]
-        build_name_tokens = ["{buildjob}", "{buildname}"]
-        build_stem_tokens = ["{buildstem}", "{buildjobstem}"]
-        date_tokens = ["{YYYY}", "{YY}", "{MM}", "{DD}", "{hh}", "{mm}", "{ss}"]
-
-        # Create a mapping of token group names to token groups
-        token_group_map = {
-            'script_directory_tokens': script_directory_tokens,
-            'script_stem_tokens': script_stem_tokens,
-            'script_name_tokens': script_name_tokens,
-            'batch_name_tokens': batch_name_tokens,
-            'write_node_tokens': write_node_tokens,
-            'output_directory_tokens': output_directory_tokens,
-            'output_stem_tokens': output_stem_tokens,
-            'output_tokens': output_tokens,
-            'render_order_tokens': render_order_tokens,
-            'frame_range_tokens': frame_range_tokens,
-            'gsv_tokens': gsv_tokens,
-            'temp_directory_tokens': temp_directory_tokens,
-            'uuid_tokens': uuid_tokens,
-            'build_directory_tokens': build_directory_tokens,
-            'build_name_tokens': build_name_tokens,
-            'build_stem_tokens': build_stem_tokens,
-            'date_tokens': date_tokens
-        }
 
         # Filter token groups if allowed_token_group_names is provided
         if allowed_token_group_names is not None:
