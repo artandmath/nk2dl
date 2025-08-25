@@ -1002,6 +1002,28 @@ class NukeSubmission:
         
         return all_write_nodes
 
+    def _is_write_node(self, node):
+        """Check if a node is any type of write node (Write, DeepWrite, or custom).
+        
+        Args:
+            node: Nuke node to check
+            
+        Returns:
+            bool: True if node is a write node type, False otherwise
+        """
+        if not node:
+            return False
+            
+        node_class = node.Class()
+        
+        # Check standard write node types
+        if node_class in ['Write', 'DeepWrite']:
+            return True
+            
+        # Check custom write classes from config
+        custom_classes = config.get('submission.custom_write_classes', [])
+        return node_class in custom_classes
+
     def _get_node_pretty_path(self, node, gsv_combination=None) -> str:
         """Get a node's file path while preserving frame number placeholders.
         
@@ -1142,7 +1164,7 @@ class NukeSubmission:
                     # File stem tokens require a write node to get output path
                     if write_node and nuke:
                         node = nuke.toNode(write_node)
-                        if node and node.Class() == "Write":
+                        if self._is_write_node(node):
                             try:
                                 output_file = self._get_node_pretty_path(node, gsv_combination)
                                 # Extract stem from the output path
@@ -1159,7 +1181,7 @@ class NukeSubmission:
                     # Output directory tokens require a write node to get output path
                     if write_node and nuke:
                         node = nuke.toNode(write_node)
-                        if node and node.Class() == "Write":
+                        if self._is_write_node(node):
                             try:
                                 output_file = self._get_node_pretty_path(node, gsv_combination)
                                 # Extract directory from the output path
@@ -1234,7 +1256,7 @@ class NukeSubmission:
   
                 elif write_node and nuke and token in write_node_tokens + output_tokens + render_order_tokens:
                     node = nuke.toNode(write_node)
-                    if node and node.Class() == "Write":
+                    if self._is_write_node(node):
                         if token in write_node_tokens:
                             value = write_node
                         elif token in render_order_tokens:
@@ -1611,7 +1633,7 @@ class NukeSubmission:
         nuke = self._ensure_script_can_be_parsed()
         node = nuke.toNode(write_node)
         
-        if node and node.Class() == "Write" and 'file_type' in node.knobs():
+        if self._is_write_node(node) and 'file_type' in node.knobs():
             file_type = node['file_type'].value()
             movie_formats = ['mov', 'mxf']
             return file_type.lower() in movie_formats
@@ -1876,7 +1898,7 @@ class NukeSubmission:
             # For write nodes as tasks: add all specified write nodes
             for i, write_node_name in enumerate(self.write_nodes):
                 node = nuke.toNode(write_node_name)
-                if node and node.Class() == "Write" and not node['disable'].value():
+                if self._is_write_node(node) and not node['disable'].value():
                     output_path = self._get_node_pretty_path(node, gsv_combination)
                     if output_path:
                         job_info[f"OutputFilename{i}"] = output_path
@@ -1885,7 +1907,7 @@ class NukeSubmission:
             # For a single write node: add just that one
             write_node_name = self.write_nodes[0]
             node = nuke.toNode(write_node_name)
-            if node and node.Class() == "Write" and not node['disable'].value():
+            if self._is_write_node(node) and not node['disable'].value():
                 output_path = self._get_node_pretty_path(node, gsv_combination)
                 if output_path:
                     job_info["OutputFilename0"] = output_path
@@ -2115,7 +2137,7 @@ class NukeSubmission:
             # For each write node, determine its frame range
             for node_name in all_write_nodes:
                 node = nuke.toNode(node_name)
-                if node and node.Class() == "Write":
+                if self._is_write_node(node):
                     frame_range_source = "unknown"
                     # Case 1: If use_node_frame_list is true and the node has use_limit enabled,
                     # use the node's first/last knobs
@@ -2724,7 +2746,7 @@ class NukeSubmission:
                             
                             # Add output filename for this write node
                             node_obj = nuke.toNode(write_node)
-                            if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
+                            if self._is_write_node(node_obj) and not node_obj['disable'].value():
                                 output_path = self._get_node_pretty_path(node_obj, gsv_combination)
                                 if output_path:
                                     node_job_info["OutputFilename0"] = output_path
@@ -2893,7 +2915,7 @@ class NukeSubmission:
                         
                         # Add output filename for this write node
                         node_obj = nuke.toNode(write_node)
-                        if node_obj and node_obj.Class() == "Write" and not node_obj['disable'].value():
+                        if self._is_write_node(node_obj) and not node_obj['disable'].value():
                             output_path = self._get_node_pretty_path(node_obj)
                             if output_path:
                                 node_job_info["OutputFilename0"] = output_path
@@ -3580,8 +3602,8 @@ class NukeSubmission:
         
         # Get the write node
         node = nuke.toNode(write_node_name)
-        if not node or node.Class() != "Write":
-            logger.warning(f"Cannot extract metadata from {write_node_name}: Node not found or not a Write node")
+        if not self._is_write_node(node):
+            logger.warning(f"Cannot extract metadata from {write_node_name}: Node not found or not a write node")
             return {}, {}
             
         # Get metadata from the write node

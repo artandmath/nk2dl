@@ -12,6 +12,7 @@ from typing import Dict, List, Any, Optional, Union, Tuple
 
 from .logging import setup_logging
 from .errors import ParserError
+from .config import config
 
 # Create a module-specific logger
 logger = setup_logging('nk2dl.nuke.parser')
@@ -126,6 +127,36 @@ class WriteNode(NukeNode):
         self._knobs["last"] = NukeKnob("last", 100)
 
 
+class DeepWriteNode(NukeNode):
+    """Class representing a DeepWrite node in a Nuke script."""
+    
+    def __init__(self, name: str):
+        super().__init__(name, "DeepWrite")
+        # Add default knobs (similar to WriteNode)
+        self._knobs["file"] = NukeKnob("file", "")
+        self._knobs["file_type"] = NukeKnob("file_type", "exr")
+        self._knobs["disable"] = NukeKnob("disable", False)
+        self._knobs["render_order"] = NukeKnob("render_order", 0)
+        self._knobs["use_limit"] = NukeKnob("use_limit", False)
+        self._knobs["first"] = NukeKnob("first", 1)
+        self._knobs["last"] = NukeKnob("last", 100)
+
+
+class CustomWriteNode(NukeNode):
+    """Class representing a custom write node in a Nuke script."""
+    
+    def __init__(self, name: str, node_class: str):
+        super().__init__(name, node_class)
+        # Add default knobs (similar to WriteNode)
+        self._knobs["file"] = NukeKnob("file", "")
+        self._knobs["file_type"] = NukeKnob("file_type", "exr")
+        self._knobs["disable"] = NukeKnob("disable", False)
+        self._knobs["render_order"] = NukeKnob("render_order", 0)
+        self._knobs["use_limit"] = NukeKnob("use_limit", False)
+        self._knobs["first"] = NukeKnob("first", 1)
+        self._knobs["last"] = NukeKnob("last", 100)
+
+
 class NukeParser:
     """Parser for Nuke script files."""
     
@@ -183,15 +214,36 @@ class NukeParser:
         """
         return self.nodes.get(name)
         
-    def allNodes(self, node_type: Optional[str] = None) -> List[NukeNode]:
+    def _is_write_node_type(self, node_type: str) -> bool:
+        """Check if a node type is any type of write node.
+        
+        Args:
+            node_type: The node type to check
+            
+        Returns:
+            bool: True if node type is a write node type, False otherwise
+        """
+        # Check standard write node types
+        if node_type in ['Write', 'DeepWrite']:
+            return True
+            
+        # Check custom write classes from config
+        custom_classes = config.get('submission.custom_write_classes', [])
+        return node_type in custom_classes
+
+    def allNodes(self, node_type: Optional[str] = None, recurseGroups: bool = False) -> List[NukeNode]:
         """Get all nodes of a specific type.
         
         Args:
             node_type: Type of nodes to get (e.g., 'Write'). If None, get all nodes.
+            recurseGroups: Whether to recurse into groups (for Nuke API compatibility)
             
         Returns:
             List of nodes
         """
+        # Note: recurseGroups parameter is for Nuke API compatibility but not implemented
+        # in this simple parser since we don't handle groups yet
+        
         if node_type:
             return [node for node in self.nodes.values() if node.Class() == node_type]
         return list(self.nodes.values())
