@@ -533,12 +533,10 @@ class DeadlineConnection:
                 "and DEADLINE_PATH environment variable is set correctly."
             )
 
-# Global connection instance - but don't initialize it yet
-_connection = None
-
 def get_connection() -> DeadlineConnection:
-    """Get the global connection instance, creating it if needed."""
-    global _connection
-    if _connection is None:
-        _connection = DeadlineConnection()
-    return _connection 
+    """Get a fresh connection instance.
+    
+    Creates a new connection instance for each call, allowing automatic
+    recovery from web service failures without persistent state issues.
+    """
+    return DeadlineConnection() 
