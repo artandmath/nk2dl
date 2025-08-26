@@ -87,93 +87,54 @@ def node_pretty_path(node) -> str:
         original_path = node['file'].value()
         logger.debug(f"{node.name()} Original path: {original_path}")
 
-        # Evaluate the path (which will substitute the current frame number)
-        evaluated_path = node['file'].evaluate()
-        logger.debug(f"{node.name()} Nuke evaluated path: {evaluated_path}")
-
-        # Check if the original path had frame number placeholders
-        has_hash_placeholder = re.search(r'#+', original_path) is not None
-        has_printf_placeholder = re.search(r'%\d*d', original_path) is not None
+        # Define frame placeholder patterns and their temporary replacements
+        frame_placeholders = []
         
-        if has_hash_placeholder or has_printf_placeholder:
-            # Split the path into directory and filename
-            directory, filename = os.path.split(evaluated_path)
-            original_directory, original_filename = os.path.split(original_path)
-            
-            # Check if the original filename contains placeholders
-            if has_hash_placeholder and re.search(r'#+', original_filename):
-                # Extract the hash sequence (e.g., '####')
-                hash_match = re.search(r'(#+)', original_filename)
-                if hash_match:
-                    placeholder = hash_match.group(1)
-                    # Find position of hash placeholder in original filename
-                    parts = original_filename.split(placeholder)
-                    
-                    # If we have parts before and after the placeholder, use them for context
-                    if len(parts) >= 2:
-                        prefix = parts[0]
-                        suffix = parts[1] if len(parts) > 1 else ''
-                        
-                        # Create a pattern to find the frame number in the evaluated filename
-                        if prefix:
-                            prefix_pattern = re.escape(prefix)
-                            if suffix:
-                                suffix_pattern = re.escape(suffix)
-                                pattern = f"{prefix_pattern}(\\d+){suffix_pattern}"
-                            else:
-                                pattern = f"{prefix_pattern}(\\d+)"
-                        elif suffix:
-                            suffix_pattern = re.escape(suffix)
-                            pattern = f"(\\d+){suffix_pattern}"
-                        else:
-                            pattern = r"(\d+)"
-                        
-                        # Find and replace the frame number with the original placeholder
-                        frame_match = re.search(pattern, filename)
-                        if frame_match:
-                            frame_num = frame_match.group(1)
-                            fixed_filename = filename.replace(frame_num, placeholder, 1)
-                            evaluated_path = os.path.join(directory, fixed_filename)
-            
-            elif has_printf_placeholder and re.search(r'%\d*d', original_filename):
-                # Extract the printf format (e.g., '%04d')
-                printf_match = re.search(r'(%\d*d)', original_filename)
-                if printf_match:
-                    placeholder = printf_match.group(1)
-                    # Find position of printf placeholder in original filename
-                    parts = original_filename.split(placeholder)
-                    
-                    # If we have parts before and after the placeholder, use them for context
-                    if len(parts) >= 2:
-                        prefix = parts[0]
-                        suffix = parts[1] if len(parts) > 1 else ''
-                        
-                        # Create a pattern to find the frame number in the evaluated filename
-                        if prefix:
-                            prefix_pattern = re.escape(prefix)
-                            if suffix:
-                                suffix_pattern = re.escape(suffix)
-                                pattern = f"{prefix_pattern}(\\d+){suffix_pattern}"
-                            else:
-                                pattern = f"{prefix_pattern}(\\d+)"
-                        elif suffix:
-                            suffix_pattern = re.escape(suffix)
-                            pattern = f"(\\d+){suffix_pattern}"
-                        else:
-                            pattern = r"(\d+)"
-                        
-                        # Find and replace the frame number with the original placeholder
-                        frame_match = re.search(pattern, filename)
-                        if frame_match:
-                            frame_num = frame_match.group(1)
-                            fixed_filename = filename.replace(frame_num, placeholder, 1)
-                            evaluated_path = os.path.join(directory, fixed_filename)
+        # Find hash placeholders (####, ###, etc.)
+        hash_matches = list(re.finditer(r'#+', original_path))
+        for i, match in enumerate(hash_matches):
+            placeholder = match.group(0)
+            token = f"__FRAME_HASH_{len(placeholder)}_{i}__"
+            frame_placeholders.append((placeholder, token))
+        
+        # Find printf placeholders (%04d, %d, etc.)
+        printf_matches = list(re.finditer(r'%\d*d', original_path))
+        for i, match in enumerate(printf_matches):
+            placeholder = match.group(0)
+            token = f"__FRAME_PRINTF_{placeholder.replace('%', '').replace('d', '')}_{i}__"
+            frame_placeholders.append((placeholder, token))
 
+        if frame_placeholders:
+            # Step 1: Replace frame placeholders with temporary tokens
+            modified_path = original_path
+            for placeholder, token in frame_placeholders:
+                modified_path = modified_path.replace(placeholder, token)
+            
+            logger.debug(f"{node.name()} Modified path with tokens: {modified_path}")
+            
+            # Step 2: Temporarily set the node's file path to the tokenized version
+            original_knob_value = node['file'].value()
+            node['file'].setValue(modified_path)
+            
+            # Step 3: Evaluate the path (this will resolve metadata but leave our tokens intact)
+            evaluated_path = node['file'].evaluate()
+            logger.debug(f"{node.name()} Evaluated path with tokens: {evaluated_path}")
+            
+            # Step 4: Restore the original file path
+            node['file'].setValue(original_knob_value)
+            
+            # Step 5: Replace tokens back with original placeholders
+            for placeholder, token in frame_placeholders:
+                evaluated_path = evaluated_path.replace(token, placeholder)
+            
+            logger.debug(f"{node.name()} Final path with restored placeholders: {evaluated_path}")
+        
+        else:
+            # No frame placeholders found, just evaluate normally
+            evaluated_path = node['file'].evaluate()
+            
         # Check if the path contains GSV variables like %{shotcode}
         gsv_pattern = r'%\{([^}]+)\}'
-        gsv_matches = re.finditer(gsv_pattern, evaluated_path)
-        
-        # If unevaluated GSV variables are found, evaluate them
         if re.search(gsv_pattern, evaluated_path):
             try:
                 # Get the root node to access GSV knob
@@ -195,7 +156,6 @@ def node_pretty_path(node) -> str:
             except Exception as e:
                 logger.warning(f"Error evaluating GSV variables: {e}")
 
-        # If no placeholders or replacement failed, return the evaluated path
         logger.debug(f"{node.name()} Pretty path: {evaluated_path}")
         return evaluated_path
         
