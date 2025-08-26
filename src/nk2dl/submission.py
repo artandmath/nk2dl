@@ -1499,6 +1499,74 @@ class NukeSubmission:
         except Exception as e:
             raise SubmissionError(f"Failed to get frame range from Nuke API: {e}")
     
+    def _capture_initial_gsv_state(self) -> Dict[str, str]:
+        """Capture the current GSV state before submission.
+        
+        Returns:
+            Dict mapping GSV keys to their current values
+        """
+        initial_state = {}
+        
+        if not self.gsv_combinations:
+            return initial_state
+            
+        try:
+            nuke = self._ensure_script_can_be_parsed()
+            root_node = nuke.root()
+            
+            if 'gsv' in root_node.knobs():
+                gsv_knob = root_node['gsv']
+                
+                # Get all unique GSV keys that will be modified
+                gsv_keys = set()
+                for gsv_combination in self.gsv_combinations:
+                    for key, value in gsv_combination:
+                        gsv_keys.add(key)
+                
+                # Capture current value for each key
+                for key in gsv_keys:
+                    try:
+                        current_value = gsv_knob.getGsvValue(f'__default__.{key}')
+                        initial_state[key] = current_value or ""
+                        logger.debug(f"Captured initial GSV state: {key} = '{current_value}'")
+                    except Exception as e:
+                        logger.warning(f"Failed to get initial GSV value for {key}: {e}")
+                        initial_state[key] = ""  # Fallback to empty string
+                        
+        except Exception as e:
+            logger.warning(f"Failed to capture initial GSV state: {e}")
+            
+        return initial_state
+    
+    def _restore_gsv_state(self, initial_state: Dict[str, str]) -> None:
+        """Restore GSV state to initial values.
+        
+        Args:
+            initial_state: Dict mapping GSV keys to their original values
+        """
+        if not initial_state:
+            logger.debug("No initial GSV state to restore")
+            return
+            
+        try:
+            nuke = self._ensure_script_can_be_parsed()
+            root_node = nuke.root()
+            
+            if 'gsv' in root_node.knobs():
+                gsv_knob = root_node['gsv']
+                
+                for key, original_value in initial_state.items():
+                    try:
+                        gsv_knob.setGsvValue(f'__default__.{key}', original_value)
+                        logger.debug(f"Restored GSV {key} to original value: '{original_value}'")
+                    except Exception as e:
+                        logger.warning(f"Failed to restore GSV value {key}='{original_value}': {e}")
+                        
+                logger.info(f"Restored {len(initial_state)} GSV variables to original state")
+                        
+        except Exception as e:
+            logger.warning(f"Failed to restore GSV state: {e}")
+
     def _parse_graph_scope_variables(self) -> None:
         """Parse graph scope variables and get all possible combinations.
         
@@ -2678,6 +2746,12 @@ class NukeSubmission:
             if self.copy_script:
                 self._copy_script()
             
+            # Capture initial GSV state before any modifications
+            initial_gsv_state = {}
+            if self.graph_scope_variables and self.gsv_combinations:
+                initial_gsv_state = self._capture_initial_gsv_state()
+                logger.debug(f"Captured initial GSV state: {initial_gsv_state}")
+            
             # If using GSVs, submit multiple jobs for each combination
             if self.graph_scope_variables and self.gsv_combinations:
                 for gsv_combination in self.gsv_combinations:
@@ -3071,6 +3145,10 @@ class NukeSubmission:
                 self.script_will_close = False
                 logger.info(f"Script {self.script_path} closed after submission")
             
+            # Restore GSV state to original values after successful submission
+            if initial_gsv_state:
+                self._restore_gsv_state(initial_gsv_state)
+            
             return self.jobs
                     
         except Exception as e:
@@ -3082,6 +3160,13 @@ class NukeSubmission:
                     self.script_will_close = False
                 except:
                     pass  # Don't let script closing error mask the original error
+            
+            # Restore GSV state to original values even if submission failed
+            if 'initial_gsv_state' in locals() and initial_gsv_state:
+                try:
+                    self._restore_gsv_state(initial_gsv_state)
+                except Exception as restore_error:
+                    logger.warning(f"Failed to restore GSV state after submission failure: {restore_error}")
             
             raise SubmissionError(f"Failed to submit job: {e}")
 
