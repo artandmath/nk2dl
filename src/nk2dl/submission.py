@@ -354,10 +354,10 @@ class NukeSubmission:
                 script_job_script_path: Optional[str] = None,
                 
                 # Machine list parameters
-                machine_list: Optional[List[str]] = None,
+                machine_list: Optional[Union[str, List[str]]] = None,
                 machine_list_is_a_deny_list: Optional[bool] = None,
-                machine_allow_list: Optional[List[str]] = None,
-                machine_deny_list: Optional[List[str]] = None,
+                machine_allow_list: Optional[Union[str, List[str]]] = None,
+                machine_deny_list: Optional[Union[str, List[str]]] = None,
                 machine_limit: Optional[int] = None,
                 
                 # Job Info parameters
@@ -486,10 +486,10 @@ class NukeSubmission:
                                    can use pre and post build job scripts to run the python scripts with arguments.
             
             # Machine list parameters
-            machine_list: List of machine names to allow or deny
+            machine_list: String (comma/space delimited) or list of machine names to allow or deny
             machine_list_is_a_deny_list: Whether the machine list is a deny list
-            machine_allow_list: List of machine names to allow
-            machine_deny_list: List of machine names to deny
+            machine_allow_list: String (comma/space delimited) or list of machine names to allow
+            machine_deny_list: String (comma/space delimited) or list of machine names to deny
             machine_limit: Maximum number of machines to use
             
             # Job Info parameters
@@ -867,15 +867,58 @@ class NukeSubmission:
         if self.graph_scope_variables:
             self._parse_graph_scope_variables()
 
+    
+    def _normalize_machine_list(self, machine_input: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
+        """Normalize machine list input to a proper list format.
+        
+        Accepts either a string (comma/space delimited) or a list of strings.
+        If a string is provided, it will be split on commas and/or spaces.
+        
+        Args:
+            machine_input: Machine list as string or list of strings
+            
+        Returns:
+            List of machine names, or None if input is None/empty
+            
+        Examples:
+            _normalize_machine_list("my_box") -> ["my_box"]
+            _normalize_machine_list("box1,box2") -> ["box1", "box2"]
+            _normalize_machine_list("box1, box2 box3") -> ["box1", "box2", "box3"]
+            _normalize_machine_list(["box1", "box2"]) -> ["box1", "box2"]
+            _normalize_machine_list("") -> None
+            _normalize_machine_list(None) -> None
+        """
+        if machine_input is None:
+            return None
+            
+        if isinstance(machine_input, str):
+            # Handle string input
+            if not machine_input.strip():
+                return None
+                
+            # Split on both commas and spaces, then filter out empty strings
+            import re
+            machines = re.split(r'[,\s]+', machine_input.strip())
+            machines = [machine.strip() for machine in machines if machine.strip()]
+            
+            return machines if machines else None
+        elif isinstance(machine_input, list):
+            # Handle list input - ensure all items are strings and non-empty
+            machines = [str(machine).strip() for machine in machine_input if str(machine).strip()]
+            return machines if machines else None
+        else:
+            # Invalid input type
+            raise SubmissionError(f"Machine list must be a string or list of strings, got {type(machine_input)}")
+
 
     def _initialize_machine_lists(self, machine_list, machine_list_is_a_deny_list, machine_allow_list, machine_deny_list):
         """Initialize machine allow and deny lists based on provided parameters.
         
         Args:
-            machine_list: Generic list of machines
+            machine_list: String (comma/space delimited) or list of machines
             machine_list_is_a_deny_list: Whether the machine_list should be treated as a deny list
-            machine_allow_list: Explicit allow list of machines
-            machine_deny_list: Explicit deny list of machines
+            machine_allow_list: String (comma/space delimited) or explicit allow list of machines
+            machine_deny_list: String (comma/space delimited) or explicit deny list of machines
             
         Returns:
             tuple: (machine_allow_list, machine_deny_list)
@@ -894,22 +937,27 @@ class NukeSubmission:
         if len(provided) > 1:
             raise SubmissionError(f"Only one of these parameters can be specified: {', '.join(provided)}")
 
+        # Normalize all machine list inputs
+        normalized_machine_list = self._normalize_machine_list(machine_list)
+        normalized_machine_allow_list = self._normalize_machine_list(machine_allow_list)
+        normalized_machine_deny_list = self._normalize_machine_list(machine_deny_list)
+        
         # Handle machine list logic from parameters
-        if machine_list is not None:
+        if normalized_machine_list is not None:
             # If machine_list_is_a_deny_list is True, use it as deny list
             if machine_list_is_a_deny_list:
-                return None, machine_list
+                return None, normalized_machine_list
             # Otherwise, use it as allow list
             else:
-                return machine_list, None
-        elif machine_allow_list is not None:
-            return machine_allow_list, None
-        elif machine_deny_list is not None:
-            return None, machine_deny_list
+                return normalized_machine_list, None
+        elif normalized_machine_allow_list is not None:
+            return normalized_machine_allow_list, None
+        elif normalized_machine_deny_list is not None:
+            return None, normalized_machine_deny_list
         
         # If no machine lists were provided through parameters, check config
-        config_allow_list = config.get('submission.machine_allow_list')
-        config_deny_list = config.get('submission.machine_deny_list')
+        config_allow_list = self._normalize_machine_list(config.get('submission.machine_allow_list'))
+        config_deny_list = self._normalize_machine_list(config.get('submission.machine_deny_list'))
         
         # Check that both aren't specified in the config
         if config_allow_list and config_deny_list:
@@ -3895,10 +3943,10 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
                                  to include config values and then extend them with the rest of the list.
           
           # Machine List parameters
-          - machine_list: List of machine names to allow or deny based on machine_list_is_a_deny_list
+          - machine_list: String (comma/space delimited) or list of machine names to allow or deny based on machine_list_is_a_deny_list
           - machine_list_is_a_deny_list: Whether the machine_list is a deny list (default: False, treat as allow list)
-          - machine_allow_list: Alternative to machine_list, explicitly specifies an allow list
-          - machine_deny_list: List of machine names to deny (cannot be used with machine_allow_list/machine_list)
+          - machine_allow_list: Alternative to machine_list, string (comma/space delimited) or list specifying an allow list
+          - machine_deny_list: String (comma/space delimited) or list of machine names to deny (cannot be used with machine_allow_list/machine_list)
           - machine_limit: Maximum number of machines that can work on the job simultaneously
     
     Returns:
