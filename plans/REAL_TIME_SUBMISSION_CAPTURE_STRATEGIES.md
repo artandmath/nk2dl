@@ -15,6 +15,24 @@ The current `submit_nuke_script()` function is **synchronous** and only returns 
 
 Modify the `NukeSubmission` class to accept callback functions for progress reporting, with wrapper function support.
 
+#### Callback Parameter Definitions:
+
+**Connection Status Callback**: `connection_status_callback(message: str, status_type: str)`
+- `message`: Human-readable status message  
+- `status_type`: Message priority level
+  - `"info"`: General information (attempting connection)
+  - `"success"`: Successful operation (job submitted)
+  - `"warning"`: Issue but operation succeeded (fallback occurred)
+  - `"error"`: Operation failed
+
+**Job Submitted Callback**: `job_submitted_callback(node_name: str, job_id: str, render_order: int, status: str, connection_type: str, error: str = None)`
+- `connection_type` values:
+  - `"web"`: Web Service connection
+  - `"command_line"`: Direct Command Line or Command Line Fallback
+
+**Progress Callback**: `progress_callback(message: str)`
+- Simple progress messages for current operation
+
 #### Implementation:
 
 **Approach A: Modify NukeSubmission Class (Primary Implementation)**
@@ -36,15 +54,10 @@ class NukeSubmission:
     def submit(self) -> List[Dict[str, Any]]:
         """Submit with real-time callback support."""
         
-        # Connection phase callback
-        if self.connection_status_callback:
-            self.connection_status_callback("Connecting to Deadline webservice...", "info")
-            
-        # Get Deadline connection (line ~2718)
+        # Get Deadline connection (line ~2718) - this is instantaneous
         self.deadline = get_connection()
         
-        if self.connection_status_callback:
-            self.connection_status_callback(f"Connected to {self.deadline}", "success")
+        # Connection testing happens during first job submission via ensure_connected()
         
         # ... existing setup code ...
         
@@ -60,16 +73,44 @@ class NukeSubmission:
             
             # Submit individual job (line ~3082)
             try:
+                # Connection testing and fallback happens here in submit_job()
+                if self.connection_status_callback:
+                    # Determine connection method being attempted
+                    connection_method = "Web Service" if self.deadline.use_web_service else "Command Line"
+                    self.connection_status_callback(f"Submitting via {connection_method}...", "info")
+                
                 self._submit_job(node_job_info, node_plugin_info, render_order, write_node, None, auxiliary_files)
+                
+                # Get connection type from last submission (may have changed due to fallback)
+                last_job = self.jobs[-1]
+                connection_type = last_job["deadline_return"].get("connection_type", "unknown")
+                
+                if self.connection_status_callback:
+                    # Map connection_type to descriptive names
+                    connection_names = {
+                        "web": "Web Service",
+                        "command_line": "Command Line Fallback" if self.deadline.use_web_service else "Command Line"
+                    }
+                    connection_name = connection_names.get(connection_type, connection_type)
+                    
+                    if connection_type == "command_line" and self.deadline.use_web_service:
+                        # This was a fallback scenario
+                        self.connection_status_callback(f"Fell back to Command Line - Job submitted successfully", "warning")
+                    else:
+                        self.connection_status_callback(f"Job submitted via {connection_name}", "success")
                 
                 if self.job_submitted_callback:
                     self.job_submitted_callback(
                         node_name=write_node,
-                        job_id=self.jobs[-1]["job_id"],  # Last submitted job ID
+                        job_id=last_job["job_id"],
                         render_order=render_order,
-                        status='success'
+                        status='success',
+                        connection_type=connection_type
                     )
             except Exception as e:
+                if self.connection_status_callback:
+                    self.connection_status_callback(f"Submission failed: {str(e)}", "error")
+                
                 if self.job_submitted_callback:
                     self.job_submitted_callback(
                         node_name=write_node,
@@ -84,28 +125,16 @@ class NukeSubmission:
 ```
 
 **Approach B: Wrapper Function Support**
+
+The wrapper function `submit_nuke_script()` requires **no changes** since it already passes `**kwargs` directly to `NukeSubmission.__init__()` at line 4100:
+
 ```python
-def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
-    """Submit with optional callback support via wrapper function."""
-    
-    # Extract callbacks from kwargs
-    progress_callback = kwargs.pop('progress_callback', None)
-    job_submitted_callback = kwargs.pop('job_submitted_callback', None)
-    connection_status_callback = kwargs.pop('connection_status_callback', None)
-    
-    # Pass callbacks to NukeSubmission
-    kwargs.update({
-        'progress_callback': progress_callback,
-        'job_submitted_callback': job_submitted_callback,
-        'connection_status_callback': connection_status_callback
-    })
-    
-    # ... existing subprocess/build job logic (lines 4046-4091) ...
-    
-    # Create and run submission with callbacks (line ~4100)
-    submission = NukeSubmission(script_path=script_path, **kwargs)
-    return submission.submit()
+# Existing code at line ~4100 already works:
+submission = NukeSubmission(script_path=script_path, **kwargs)
+return submission.submit()
 ```
+
+Any callback parameters passed to `submit_nuke_script()` will automatically be forwarded to the `NukeSubmission` constructor.
 
 #### Advantages:
 - ✅ **Clean integration**: Builds on existing NukeSubmission architecture
@@ -118,6 +147,8 @@ def submit_nuke_script(script_path: str, **kwargs) -> List[Dict[str, Any]]:
 - ⚠️ **Build job mode**: Callbacks may not work in build job submissions (`submission_is_build_job = True`)
 - ⚠️ **Thread safety**: GUI callbacks must be thread-safe
 - ⚠️ **Error handling**: Callback failures shouldn't break submission process
+- ⚠️ **Dynamic connection fallback**: Connection type can change mid-submission (Web Service → Command Line)
+- ⚠️ **Connection testing is per-job**: Real connection validation happens during `submit_job()`, not at connection time
 
 ### Option 2: Event-Based Submission System
 
@@ -369,6 +400,8 @@ class CallbackSubmissionWorker(QtCore.QRunnable):
             
             def on_connection_status(message, status_type):
                 # Thread-safe connection status update
+                # status_type can be: "info", "success", "warning", "error"
+                # Allows UI to color-code or prioritize messages appropriately
                 QtCore.QMetaObject.invokeMethod(
                     self.progress_dialog, 
                     "update_connection_status", 
